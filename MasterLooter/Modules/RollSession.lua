@@ -86,6 +86,11 @@ local function isGroupMember(name)
     return groupUnitForName(name) ~= nil
 end
 
+local function isGrouped()
+    return (GetNumRaidMembers and (GetNumRaidMembers() or 0) > 0) or
+        (GetNumPartyMembers and (GetNumPartyMembers() or 0) > 0) or false
+end
+
 local function currentLootMasterName()
     if not GetLootMethod then return nil end
     local method, partyID, raidID = GetLootMethod()
@@ -328,7 +333,11 @@ function RollSession:RecordPublicRoll(player, roll, minimum, maximum, sessionID)
     end
     local key = baseName(player)
     if key == "" then return nil, "invalid player" end
-    if not isGroupMember(player) then return nil, "player is not in the group" end
+    -- Some Ascension builds report the party size correctly while returning nil
+    -- for UnitName/GetUnitName/UnitFullName on party tokens. A public /roll is
+    -- therefore allowed as a group fallback, but only on the active authority's
+    -- own session. Solo and inactive-session messages remain rejected above.
+    if not isGroupMember(player) and not isGrouped() then return nil, "player is not in the group" end
     local existing = state.participants[key]
     if existing and existing.choice then return nil, "player already rolled" end
     local participant = {

@@ -299,6 +299,16 @@ same(publicMS.choice, "MS", "/roll 100 is classified as MS")
 same(publicMS.roll, 37, "public MS preserves the exact Ascension system-message result")
 expect(publicMS.publicRoll, "public MS is marked as a chat-tracked roll")
 expect(aliceGA.RollSession:Stop(publicMSSession.id, "TEST"), "public MS session stops")
+
+-- Ascension can expose a valid party size while all party-name APIs return nil.
+-- Public system rolls must still reach the authoritative loot-master session.
+alice.env.UnitFullName = function() return nil end
+local unresolvedPartySession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+expect(unresolvedPartySession ~= nil, "a roll starts while Ascension party-name APIs are unresolved")
+fire(alice, "CHAT_MSG_SYSTEM", "|cff00ff00|Hplayer:Hiddenparty|h[Hiddenparty]|h|r rolls 54 (1 - 100)")
+same(aliceGA.RollSession:GetState(unresolvedPartySession.id).participants.hiddenparty.roll, 54,
+    "a grouped public roll survives missing Ascension party-name API results")
+expect(aliceGA.RollSession:Stop(unresolvedPartySession.id, "TEST"), "unresolved-party public roll session stops")
 alice.env.GetNumRaidMembers, alice.env.GetNumPartyMembers = originalRaidCount, originalPartyCount
 alice.env.UnitFullName = originalUnitFullName
 

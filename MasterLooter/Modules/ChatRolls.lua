@@ -20,6 +20,13 @@ end
 
 local localizedRollPattern = createFormatPattern(_G and _G.RANDOM_ROLL_RESULT)
 
+local function visibleMessage(message)
+    message = string.gsub(message, "|c%x%x%x%x%x%x%x%x", "")
+    message = string.gsub(message, "|r", "")
+    message = string.gsub(message, "|H[^|]+|h%[([^%]]+)%]|h", "%1")
+    return message
+end
+
 local function parseSystemRoll(message)
     if type(message) ~= "string" then return nil end
     if localizedRollPattern then
@@ -29,12 +36,14 @@ local function parseSystemRoll(message)
             return player, roll, minimum, maximum
         end
     end
+    message = visibleMessage(message)
     local roll, minimum, maximum = string.match(message, "(%d+)%s*%(%s*(%d+)%s*%-%s*(%d+)%s*%)")
     roll, minimum, maximum = tonumber(roll), tonumber(minimum), tonumber(maximum)
     if not roll or not minimum or not maximum then return nil end
     local player = string.match(message, "^%s*([^%s]+)")
     if not player then return nil end
-    player = string.gsub(player, "[,;:]+$", "")
+    player = string.gsub(player, "^[%[]+", "")
+    player = string.gsub(player, "[%],;:]+$", "")
     return player, roll, minimum, maximum
 end
 

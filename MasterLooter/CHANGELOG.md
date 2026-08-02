@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.12-beta
+
+- Öffentliche `/roll`-Ergebnisse werden in Ascension-Gruppen auch dann erfasst, wenn die Partygröße verfügbar ist, die Namen über `UnitName`, `GetUnitName` und `UnitFullName` aber fehlen
+- Farbige und verlinkte Spielernamen in Ascension-Systemmeldungen werden vor der Auswertung bereinigt
+- Regressionstest für eine aktive Gruppe mit nicht auflösbaren `partyX`-Namen ergänzt
+
 ## 0.9.11-beta
 
 - Lootmaster-Fenster nach dem kompakten Gargul-Aufbau neu gegliedert: Item und Start/Stop oben, breite Notizzeile, Timer und autoritativer OS-Bereich darunter
