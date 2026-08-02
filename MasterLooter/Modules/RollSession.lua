@@ -353,6 +353,22 @@ function RollSession:RecordPublicRoll(player, roll, minimum, maximum, sessionID)
     return participant
 end
 
+function RollSession:ObservePublicRoll(player, roll, minimum, maximum, sessionID)
+    local state = resolveState(sessionID)
+    if not state or state.status ~= "ACTIVE" then return nil, "no active session" end
+    if samePlayer(state.owner, playerName()) and self:IsAuthority(playerName()) then
+        return self:RecordPublicRoll(player, roll, minimum, maximum, state.id)
+    end
+    -- A participant may relay only the result carrying their own character
+    -- name. The authority validates the sender and the roll range again.
+    if not samePlayer(player, playerName()) then return nil, "not the local player's roll" end
+    roll, minimum, maximum = tonumber(roll), tonumber(minimum), tonumber(maximum)
+    if minimum ~= 1 or not roll or not maximum or not self:GetChoiceForMaximum(state, maximum) then
+        return nil, "roll range does not match this session"
+    end
+    return send("PUBLIC_ROLL", { self.PROTOCOL, state.id, roll, minimum, maximum })
+end
+
 function RollSession:Award(sessionID, winner, choice, roll, note)
     local state = resolveState(sessionID)
     if not state then return nil, "unknown session" end
@@ -495,6 +511,13 @@ local function receiveRollAck(fields, sender)
     emit("GA_ROLL_SESSION_UPDATED", state, "ROLL_ACK", participant)
 end
 
+local function receivePublicRoll(fields, sender)
+    if not validVersion(fields) or (not isGroupMember(sender) and not isGrouped()) then return end
+    local state = resolveState(fields[2])
+    if not state or state.status ~= "ACTIVE" or not samePlayer(state.owner, playerName()) then return end
+    RollSession:RecordPublicRoll(sender, fields[3], fields[4], fields[5], state.id)
+end
+
 local function receiveStop(fields, sender)
     if not validVersion(fields) or not RollSession:IsAuthority(sender) then return end
     local state, seq = resolveState(fields[2]), validSequence(fields[3])
@@ -552,6 +575,7 @@ function RollSession:BindCommunication()
     GA.Comm:RegisterHandler("ACK", receiveAck)
     GA.Comm:RegisterHandler("ROLL", receiveRoll)
     GA.Comm:RegisterHandler("ROLL_ACK", receiveRollAck)
+    GA.Comm:RegisterHandler("PUBLIC_ROLL", receivePublicRoll)
     GA.Comm:RegisterHandler("STOP", receiveStop)
     GA.Comm:RegisterHandler("RESULT", receiveResult)
     GA.Comm:RegisterHandler("SYNC", receiveSync)

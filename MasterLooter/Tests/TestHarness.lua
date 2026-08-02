@@ -325,6 +325,15 @@ same(aliceGA.RollSession:GetState(publicOSSession.id).participants.bob.roll, 31,
     "a second public roll cannot replace the first accepted result")
 expect(aliceGA.RollSession:Stop(publicOSSession.id, "TEST"), "public OS session stops")
 
+-- If Ascension only delivers the system line to the rolling client, that
+-- client relays its own exact public result to the session authority.
+local relayedSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+fire(bob, "CHAT_MSG_SYSTEM", "Bob rolls 73 (1 - 100)")
+local relayedRoll = aliceGA.RollSession:GetState(relayedSession.id).participants.bob
+same(relayedRoll.roll, 73, "the rolling client relays its public result to the loot master")
+same(relayedRoll.choice, "MS", "the authority classifies a relayed /roll 100 as MS")
+expect(aliceGA.RollSession:Stop(relayedSession.id, "TEST"), "relayed public-roll session stops")
+
 -- Roll deadlines are local monotonic GetTime values, never transmitted wall-clock timestamps.
 alice.now, bob.now = 5000, 20
 local clockSession = aliceGA.RollSession:Start(itemLink, { duration = 20 })

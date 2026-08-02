@@ -75,6 +75,14 @@ local function getRolls(session)
     return result
 end
 
+local function rollSignature(rolls)
+    local parts = {}
+    for index, roll in ipairs(rolls or {}) do
+        parts[index] = table.concat({ tostring(roll.player), tostring(roll.choice), tostring(roll.roll) }, "\031")
+    end
+    return table.concat(parts, "\030")
+end
+
 local function sessionUpdateArguments(...)
     if select(2, ...) == "GA_ROLL_SESSION_UPDATED" then return select(3, ...), select(4, ...), select(5, ...) end
     if select(1, ...) == "GA_ROLL_SESSION_UPDATED" then return select(2, ...), select(3, ...), select(4, ...) end
@@ -114,6 +122,7 @@ function MasterLooterWindow:EnsureFrame()
     Theme:RestorePosition(frame, "masterLooterGargulV1", "CENTER", 0, 20)
     Theme:RegisterForEscape(frame)
     self.frame = frame
+    frame:SetScript("OnUpdate", function(_, elapsed) MasterLooterWindow:OnUpdate(elapsed) end)
 
     local itemLabel = Theme:CreateLabel(frame, "ITEM", 11, Theme.colors.muted)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -54)
@@ -498,6 +507,7 @@ function MasterLooterWindow:UpdateSession(session)
     if link then self:SetItem(link) end
     self:SetSessionActive(session.status == nil or session.status == "ACTIVE")
     self.rolls = getRolls(session)
+    self.rollSignature = rollSignature(self.rolls)
     self.selected = nil
     self.page = math.min(self.page or 1, math.max(1, math.ceil(#self.rolls / ROWS)))
     self:RefreshRows()
@@ -506,6 +516,26 @@ function MasterLooterWindow:UpdateSession(session)
             self:SelectRow(index)
             break
         end
+    end
+end
+
+
+function MasterLooterWindow:OnUpdate(elapsed)
+    if not self.sessionActive or not self.frame or not self.frame:IsShown() then return end
+    self.pollElapsed = (self.pollElapsed or 0) + (tonumber(elapsed) or 0)
+    if self.pollElapsed < 0.25 then return end
+    self.pollElapsed = 0
+    local manager = GA.RollSession
+    local state = manager and type(manager.GetState) == "function" and manager:GetState(self.sessionId)
+    if not state then return end
+    local rolls = getRolls(state)
+    local signature = rollSignature(rolls)
+    if signature == self.rollSignature then return end
+    self.session, self.rolls, self.rollSignature = state, rolls, signature
+    self.selected = nil
+    self:RefreshRows()
+    for index, roll in ipairs(rolls) do
+        if roll.choice ~= "PASS" then self:SelectRow(index); break end
     end
 end
 

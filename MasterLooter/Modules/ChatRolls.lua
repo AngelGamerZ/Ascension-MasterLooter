@@ -63,13 +63,22 @@ function ChatRolls:OnSystemMessage(...)
         publicRoll = true, pending = false,
     }
     GA.Events:Emit("GA_PUBLIC_ROLL_SEEN", state, participant)
-    local recorded = manager:RecordPublicRoll(player, roll, minimum, maximum, state.id)
+    local method = manager.ObservePublicRoll or manager.RecordPublicRoll
+    local recorded = method(manager, player, roll, minimum, maximum, state.id)
     return recorded or participant
 end
 
 function ChatRolls:OnInitialize()
-    GA.Events:On("CHAT_MSG_SYSTEM", function(_, _, ...) ChatRolls:OnSystemMessage(...) end, self)
-    GA.Events:RegisterGameEvent("CHAT_MSG_SYSTEM")
+    -- Use a dedicated frame for this critical game event. This avoids relying
+    -- on other event-bus registrations on Ascension's modified client.
+    if type(CreateFrame) == "function" then
+        self.frame = self.frame or CreateFrame("Frame")
+        self.frame:RegisterEvent("CHAT_MSG_SYSTEM")
+        self.frame:SetScript("OnEvent", function(_, _, ...) ChatRolls:OnSystemMessage(...) end)
+    else
+        GA.Events:On("CHAT_MSG_SYSTEM", function(_, _, ...) ChatRolls:OnSystemMessage(...) end, self)
+        GA.Events:RegisterGameEvent("CHAT_MSG_SYSTEM")
+    end
     return true
 end
 

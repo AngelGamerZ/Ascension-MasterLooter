@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.13-beta
+
+- Eigenes öffentliches `/roll`-Ergebnis wird vom Teilnehmer-Addon zusätzlich an den Lootmaster übermittelt, falls Ascension die Systemmeldung nicht an dessen Client verteilt
+- Der Lootmaster validiert Absender, aktive Sitzung und Rollbereich erneut; fremde Würfe können nicht stellvertretend übertragen werden
+- `CHAT_MSG_SYSTEM` wird für die kritische Rollerfassung über einen eigenen Eventframe empfangen
+- Die Lootmaster-Tabelle gleicht sich während einer sichtbaren aktiven Sitzung zusätzlich alle 250 Millisekunden mit dem autoritativen Sitzungszustand ab
+- Regressionstest für einen Wurf, dessen Systemmeldung ausschließlich beim würfelnden Gruppenmitglied ankommt
+
 ## 0.9.12-beta
 
 - Öffentliche `/roll`-Ergebnisse werden in Ascension-Gruppen auch dann erfasst, wenn die Partygröße verfügbar ist, die Namen über `UnitName`, `GetUnitName` und `UnitFullName` aber fehlen
