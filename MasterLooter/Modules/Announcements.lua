@@ -92,7 +92,7 @@ function Announcements:OnRollStarted(state)
     local config = self:GetConfig()
     if config.rollStart and isOwner(state) then
         self:Send("Roll für " .. itemDescription(state) .. " gestartet - " .. tostring(state.duration or 30) ..
-            " Sekunden. MS: /roll 100, OS: /roll " .. tostring(state.osRollMaximum or 99) .. ".")
+            " Sekunden. /roll 100 für MS. /roll " .. tostring(state.osRollMaximum or 99) .. " für OS.")
     end
     if isOwner(state) then
         self.activeRoll = state

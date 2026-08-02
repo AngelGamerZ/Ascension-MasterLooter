@@ -11,7 +11,7 @@ Copy both folders into `Interface/AddOns/`:
 - `MasterLooter`
 - `MasterLooter_ItemData`
 
-Players need the main addon for synchronized roll windows, but group members without it can participate through the announced public `/roll` commands. The ItemData addon is optional.
+Players need the main addon for synchronized roll windows, but group members without it can participate through the announced public `/roll` commands. The loot master determines the OS range for each session; connected clients receive it automatically. The ItemData addon is optional.
 
 Open the addon with `/ml` or `/masterlooter`.
 
@@ -25,7 +25,7 @@ Screenshots and branding assets will be added to [`assets/`](assets/) later.
 npx --yes --package fengari-node-cli fengari .\MasterLooter\Tests\TestHarness.lua
 ```
 
-The current integration harness covers two isolated addon clients and 128 assertions across communication, rolls, awards, trades, rules, GDKP, auctions, bag inspection, and item data.
+The current integration harness covers two isolated addon clients and 168 assertions across communication, rolls, awards, trades, rules, GDKP, auctions, bag inspection, and item data.
 
 More details are available in [MasterLooter/README.md](MasterLooter/README.md).
 

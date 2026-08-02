@@ -148,6 +148,8 @@ function RollWindow:ShowSession(session)
     self.itemLink = value(session, "itemLink", "link") or value(session.item, "link", "itemLink")
     local duration = tonumber(value(session, "duration", "seconds", "timeout")) or 30
     self.osRollMaximum = math.max(2, math.min(99, math.floor(tonumber(value(session, "osRollMaximum", "osMaximum")) or 99)))
+    if self.buttons and self.buttons.MS then self.buttons.MS:SetText("MS (/100)") end
+    if self.buttons and self.buttons.OS then self.buttons.OS:SetText("OS (/" .. tostring(self.osRollMaximum) .. ")") end
     self.endsAt = tonumber(value(session, "endsAt", "endTime", "expiresAt")) or (now() + duration)
     self.elapsed = 0
 

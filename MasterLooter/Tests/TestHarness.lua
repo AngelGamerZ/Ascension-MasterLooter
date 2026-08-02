@@ -282,8 +282,10 @@ expect(not passed.pending, "pass acknowledgement clears the participant pending 
 expect(aliceGA.RollSession:Stop(passSession.id, "TEST"), "pass test session stops")
 
 -- Public Blizzard /roll messages allow group members without the addon to participate.
+bobGA.DB:GetProfile().osRollMaximum = 17
 local publicMSSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
 same(bobGA.RollSession:GetState(publicMSSession.id).osRollMaximum, 42, "START synchronizes the configured OS maximum")
+same(bobGA.DB:GetProfile().osRollMaximum, 17, "a participant's local preference cannot override the loot master's session")
 fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 87 (1-100)")
 local publicMS = aliceGA.RollSession:GetState(publicMSSession.id).participants.bob
 same(publicMS.choice, "MS", "/roll 100 is classified as MS")
@@ -333,7 +335,7 @@ same(bobGA.RollSession:GetState(countdownSession.id).status, "STOPPED", "timeout
 local intervalSeen, countdownSeen, finalSecondSeen, timeoutSeen, instructionsSeen = false, false, false, false, false
 for index = chatStart + 1, #alice.chatMessages do
     local message = alice.chatMessages[index].message
-    if string.find(message, "MS: /roll 100, OS: /roll 42", 1, true) then instructionsSeen = true end
+    if string.find(message, "/roll 100 für MS. /roll 42 für OS.", 1, true) then instructionsSeen = true end
     if string.find(message, "Noch 50 Sekunden", 1, true) then intervalSeen = true end
     if string.find(message, "Noch 10 Sekunden", 1, true) then countdownSeen = true end
     if string.find(message, "Noch 1 Sekunde", 1, true) then finalSecondSeen = true end

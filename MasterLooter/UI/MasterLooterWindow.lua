@@ -104,7 +104,7 @@ function MasterLooterWindow:EnsureFrame()
 
     local frame = CreateFrame("Frame", "MasterLooterMainWindow", UIParent)
     frame:SetWidth(520)
-    frame:SetHeight(505)
+    frame:SetHeight(537)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
@@ -172,15 +172,28 @@ function MasterLooterWindow:EnsureFrame()
     duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
 
+    local osLabel = Theme:CreateLabel(frame, "OS /roll", 12, Theme.colors.muted)
+    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -105)
+    local osMaximum = Theme:CreateEditBox(frame, 46, 24, true)
+    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", 350, -99)
+    if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
+    osMaximum:SetText(tostring(math.max(2, math.min(99, math.floor(tonumber(profile and profile.osRollMaximum) or 99)))))
+    self.osMaximumEdit = osMaximum
+    local osHint = Theme:CreateLabel(frame, "(2–99)", 12, Theme.colors.muted)
+    osHint:SetPoint("LEFT", osMaximum, "RIGHT", 7, 0)
+    osMaximum:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
+    osMaximum:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
+    osMaximum:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeOSMaximum() end)
+
     local noteLabel = Theme:CreateLabel(frame, "Notiz (optional)", 12, Theme.colors.muted)
-    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -105)
-    local note = Theme:CreateEditBox(frame, 123, 24)
-    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 375, -99)
+    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -137)
+    local note = Theme:CreateEditBox(frame, 365, 24)
+    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -131)
     if type(note.SetMaxLetters) == "function" then note:SetMaxLetters(160) end
     self.noteEdit = note
 
     local start = Theme:CreateButton(frame, "Roll starten", 115, 28)
-    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -137)
+    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -169)
     start:SetScript("OnClick", function() MasterLooterWindow:StartSession() end)
     self.startButton = start
     local stop = Theme:CreateButton(frame, "Stoppen", 90, 28)
@@ -196,7 +209,7 @@ function MasterLooterWindow:EnsureFrame()
     self.status = status
 
     local tableFrame = CreateFrame("Frame", nil, frame)
-    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -180)
+    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -212)
     tableFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 61)
     Theme:ApplyInset(tableFrame)
     self.tableFrame = tableFrame
@@ -272,7 +285,11 @@ function MasterLooterWindow:GetInputIssue()
     if not duration or duration ~= math.floor(duration) or duration < 5 or duration > 300 then
         return "DURATION", "Die Rollzeit muss eine ganze Zahl zwischen 5 und 300 Sekunden sein."
     end
-    return nil, nil, duration
+    local osMaximum = tonumber(self.osMaximumEdit and self.osMaximumEdit:GetText())
+    if not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 then
+        return "OS_MAXIMUM", "Der Lootmaster muss für OS eine ganze Zahl zwischen 2 und 99 festlegen."
+    end
+    return nil, nil, duration, osMaximum
 end
 
 function MasterLooterWindow:RefreshInputState(showFeedback)
@@ -287,6 +304,9 @@ function MasterLooterWindow:RefreshInputState(showFeedback)
     end
     if type(self.durationEdit.SetTextColor) == "function" then
         self.durationEdit:SetTextColor(unpack(issue == "DURATION" and Theme.colors.red or Theme.colors.text))
+    end
+    if self.osMaximumEdit and type(self.osMaximumEdit.SetTextColor) == "function" then
+        self.osMaximumEdit:SetTextColor(unpack(issue == "OS_MAXIMUM" and Theme.colors.red or Theme.colors.text))
     end
     if showFeedback then
         if issue then self:SetStatus(message, Theme.colors.red)
@@ -314,6 +334,15 @@ function MasterLooterWindow:AdjustDuration(delta)
     self:RefreshInputState(true)
 end
 
+function MasterLooterWindow:NormalizeOSMaximum()
+    if not self.osMaximumEdit then return end
+    local profile = GA.DB and GA.DB:GetProfile()
+    local maximum = tonumber(self.osMaximumEdit:GetText()) or tonumber(profile and profile.osRollMaximum) or 99
+    maximum = math.max(2, math.min(99, math.floor(maximum + 0.5)))
+    self.osMaximumEdit:SetText(tostring(maximum))
+    self:RefreshInputState(false)
+end
+
 function MasterLooterWindow:SetSessionActive(active)
     self.sessionActive, self.sessionStarting = active and true or false, false
     if not self.startButton then return end
@@ -322,6 +351,7 @@ function MasterLooterWindow:SetSessionActive(active)
         if self.durationMinus then self.durationMinus:Disable() end
         if self.durationPlus then self.durationPlus:Disable() end
         if self.durationEdit.Disable then self.durationEdit:Disable() end
+        if self.osMaximumEdit and self.osMaximumEdit.Disable then self.osMaximumEdit:Disable() end
         if self.noteEdit.Disable then self.noteEdit:Disable() end
         if self.itemDrop then self.itemDrop:EnableMouse(false) end
     else
@@ -330,6 +360,7 @@ function MasterLooterWindow:SetSessionActive(active)
         if self.durationMinus then self.durationMinus:Enable() end
         if self.durationPlus then self.durationPlus:Enable() end
         if self.durationEdit.Enable then self.durationEdit:Enable() end
+        if self.osMaximumEdit and self.osMaximumEdit.Enable then self.osMaximumEdit:Enable() end
         if self.noteEdit.Enable then self.noteEdit:Enable() end
         if self.itemDrop then self.itemDrop:EnableMouse(true) end
         self:RefreshInputState(false)
@@ -400,7 +431,7 @@ function MasterLooterWindow:SetStatus(text, color)
 end
 
 function MasterLooterWindow:StartSession()
-    local issue, validationMessage, duration = self:GetInputIssue()
+    local issue, validationMessage, duration, osMaximum = self:GetInputIssue()
     if issue then self:RefreshInputState(true); return end
     local itemLink = self.itemLink
     local note = self.noteEdit:GetText()
@@ -419,7 +450,7 @@ function MasterLooterWindow:StartSession()
         duration = duration,
         note = note,
         choices = { "MS", "OS", "PASS" },
-        osRollMaximum = profile and profile.osRollMaximum or 99,
+        osRollMaximum = osMaximum,
     })
     if not ok or result == nil or result == false then
         self.sessionStarting = false
@@ -427,7 +458,10 @@ function MasterLooterWindow:StartSession()
         self:SetStatus((not ok and result) or errorMessage or "Session konnte nicht gestartet werden.", Theme.colors.red)
         return
     end
-    if profile then profile.defaultRollDuration = duration end
+    if profile then
+        profile.defaultRollDuration = duration
+        profile.osRollMaximum = osMaximum
+    end
     self:UpdateSession(result)
     self:SetSessionActive(true)
     self:SetStatus("Session läuft. Antworten erscheinen unten in der Liste.", Theme.colors.green)
@@ -454,6 +488,9 @@ function MasterLooterWindow:UpdateSession(session)
     self:EnsureFrame()
     self.session = session
     self.sessionId = field(session, "id", "sessionId", "rollId")
+    if self.osMaximumEdit and session.osRollMaximum then
+        self.osMaximumEdit:SetText(tostring(session.osRollMaximum))
+    end
     local link = field(session, "itemLink", "link") or field(session.item, "link", "itemLink")
     if link then self:SetItem(link) end
     self:SetSessionActive(session.status == nil or session.status == "ACTIVE")

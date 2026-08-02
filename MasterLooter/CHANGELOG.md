@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.7-beta
+
+- OS-Wurfmaximum aus den allgemeinen Einstellungen direkt in das Lootmaster-Fenster verschoben
+- Der beim Sitzungsstart festgelegte OS-Wert wird autoritativ an alle Addon-Clients übertragen; lokale Teilnehmerwerte werden ignoriert
+- Teilnehmerbuttons zeigen den empfangenen Bereich als `MS (/100)` und `OS (/X)` an
+- Startansage nennt die Befehle ausdrücklich als `/roll 100 für MS. /roll X für OS.`
+
 ## 0.9.6-beta
 
 - Rolltracking auf öffentliche Blizzard-`/roll`-Ergebnisse umgestellt
