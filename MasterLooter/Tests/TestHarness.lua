@@ -543,4 +543,24 @@ local learned = itemNamespace:Get(9000001)
 same(learned.name, "Ascension Test Item", "learned item keeps its runtime name")
 same(itemNamespace:Search("ascension test", 5)[1].itemID, 9000001, "item search returns learned custom ID")
 
+-- Delayed events from a completed queue item must never disable the next item's buttons.
+aliceGA.UI = aliceGA.UI or {}
+aliceGA.UI.Theme = { colors = { muted = { 0.5, 0.5, 0.5, 1 }, green = { 0, 1, 0, 1 } } }
+alice.env.unpack = alice.env.unpack or table.unpack
+loadFile(alice, "UI/RollWindow.lua")
+local rollWindow = aliceGA.UI.RollWindow
+rollWindow.frame = { Hide = function() end }
+rollWindow.session, rollWindow.sessionId = {}, "queue-item-2"
+rollWindow.status = { SetText = function() end, SetTextColor = function() end }
+rollWindow.SetButtonsEnabled = function(self, enabled) self.lastButtonsEnabled = enabled end
+same(rollWindow:EndSession("AWARDED", { id = "queue-item-1" }), false,
+    "a delayed end event from the first queue item is ignored")
+same(rollWindow.lastButtonsEnabled, nil, "the second queue item's buttons stay enabled after a stale end event")
+same(rollWindow:Confirm({ name = "Alice", choice = "MS", roll = 88 }, { id = "queue-item-1" }), false,
+    "a delayed roll acknowledgement from the first queue item is ignored")
+same(rollWindow.lastButtonsEnabled, nil, "a stale acknowledgement cannot gray the second queue item's buttons")
+expect(rollWindow:EndSession("STOPPED", { id = "queue-item-2" }),
+    "the current queue item's own end event is still applied")
+same(rollWindow.lastButtonsEnabled, false, "the current queue item disables its buttons when it actually ends")
+
 print(string.format("PASS: %d assertions; two clients; Comm; rolls; rules; GDKP; items", assertions))

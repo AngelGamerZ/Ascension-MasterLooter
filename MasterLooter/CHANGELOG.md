@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.9-beta
+
+- Verspätete Ende-, Ergebnis- und Bestätigungsereignisse werden nur noch auf das Rollfenster ihrer eigenen Sitzungs-ID angewendet
+- Ein Ereignis des ersten Warteschlangen-Items kann die Buttons des bereits gestarteten zweiten Items nicht mehr deaktivieren
+- Regressionstest für zwei aufeinanderfolgende Warteschlangen-Items ergänzt
+
 ## 0.9.8-beta
 
 - Ascension-Systemmeldungen mit Leerzeichen im Bereich wie `Flexdeineex rolls 37 (1 - 100)` als Regressionstest ergänzt

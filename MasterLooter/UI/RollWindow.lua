@@ -137,6 +137,12 @@ function RollWindow:SetButtonsEnabled(enabled)
     end
 end
 
+function RollWindow:IsCurrentSession(subject)
+    if type(subject) ~= "table" or self.sessionId == nil then return false end
+    local id = value(subject, "id", "sessionId", "sessionID", "rollId")
+    return id ~= nil and tostring(id) == tostring(self.sessionId)
+end
+
 function RollWindow:ShowSession(session)
     if type(session) ~= "table" then return end
     local profile = GA.DB and GA.DB:GetProfile()
@@ -203,8 +209,9 @@ function RollWindow:Submit(choice)
     end
 end
 
-function RollWindow:EndSession(reason)
+function RollWindow:EndSession(reason, subject)
     if not self.frame or not self.session then return end
+    if subject and not self:IsCurrentSession(subject) then return false end
     self.endsAt = nil
     self:SetButtonsEnabled(false)
     local messages = {
@@ -217,10 +224,12 @@ function RollWindow:EndSession(reason)
     self.status:SetText(messages[reason] or (type(reason) == "string" and reason) or "Die Verteilung wurde beendet.")
     self.status:SetTextColor(unpack(Theme.colors.muted))
     if reason == "TIMEOUT" or reason == "TIMEOUT_LOCAL" or reason == "EXPIRED" then self.frame:Hide() end
+    return true
 end
 
-function RollWindow:Confirm(participant)
+function RollWindow:Confirm(participant, session)
     if type(participant) ~= "table" or not self.frame then return end
+    if session and not self:IsCurrentSession(session) then return false end
     local name = value(participant, "name", "player", "playerName")
     local me = type(UnitName) == "function" and UnitName("player") or nil
     if name and me and string.lower(string.match(name, "^[^-]+") or name) ~= string.lower(string.match(me, "^[^-]+") or me) then return end
@@ -229,6 +238,7 @@ function RollWindow:Confirm(participant)
     self.status:SetText(choice == "PASS" and "Passen wurde bestätigt." or ("Bestätigt: " .. choice .. " (" .. roll .. ")"))
     self.status:SetTextColor(unpack(Theme.colors.green))
     self:SetButtonsEnabled(false)
+    return true
 end
 
 
@@ -276,10 +286,10 @@ function RollWindow:Initialize()
         RollWindow:ShowSession(eventArgument("GA_ROLL_SESSION_STARTED", ...))
     end)
     registerMessage("GA_ROLL_SESSION_UPDATED", function(...)
-        local action, participant
-        if select(2, ...) == "GA_ROLL_SESSION_UPDATED" then action, participant = select(4, ...), select(5, ...)
-        elseif select(1, ...) == "GA_ROLL_SESSION_UPDATED" then action, participant = select(3, ...), select(4, ...) end
-        if action == "ROLL_ACK" then RollWindow:Confirm(participant) end
+        local state, action, participant
+        if select(2, ...) == "GA_ROLL_SESSION_UPDATED" then state, action, participant = select(3, ...), select(4, ...), select(5, ...)
+        elseif select(1, ...) == "GA_ROLL_SESSION_UPDATED" then state, action, participant = select(2, ...), select(3, ...), select(4, ...) end
+        if action == "ROLL_ACK" then RollWindow:Confirm(participant, state) end
     end)
     registerMessage("GA_PUBLIC_ROLL_SEEN", function(...)
         local state, participant
@@ -291,22 +301,22 @@ function RollWindow:Initialize()
         end
     end)
     registerMessage("GA_ROLL_SESSION_STOPPED", function(...)
-        local _, reason = eventArguments("GA_ROLL_SESSION_STOPPED", ...)
-        RollWindow:EndSession(reason)
+        local state, reason = eventArguments("GA_ROLL_SESSION_STOPPED", ...)
+        RollWindow:EndSession(reason, state)
     end)
     registerMessage("GA_ROLL_SESSION_ENDED", function(...)
-        local _, reason = eventArguments("GA_ROLL_SESSION_ENDED", ...)
-        RollWindow:EndSession(reason)
+        local state, reason = eventArguments("GA_ROLL_SESSION_ENDED", ...)
+        RollWindow:EndSession(reason, state)
     end)
     registerMessage("GA_ROLL_SESSION_AWARDED", function(...)
         local data = eventArgument("GA_ROLL_SESSION_AWARDED", ...)
         local winner = type(data) == "table" and value(data, "winner", "player") or data
-        RollWindow:EndSession(winner and ("Vergeben an " .. winner) or "Item wurde vergeben.")
+        RollWindow:EndSession(winner and ("Vergeben an " .. winner) or "Item wurde vergeben.", data)
     end)
     registerMessage("GA_ROLL_RESULT", function(...)
         local data = eventArgument("GA_ROLL_RESULT", ...)
         local winner = type(data) == "table" and value(data, "winner", "player") or nil
-        RollWindow:EndSession(winner and ("Vergeben an " .. winner) or "Item wurde vergeben.")
+        RollWindow:EndSession(winner and ("Vergeben an " .. winner) or "Item wurde vergeben.", data)
     end)
 end
 
