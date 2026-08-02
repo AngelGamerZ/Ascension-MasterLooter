@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.10-beta
+
+- **Erfasster Loot** aktualisiert sich bei Lootereignissen nur noch im Hintergrund und öffnet ausschließlich manuell über `/ml loot` oder das Minimap-Menü
+- Das zusätzliche MasterLooter-Gruppenlootfenster samt nativer Roll-Überlagerung entfernt
+- Bedarf, Gier, Entzaubern und Passen bei normalem Gruppenloot verbleiben vollständig bei der Blizzard-Oberfläche
+- Crafting, Entzaubern, Behälter und normales Aufsammeln öffnen kein MasterLooter-Lootfenster mehr
+
 ## 0.9.9-beta
 
 - Verspätete Ende-, Ergebnis- und Bestätigungsereignisse werden nur noch auf das Rollfenster ihrer eigenen Sitzungs-ID angewendet

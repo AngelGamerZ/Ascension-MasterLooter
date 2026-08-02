@@ -11,7 +11,7 @@ Der automatisierte Harness prüft die Lua- und Mehrclient-Logik außerhalb des S
 7. Trade abschließen und prüfen, dass erst die Ascension-Erfolgsmeldung den Eintrag als zugestellt markiert.
 8. SoftRes/HardRes, Priorität, +1 und Boost setzen; Rangfolge mit mindestens drei Spielern prüfen.
 9. GDKP-Sitzung und Auktion starten; Mindestschritt, Rebid und Anti-Snipe testen; `/reload` während aktiver GDKP-Sitzung prüfen.
-10. Einen nativen Gruppenloot-Wurf auslösen und Need/Greed/Disenchant/Pass testen.
+10. Einen nativen Gruppenloot-Wurf auslösen und prüfen, dass ausschließlich Blizzards Bedarf-/Gier-/Entzaubern-/Passen-Oberfläche erscheint.
 11. Raidverwaltung und Tascheninspektor nur mit Testcharakteren verwenden; alle Aktionen bleiben explizite Buttonklicks.
 12. Bei einem Ascension-Custom-Item die Suche zuerst ohne, dann mit installiertem Ascension AtlasLoot prüfen.
 

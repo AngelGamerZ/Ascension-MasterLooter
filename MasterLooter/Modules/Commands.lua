@@ -12,7 +12,7 @@ local WINDOWS = {
     loot = "LootWindow", trade = "TradeWindow", softres = "SoftResWindow",
     rules = "RulesWindow", gdkpui = "GDKPWindow", history = "HistoryWindow",
     auction = "GDKPAuctionWindow", raid = "RaidManagerWindow", version = "VersionWindow",
-    bags = "BagInspectorWindow", native = "NativeLootWindow", settings = "SettingsWindow", io = "ImportExportWindow",
+    bags = "BagInspectorWindow", settings = "SettingsWindow", io = "ImportExportWindow",
 }
 
 local function showWindow(key)
@@ -25,7 +25,7 @@ function Commands:Help()
     GA:Print("/ml – Lootmaster-Fenster | /ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
     GA:Print("/ml gdkp start|sale|finish | /ml version")
-    GA:Print("/ml loot|trade|softres|rules|gdkpui|auction|raid|version|bags|native|history|settings|io")
+    GA:Print("/ml loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
 
 function Commands:Handle(message)

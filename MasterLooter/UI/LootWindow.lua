@@ -119,7 +119,9 @@ function LootWindow:Hide() if self.frame then self.frame:Hide() end end
 function LootWindow:Toggle() local frame = self:EnsureFrame(); if frame:IsShown() then self:Hide() else self:Show() end end
 function LootWindow:OnInitialize()
     self:EnsureFrame()
-    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)); LootWindow.frame:Show() end, self)
+    -- Capture every loot source in the background. Opening this management
+    -- window is an explicit user action via /ml loot or the launcher menu.
+    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)

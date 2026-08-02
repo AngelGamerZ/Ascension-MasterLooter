@@ -17,7 +17,9 @@ Die Rollbuttons führen echte öffentliche Würfe aus: `MS` verwendet immer `/ro
 
 Der Eingabebereich prüft diesen Ablauf unmittelbar: **Roll starten** wird erst mit einem gültigen Item und einer Rollzeit zwischen 5 und 300 Sekunden aktiv. Die Zeit lässt sich in Fünf-Sekunden-Schritten ändern, die optionale Notiz ist auf 160 Zeichen begrenzt und ein Rechtsklick entfernt das abgelegte Item. Während eine Session läuft, sind die Eingaben gesperrt; Status- und Feldfarben zeigen Fehler, Versand und Abschluss verständlich an.
 
-Teilnehmer sehen MasterLooter- und native Gruppenloot-Rolls als kompakte, 560 Pixel breite Leiste im unteren Bildschirmbereich. Beide Oberflächen unterstützen ein ausdrückliches **Passen**, schließen bei Ablauf automatisch und verwenden eine versionierte Standardposition oberhalb des unteren Bildschirmrands. Der Masterlooter kündigt die verbleibende Zeit regelmäßig in Gruppe oder Raid an und zählt ab zehn Sekunden jede Sekunde herunter.
+Teilnehmer sehen MasterLooter-Rolls als kompakte, 560 Pixel breite Leiste im unteren Bildschirmbereich. Die Oberfläche unterstützt ein ausdrückliches **Passen**, schließt bei Ablauf automatisch und verwendet eine versionierte Standardposition oberhalb des unteren Bildschirmrands. Der Masterlooter kündigt die verbleibende Zeit regelmäßig in Gruppe oder Raid an und zählt ab zehn Sekunden jede Sekunde herunter. Normale Bedarf-/Gier-/Entzaubern-Würfe verbleiben vollständig in der Blizzard-Oberfläche.
+
+Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet sich ausschließlich manuell über `/ml loot` oder den Minimap-Menüpunkt **Loot**. Crafting, Entzaubern, Behälter und normales Aufsammeln öffnen es nicht automatisch.
 
 ## Module
 
@@ -27,7 +29,7 @@ Teilnehmer sehen MasterLooter- und native Gruppenloot-Rolls als kompakte, 560 Pi
 - SoftRes, HardRes, Prioritäten, +1 und Boosted Rolls
 - GDKP-Sitzungen, Verkäufe, Pot und Cuts
 - Synchronisierte GDKP-Auktionen mit Mindestschritt, Anti-Snipe und Replay-Schutz
-- Native Gruppenloot-Rolls, Raidverwaltung, Versionsprüfung und Tascheninspektor
+- Unveränderte Blizzard-Gruppenloot-Oberfläche sowie Raidverwaltung, Versionsprüfung und Tascheninspektor
 - Persistente Profile und Einstellungen
 - Optionaler, zur Laufzeit lernender Ascension-Itemindex
 

@@ -25,7 +25,7 @@ Screenshots and branding assets will be added to [`assets/`](assets/) later.
 npx --yes --package fengari-node-cli fengari .\MasterLooter\Tests\TestHarness.lua
 ```
 
-The current integration harness covers two isolated addon clients and 174 assertions across communication, queued rolls, awards, trades, rules, GDKP, auctions, bag inspection, and item data.
+The current integration harness covers two isolated addon clients and 158 assertions across communication, queued rolls, background loot capture, awards, trades, rules, GDKP, auctions, bag inspection, and item data. Blizzard's native group-loot UI is deliberately outside the addon.
 
 More details are available in [MasterLooter/README.md](MasterLooter/README.md).
 

@@ -135,7 +135,6 @@ local function loadAddon(client)
     loadFile(client, "Modules/BagInspector.lua")
     loadFile(client, "Modules/RollSession.lua")
     loadFile(client, "Modules/ChatRolls.lua")
-    loadFile(client, "Modules/NativeLootRoll.lua")
     loadFile(client, "Modules/Trade.lua")
     loadFile(client, "Modules/Award.lua")
     loadFile(client, "Modules/SoftRes.lua")
@@ -389,41 +388,6 @@ expect(bobGA.BagInspector:Request("Alice") == nil, "repeated bag request is rate
 expect(bobGA.BagInspector:Request("NotInRaid") == nil, "non-group bag request is rejected")
 expect(#bobGA.BagInspector:GetPlayers() >= 2, "bag inspector exposes the current group roster")
 
--- Native group-loot is observed only; RollOnLoot runs after an explicit call.
-local nativeActions, nativeStarted, nativeUpdated, nativeEnded = {}, 0, 0, 0
-alice.env.GetLootRollItemInfo = function(rollID)
-    if rollID == 77 then return "native-icon", "Native Test Item", 1, 4, true, true, true, true end
-    if rollID == 78 then return "native-icon", "Restricted Item", 1, 3, false, false, true, false, "Need blocked" end
-end
-alice.env.GetLootRollItemLink = function(rollID) return (rollID == 77 or rollID == 78) and itemLink or nil end
-alice.env.RollOnLoot = function(rollID, rollType) nativeActions[#nativeActions + 1] = { rollID, rollType } end
-aliceGA.Events:On("GA_NATIVE_ROLL_STARTED", function() nativeStarted = nativeStarted + 1 end)
-aliceGA.Events:On("GA_NATIVE_ROLL_UPDATED", function() nativeUpdated = nativeUpdated + 1 end)
-aliceGA.Events:On("GA_NATIVE_ROLL_ENDED", function() nativeEnded = nativeEnded + 1 end)
-fire(alice, "START_LOOT_ROLL", 77, 30000)
-same(#nativeActions, 0, "native roll start never performs an automatic action")
-local native = aliceGA.NativeLootRoll:GetActive()[1]
-same(native.rollID, 77, "native roll captures its roll id")
-same(native.link, itemLink, "native roll captures its item link")
-same(native.texture, "native-icon", "native roll captures its texture")
-same(native.quality, 4, "native roll captures item quality")
-expect(native.canNeed and native.canGreed and native.canDE, "native roll captures available choices")
-expect(native.canPass, "native roll always exposes an explicit pass choice")
-same(native.timeout, 30, "native roll converts timeout milliseconds to seconds")
-expect(aliceGA.NativeLootRoll:Roll(77, "DE"), "explicit disenchant choice calls RollOnLoot")
-same(nativeActions[1][1], 77, "native action keeps roll id")
-same(nativeActions[1][2], 3, "disenchant maps to the legacy roll type")
-expect(not aliceGA.NativeLootRoll:Roll(77, "NEED"), "native roll rejects a second choice")
-fire(alice, "CANCEL_LOOT_ROLL", 77)
-same(#aliceGA.NativeLootRoll:GetActive(), 0, "cancel removes the native roll")
-same(nativeStarted, 1, "native start event is emitted")
-same(nativeUpdated, 1, "native explicit choice emits update")
-same(nativeEnded, 1, "native cancel emits ended")
-fire(alice, "START_LOOT_ROLL", 78, 10000)
-expect(not aliceGA.NativeLootRoll:Roll(78, "NEED"), "unavailable need choice is rejected")
-expect(aliceGA.NativeLootRoll:Roll(78, "PASS"), "pass remains available through explicit UI action")
-same(nativeActions[#nativeActions][2], 0, "pass maps to the legacy roll type")
-fire(alice, "CANCEL_LOOT_ROLL", 78)
 fire(alice, "TRADE_CLOSED")
 same(aliceGA.Trade.state, "COMPLETED", "TRADE_CLOSED does not downgrade a confirmed completion")
 
@@ -562,5 +526,18 @@ same(rollWindow.lastButtonsEnabled, nil, "a stale acknowledgement cannot gray th
 expect(rollWindow:EndSession("STOPPED", { id = "queue-item-2" }),
     "the current queue item's own end event is still applied")
 same(rollWindow.lastButtonsEnabled, false, "the current queue item disables its buttons when it actually ends")
+
+-- Loot capture stays in the background until the user explicitly opens its window.
+loadFile(alice, "UI/LootWindow.lua")
+local lootWindow, lootRefreshes, lootShows = aliceGA.UI.LootWindow, 0, 0
+lootWindow.frame = { Show = function() lootShows = lootShows + 1 end }
+lootWindow.EnsureFrame = function(self) return self.frame end
+lootWindow.Refresh = function() lootRefreshes = lootRefreshes + 1 end
+lootWindow:OnInitialize()
+aliceGA.Events:Emit("GA_LOOT_OPENED", { open = true, order = {}, slots = {} })
+same(lootRefreshes, 1, "opening any loot source refreshes the captured snapshot in the background")
+same(lootShows, 0, "crafting, disenchanting and ordinary loot never auto-open the captured-loot window")
+lootWindow:Show()
+same(lootShows, 1, "the captured-loot window remains available through an explicit user action")
 
 print(string.format("PASS: %d assertions; two clients; Comm; rolls; rules; GDKP; items", assertions))
