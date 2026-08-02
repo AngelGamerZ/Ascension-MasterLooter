@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4-beta
+
+- Beide Rollfenster auf 560×124 Pixel reduziert und standardmäßig weiter nach oben auf `BOTTOM +105` gesetzt
+- Neue Positionsversion überschreibt die zu tiefe Beta-Standardposition
+- Teilnehmerfenster schließen beim Ablauf der Rollzeit automatisch
+- Der Host beendet die Sitzung bei null verbindlich für alle verbundenen Clients
+- Gruppen-/Raidankündigungen bei 30-Sekunden-Intervallen, 20, 15 und ab 10 jede Sekunde
+- Eingehende MS-, OS- und Pass-Antworten erscheinen unmittelbar mit Spielername und Wurf beim Masterlooter
+- Gültige Würfe bleiben beim Host erhalten, selbst wenn der Bestätigungs-Whisper vorübergehend scheitert
+
 ## 0.9.3-beta
 
 - MasterLooter- und native Gruppenloot-Rollfenster auf kompakte 720×124 Pixel reduziert

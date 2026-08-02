@@ -59,9 +59,9 @@ function NativeLootWindow:EnsureFrame()
     if self.frame then return self.frame end
     if not Theme then return nil end
     local frame = CreateFrame("Frame", "MasterLooterNativeLootWindow", UIParent)
-    frame:SetWidth(720); frame:SetHeight(124); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
+    frame:SetWidth(560); frame:SetHeight(124); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
     Theme:ApplyPanel(frame); Theme:AddTitle(frame, "Gruppenloot")
-    Theme:MakeMovable(frame, "nativeLootWindowCompactV2"); Theme:RestorePosition(frame, "nativeLootWindowCompactV2", "BOTTOM", 0, 45); Theme:RegisterForEscape(frame); self.frame = frame
+    Theme:MakeMovable(frame, "nativeLootWindowCompactV3"); Theme:RestorePosition(frame, "nativeLootWindowCompactV3", "BOTTOM", 0, 105); Theme:RegisterForEscape(frame); self.frame = frame
 
     local previous = Theme:CreateButton(frame, "<", 24, 20); previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -39); previous:SetScript("OnClick", function() NativeLootWindow:Previous() end); self.previousButton = previous
     local page = Theme:CreateLabel(frame, "0 / 0", 10, Theme.colors.muted); page:SetPoint("LEFT", previous, "RIGHT", 3, 0); page:SetWidth(42); page:SetJustifyH("CENTER"); self.pageLabel = page
@@ -75,12 +75,12 @@ function NativeLootWindow:EnsureFrame()
 
     self.buttons = {}
     for index, choice in ipairs(CHOICES) do
-        local button = Theme:CreateButton(frame, choice.text, 88, 24)
-        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20 + ((index - 1) * 92), 13)
+        local button = Theme:CreateButton(frame, choice.text, 82, 24)
+        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18 + ((index - 1) * 86), 13)
         button:SetScript("OnClick", function() NativeLootWindow:Submit(choice.key) end)
         button:Disable(); self.buttons[choice.key] = button
     end
-    local hint = Theme:CreateLabel(frame, "Nicht verfügbare Optionen bleiben deaktiviert.", 10, Theme.colors.muted); hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 398, 19); hint:SetPoint("RIGHT", frame, "RIGHT", -18, 0); hint:SetJustifyH("RIGHT")
+    local hint = Theme:CreateLabel(frame, "Nicht verfügbare Optionen bleiben deaktiviert.", 10, Theme.colors.muted); hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 365, 19); hint:SetPoint("RIGHT", frame, "RIGHT", -18, 0); hint:SetJustifyH("RIGHT")
     frame:SetScript("OnUpdate", function(_, elapsed) NativeLootWindow:OnUpdate(elapsed) end)
     return frame
 end
@@ -151,7 +151,7 @@ function NativeLootWindow:OnUpdate(elapsed)
     if not self.endsAt or not self.frame:IsShown() then return end
     self.elapsed = (self.elapsed or 0) + elapsed; if self.elapsed < 0.1 then return end; self.elapsed = 0
     local remaining = self.endsAt - GetTime(); self.timerLabel:SetText(Theme:FormatTime(remaining))
-    if remaining <= 0 then self.endsAt = nil; self:RefreshActive() end
+    if remaining <= 0 then self.endsAt = nil; self.frame:Hide() end
 end
 
 function NativeLootWindow:Show() local frame = self:EnsureFrame(); if frame then self:RefreshActive(); frame:Show() end end
@@ -161,7 +161,10 @@ function NativeLootWindow:OnInitialize()
     self:EnsureFrame()
     GA.Events:On("GA_NATIVE_ROLL_STARTED", function(_, _, state) NativeLootWindow:RefreshActive(state and field(state, "rollID", "id", "rollId"), state); NativeLootWindow.frame:Show() end, self)
     GA.Events:On("GA_NATIVE_ROLL_UPDATED", function(_, _, state) NativeLootWindow:RefreshActive(state and field(state, "rollID", "id", "rollId"), state) end, self)
-    GA.Events:On("GA_NATIVE_ROLL_ENDED", function() NativeLootWindow:RefreshActive() end, self)
+    GA.Events:On("GA_NATIVE_ROLL_ENDED", function()
+        NativeLootWindow:RefreshActive()
+        if #NativeLootWindow.active == 0 then NativeLootWindow.frame:Hide() end
+    end, self)
     return true
 end
 

@@ -47,13 +47,14 @@ local function getRolls(session)
     local result = {}
     for key, roll in pairs(rolls) do
         if type(roll) == "table" then
-            table.insert(result, {
+            local choice = field(roll, "choice", "category", "type")
+            if choice then table.insert(result, {
                 player = field(roll, "player", "name", "playerName") or (type(key) == "string" and key) or "?",
-                choice = field(roll, "choice", "category", "type") or "-",
+                choice = choice,
                 roll = tonumber(field(roll, "roll", "value", "number")) or 0,
                 effectiveRoll = tonumber(field(roll, "effectiveRoll")) or tonumber(field(roll, "roll", "value", "number")) or 0,
                 raw = roll,
-            })
+            }) end
         else
             table.insert(result, { player = tostring(key), choice = tostring(roll), roll = 0, raw = roll })
         end
@@ -72,6 +73,29 @@ local function getRolls(session)
         if type(entry.raw) == "table" then entry.effectiveRoll = tonumber(entry.raw.effectiveRoll) or entry.roll end
     end
     return result
+end
+
+local function sessionUpdateArguments(...)
+    if select(2, ...) == "GA_ROLL_SESSION_UPDATED" then return select(3, ...), select(4, ...), select(5, ...) end
+    if select(1, ...) == "GA_ROLL_SESSION_UPDATED" then return select(2, ...), select(3, ...), select(4, ...) end
+    local state, action, participant
+    for index = 1, select("#", ...) do
+        local candidate = select(index, ...)
+        if not state and type(candidate) == "table" and candidate.participants then state = candidate
+        elseif state and not action and type(candidate) == "string" then action = candidate
+        elseif state and action and type(candidate) == "table" then participant = candidate; break end
+    end
+    return state, action, participant
+end
+
+function MasterLooterWindow:ShowParticipantResponse(action, participant)
+    if type(participant) ~= "table" or (action ~= "ROLL" and action ~= "PASS") then return end
+    local name = field(participant, "name", "player", "playerName") or "Unbekannt"
+    local choice = field(participant, "choice", "category") or action
+    local labels = { MS = "Haupt-Skill", OS = "Neben-Skill", PASS = "Passen" }
+    local roll = tonumber(field(participant, "roll", "value")) or 0
+    local suffix = choice ~= "PASS" and roll > 0 and (" – " .. tostring(roll)) or ""
+    self:SetStatus(name .. ": " .. (labels[choice] or tostring(choice)) .. suffix, Theme.colors.green)
 end
 
 function MasterLooterWindow:EnsureFrame()
@@ -523,7 +547,9 @@ function MasterLooterWindow:Initialize()
     end)
     registerMessage("GA_LOOT_OPENED", function() MasterLooterWindow:HookLootButtons() end)
     local update = function(...)
-        MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_UPDATED", ...))
+        local state, action, participant = sessionUpdateArguments(...)
+        MasterLooterWindow:UpdateSession(state)
+        MasterLooterWindow:ShowParticipantResponse(action, participant)
     end
     registerMessage("GA_ROLL_SESSION_UPDATED", update)
     local stopped = function()

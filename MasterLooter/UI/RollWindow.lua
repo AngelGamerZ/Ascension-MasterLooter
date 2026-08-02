@@ -57,15 +57,15 @@ function RollWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterRollWindow", UIParent)
-    frame:SetWidth(720)
+    frame:SetWidth(560)
     frame:SetHeight(124)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     Theme:AddTitle(frame, "Beuteverteilung")
-    Theme:MakeMovable(frame, "rollWindowCompactV2")
-    Theme:RestorePosition(frame, "rollWindowCompactV2", "BOTTOM", 0, 45)
+    Theme:MakeMovable(frame, "rollWindowCompactV3")
+    Theme:RestorePosition(frame, "rollWindowCompactV3", "BOTTOM", 0, 105)
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
@@ -80,7 +80,7 @@ function RollWindow:EnsureFrame()
 
     local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 12)
     item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -1)
-    item:SetPoint("RIGHT", frame, "RIGHT", -90, 0)
+    item:SetPoint("RIGHT", frame, "RIGHT", -80, 0)
     item:SetHeight(16)
     item:SetJustifyV("TOP")
     item:SetWordWrap(false)
@@ -88,7 +88,7 @@ function RollWindow:EnsureFrame()
 
     local note = Theme:CreateLabel(frame, "", 10, Theme.colors.muted)
     note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -18)
-    note:SetPoint("RIGHT", frame, "RIGHT", -90, 0)
+    note:SetPoint("RIGHT", frame, "RIGHT", -80, 0)
     note:SetHeight(14)
     note:SetWordWrap(false)
     self.note = note
@@ -104,20 +104,20 @@ function RollWindow:EnsureFrame()
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "Haupt-Skill", x = 20 },
-        { key = "OS", text = "Neben-Skill", x = 122 },
-        { key = "PASS", text = "Passen", x = 224 },
+        { key = "MS", text = "Haupt-Skill", x = 18 },
+        { key = "OS", text = "Neben-Skill", x = 112 },
+        { key = "PASS", text = "Passen", x = 206 },
     }
     self.buttons = {}
     for _, definition in ipairs(buttons) do
-        local button = Theme:CreateButton(frame, definition.text, 98, 24)
+        local button = Theme:CreateButton(frame, definition.text, 90, 24)
         button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", definition.x, 13)
         button:SetScript("OnClick", function() RollWindow:Submit(definition.key) end)
         self.buttons[definition.key] = button
     end
 
     local status = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 338, 18)
+    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 306, 18)
     status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 18)
     status:SetJustifyH("RIGHT")
     self.status = status
@@ -193,9 +193,12 @@ function RollWindow:EndSession(reason)
         AWARDED = "Item wurde vergeben.",
         STOPPED = "Die Verteilung wurde gestoppt.",
         EXPIRED = "Zeit abgelaufen.",
+        TIMEOUT = "Zeit abgelaufen.",
+        TIMEOUT_LOCAL = "Zeit abgelaufen.",
     }
     self.status:SetText(messages[reason] or (type(reason) == "string" and reason) or "Die Verteilung wurde beendet.")
     self.status:SetTextColor(unpack(Theme.colors.muted))
+    if reason == "TIMEOUT" or reason == "TIMEOUT_LOCAL" or reason == "EXPIRED" then self.frame:Hide() end
 end
 
 function RollWindow:Confirm(participant)
@@ -235,6 +238,7 @@ function RollWindow:UpdateTimer()
         self:SetButtonsEnabled(false)
         self.status:SetText("Zeit abgelaufen.")
         self.status:SetTextColor(unpack(Theme.colors.red))
+        self.frame:Hide()
     end
 end
 

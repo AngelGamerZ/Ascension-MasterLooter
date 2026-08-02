@@ -3,7 +3,7 @@ local _, GA = ...
 
 local Announcements = { lastSent = -1000, minimumInterval = 0.5 }
 GA.Announcements = Announcements
-local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, award = true, channel = "AUTO" }
+local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, countdown = true, award = true, channel = "AUTO" }
 
 local function baseName(name)
     return type(name) == "string" and string.lower(string.match(name, "^[^-]+") or name) or ""
@@ -94,12 +94,40 @@ function Announcements:OnRollStarted(state)
         self:Send("Roll für " .. itemDescription(state) .. " gestartet - " .. tostring(state.duration or 30) ..
             " Sekunden. Bitte im MasterLooter-Fenster wählen.")
     end
+    if isOwner(state) then
+        self.activeRoll = state
+        self.lastCountdownSecond = math.ceil(tonumber(state.duration) or 30)
+    end
 end
 
 function Announcements:OnRollEnded(state, reason)
     local config = self:GetConfig()
     if config.rollStop and isOwner(state) and reason ~= "AWARDED" then
         self:Send(STOP_REASON[reason] or ("Die Verteilung wurde beendet: " .. tostring(reason or "unbekannt")))
+    end
+    if self.activeRoll and state and self.activeRoll.id == state.id then
+        self.activeRoll, self.lastCountdownSecond = nil, nil
+    end
+end
+
+local function shouldAnnounceSecond(second)
+    if second < 1 then return false end
+    if second <= 10 then return true end
+    if second == 15 or second == 20 then return true end
+    return second >= 30 and math.mod(second, 30) == 0
+end
+
+function Announcements:Tick()
+    local state = self.activeRoll
+    if not state or state.status ~= "ACTIVE" or not isOwner(state) then return end
+    if not self:GetConfig().countdown then return end
+    local current = (GetTime and GetTime()) or 0
+    local remaining = math.max(0, math.ceil((tonumber(state.expiresAt) or current) - current))
+    if remaining == self.lastCountdownSecond then return end
+    self.lastCountdownSecond = remaining
+    if shouldAnnounceSecond(remaining) then
+        self:Send("Noch " .. tostring(remaining) .. " Sekunde" .. (remaining == 1 and "" or "n") ..
+            " für " .. itemDescription(state) .. ".")
     end
 end
 
@@ -119,6 +147,12 @@ function Announcements:OnInitialize()
     GA.Events:On("GA_ROLL_SESSION_STARTED", function(_, _, state) Announcements:OnRollStarted(state) end, self)
     GA.Events:On("GA_ROLL_SESSION_ENDED", function(_, _, state, reason) Announcements:OnRollEnded(state, reason) end, self)
     GA.Events:On("GA_ROLL_RESULT", function(_, _, result, state) Announcements:OnAward(result, state) end, self)
+    self.frame = self.frame or CreateFrame("Frame")
+    local elapsed = 0
+    self.frame:SetScript("OnUpdate", function(_, delta)
+        elapsed = elapsed + delta
+        if elapsed >= 0.1 then elapsed = 0; Announcements:Tick() end
+    end)
     return true
 end
 

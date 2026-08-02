@@ -67,7 +67,7 @@ local function deliver(prefix, payload, channel, sender, target)
 end
 
 local function makeClient(name, savedDB)
-    local client = { name = name, now = 100, frames = {}, prefixes = {} }
+    local client = { name = name, now = 100, frames = {}, prefixes = {}, chatMessages = {} }
     local env = { _G = false }
     env._G = env
     setmetatable(env, { __index = hostGlobal })
@@ -103,6 +103,9 @@ local function makeClient(name, savedDB)
     end
     env.SendAddonMessage = function(prefix, payload, channel, target)
         deliver(prefix, payload, channel, client, target)
+    end
+    env.SendChatMessage = function(message, channel)
+        client.chatMessages[#client.chatMessages + 1] = { message = message, channel = channel }
     end
 
     clients[#clients + 1] = client
@@ -252,6 +255,20 @@ same(bobGA.RollSession:GetState(submitSession.id).participants.bob, nil, "failed
 bob.env.SendAddonMessage = originalBobSend
 expect(aliceGA.RollSession:Stop(submitSession.id, "TEST"), "submit rollback session stops")
 
+local ackFailureSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
+local originalAckSend = alice.env.SendAddonMessage
+alice.env.SendAddonMessage = function() error("simulated ACK transport failure") end
+local pendingAckRoll = bobGA.RollSession:SubmitRoll(ackFailureSession.id, "OS")
+expect(pendingAckRoll and pendingAckRoll.pending, "participant remains pending while the host ACK is unavailable")
+local hostRecordedRoll = aliceGA.RollSession:GetState(ackFailureSession.id).participants.bob
+expect(hostRecordedRoll ~= nil, "host keeps a valid roll even when its ACK whisper fails")
+same(hostRecordedRoll.choice, "OS", "host UI state retains the choice across ACK failure")
+alice.env.SendAddonMessage = originalAckSend
+advance(bob, bobGA.RollSession.ACK_RETRY_INTERVAL)
+expect(not bobGA.RollSession:GetState(ackFailureSession.id).participants.bob.pending,
+    "participant retry receives the cached authoritative ACK")
+expect(aliceGA.RollSession:Stop(ackFailureSession.id, "TEST"), "ACK failure test session stops")
+
 local passSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
 local passed, passError = bobGA.RollSession:Pass(passSession.id)
 expect(passed ~= nil, passError or "remote client explicitly passes")
@@ -281,6 +298,24 @@ expect(math.abs((remoteClockSession.expiresAt - bob.now) - 1.25) < 0.001,
 same(remoteClockSession.timeSource, "GetTime", "synced deadline documents its monotonic clock source")
 expect(aliceGA.RollSession:Stop(clockSession.id, "TEST"), "clock-skew session stops cleanly")
 alice.now, bob.now = 6000, 6000 -- keep subsequent integration scenarios on one forward-moving clock
+
+-- The authority posts periodic countdowns and closes the session for every client at zero.
+local chatStart = #alice.chatMessages
+local countdownSession = aliceGA.RollSession:Start(itemLink, { duration = 12 })
+for _ = 1, 12 do advance(alice, 1) end
+same(countdownSession.status, "STOPPED", "host closes the roll session when its deadline expires")
+same(bobGA.RollSession:GetState(countdownSession.id).status, "STOPPED", "timeout closes the remote roll session")
+local countdownSeen, finalSecondSeen, timeoutSeen = false, false, false
+for index = chatStart + 1, #alice.chatMessages do
+    local message = alice.chatMessages[index].message
+    if string.find(message, "Noch 10 Sekunden", 1, true) then countdownSeen = true end
+    if string.find(message, "Noch 1 Sekunde", 1, true) then finalSecondSeen = true end
+    if string.find(message, "abgelaufen", 1, true) then timeoutSeen = true end
+end
+expect(countdownSeen, "group announcements begin a per-second countdown at ten")
+expect(finalSecondSeen, "group announcements include the final second")
+expect(timeoutSeen, "group announcements report the timeout")
+bob.now = alice.now
 
 -- A pending award follows through the observed 3.3.5 trade lifecycle.
 alice.target = "Bob"

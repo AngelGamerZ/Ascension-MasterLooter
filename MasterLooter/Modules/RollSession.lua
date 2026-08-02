@@ -401,11 +401,13 @@ local function receiveRoll(fields, sender)
     local participant = { name = sender, choice = choice, roll = roll, note = note,
         passed = choice == "PASS", pending = false, authoritativeRoll = state.rollAssignments[key],
         sequence = seq, updatedAt = GetTimeSafe(), acknowledged = true }
-    local packet = sendRollAck(state, participant, sender)
-    if not packet then return end
     state.participantSequences[key] = seq
     state.participants[key] = participant
     emit("GA_ROLL_SESSION_UPDATED", state, choice == "PASS" and "PASS" or "ROLL", participant)
+    -- The host response is authoritative as soon as the ROLL packet is valid.
+    -- A failed whisper ACK must not make the roll disappear from the lootmaster UI;
+    -- the participant retry will request the same ACK again without rerolling.
+    sendRollAck(state, participant, sender)
 end
 
 local function receiveRollAck(fields, sender)
