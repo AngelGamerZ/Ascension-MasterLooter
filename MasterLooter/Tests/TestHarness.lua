@@ -73,6 +73,7 @@ local function makeClient(name, savedDB)
     setmetatable(env, { __index = hostGlobal })
     client.env = env
     env.MasterLooterDB = savedDB
+    env.RANDOM_ROLL_RESULT = "%s rolls %d (%d-%d)"
 
     env.DEFAULT_CHAT_FRAME = { AddMessage = function() end }
     env.SlashCmdList = {}
@@ -133,6 +134,7 @@ local function loadAddon(client)
     loadFile(client, "Modules/Comm.lua")
     loadFile(client, "Modules/BagInspector.lua")
     loadFile(client, "Modules/RollSession.lua")
+    loadFile(client, "Modules/ChatRolls.lua")
     loadFile(client, "Modules/NativeLootRoll.lua")
     loadFile(client, "Modules/Trade.lua")
     loadFile(client, "Modules/Award.lua")
@@ -279,6 +281,29 @@ expect(hostPass.passed, "pass participant is marked as passed")
 expect(not passed.pending, "pass acknowledgement clears the participant pending state")
 expect(aliceGA.RollSession:Stop(passSession.id, "TEST"), "pass test session stops")
 
+-- Public Blizzard /roll messages allow group members without the addon to participate.
+local publicMSSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+same(bobGA.RollSession:GetState(publicMSSession.id).osRollMaximum, 42, "START synchronizes the configured OS maximum")
+fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 87 (1-100)")
+local publicMS = aliceGA.RollSession:GetState(publicMSSession.id).participants.bob
+same(publicMS.choice, "MS", "/roll 100 is classified as MS")
+same(publicMS.roll, 87, "public MS preserves the Blizzard roll result")
+expect(publicMS.publicRoll, "public MS is marked as a chat-tracked roll")
+expect(aliceGA.RollSession:Stop(publicMSSession.id, "TEST"), "public MS session stops")
+
+local publicOSSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 31 (1-99)")
+same(aliceGA.RollSession:GetState(publicOSSession.id).participants.bob.choice, nil,
+    "a roll with the wrong maximum is ignored")
+fire(alice, "CHAT_MSG_SYSTEM", "Bob würfelt. Ergebnis: 31 (1-42)")
+local publicOS = aliceGA.RollSession:GetState(publicOSSession.id).participants.bob
+same(publicOS.choice, "OS", "configured /roll X is classified as OS")
+same(publicOS.maximum, 42, "public OS records its configured range")
+fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 41 (1-42)")
+same(aliceGA.RollSession:GetState(publicOSSession.id).participants.bob.roll, 31,
+    "a second public roll cannot replace the first accepted result")
+expect(aliceGA.RollSession:Stop(publicOSSession.id, "TEST"), "public OS session stops")
+
 -- Roll deadlines are local monotonic GetTime values, never transmitted wall-clock timestamps.
 alice.now, bob.now = 5000, 20
 local clockSession = aliceGA.RollSession:Start(itemLink, { duration = 20 })
@@ -301,17 +326,21 @@ alice.now, bob.now = 6000, 6000 -- keep subsequent integration scenarios on one 
 
 -- The authority posts periodic countdowns and closes the session for every client at zero.
 local chatStart = #alice.chatMessages
-local countdownSession = aliceGA.RollSession:Start(itemLink, { duration = 12 })
-for _ = 1, 12 do advance(alice, 1) end
+local countdownSession = aliceGA.RollSession:Start(itemLink, { duration = 60, osRollMaximum = 42 })
+for _ = 1, 60 do advance(alice, 1) end
 same(countdownSession.status, "STOPPED", "host closes the roll session when its deadline expires")
 same(bobGA.RollSession:GetState(countdownSession.id).status, "STOPPED", "timeout closes the remote roll session")
-local countdownSeen, finalSecondSeen, timeoutSeen = false, false, false
+local intervalSeen, countdownSeen, finalSecondSeen, timeoutSeen, instructionsSeen = false, false, false, false, false
 for index = chatStart + 1, #alice.chatMessages do
     local message = alice.chatMessages[index].message
+    if string.find(message, "MS: /roll 100, OS: /roll 42", 1, true) then instructionsSeen = true end
+    if string.find(message, "Noch 50 Sekunden", 1, true) then intervalSeen = true end
     if string.find(message, "Noch 10 Sekunden", 1, true) then countdownSeen = true end
     if string.find(message, "Noch 1 Sekunde", 1, true) then finalSecondSeen = true end
     if string.find(message, "abgelaufen", 1, true) then timeoutSeen = true end
 end
+expect(instructionsSeen, "roll start announcement names the public MS and configured OS commands")
+expect(intervalSeen, "a 60-second roll posts ten-second interval reminders")
 expect(countdownSeen, "group announcements begin a per-second countdown at ten")
 expect(finalSecondSeen, "group announcements include the final second")
 expect(timeoutSeen, "group announcements report the timeout")

@@ -414,10 +414,12 @@ function MasterLooterWindow:StartSession()
     self.sessionStarting = true
     self:RefreshInputState(false)
     self:SetStatus("Session wird an die Gruppe gesendet …", Theme.colors.gold)
+    local profile = GA.DB and GA.DB:GetProfile()
     local ok, result, errorMessage = pcall(method, manager, itemLink, {
         duration = duration,
         note = note,
         choices = { "MS", "OS", "PASS" },
+        osRollMaximum = profile and profile.osRollMaximum or 99,
     })
     if not ok or result == nil or result == false then
         self.sessionStarting = false
@@ -425,7 +427,6 @@ function MasterLooterWindow:StartSession()
         self:SetStatus((not ok and result) or errorMessage or "Session konnte nicht gestartet werden.", Theme.colors.red)
         return
     end
-    local profile = GA.DB and GA.DB:GetProfile()
     if profile then profile.defaultRollDuration = duration end
     self:UpdateSession(result)
     self:SetSessionActive(true)

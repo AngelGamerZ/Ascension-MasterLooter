@@ -5,7 +5,7 @@ MasterLooter ist eine eigenständige Neuimplementierung für Ascension/WoW 3.3.5
 ## In der Beta vorhanden
 
 - Synchronisierte Loot-Sitzungen mit automatischem Teilnehmerfenster
-- MS, OS und Passen, serverseitig koordinierte Würfe und Gewinnerauswahl
+- MS, OS und Passen mit öffentlichen `/roll`-Ergebnissen, Teilnahme ohne Addon und Gewinnerauswahl
 - Loot-Erfassung, direkte Masterloot-Vergabe und Award-Historie
 - Trade- und PackMule-Warteschlangen
 - SoftRes, HardRes, Prioritäten, +1 und Boosted Rolls

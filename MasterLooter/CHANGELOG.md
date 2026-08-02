@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.6-beta
+
+- Rolltracking auf öffentliche Blizzard-`/roll`-Ergebnisse umgestellt
+- `MS` verwendet immer `/roll 100`; `OS` verwendet ein konfigurierbares Maximum zwischen 2 und 99
+- Spieler ohne MasterLooter können mit den angekündigten Befehlen vollständig an MS-/OS-Würfen teilnehmen
+- Deutsche und englische `CHAT_MSG_SYSTEM`-Wurfmeldungen werden ausgewertet
+- Der erste gültige Wurf pro Spieler wird übernommen; falsche Bereiche und Wiederholungswürfe werden ignoriert
+- Startansage enthält die aktuellen MS-/OS-Befehle
+- Bei mehr als zehn verbleibenden Sekunden erfolgt alle zehn Sekunden eine Erinnerung, danach jede Sekunde
+- Netzwerkprotokoll auf Version 3 erweitert und OS-Maximum zwischen Clients synchronisiert
+
 ## 0.9.5-beta
 
 - Sichtbare Rolloptionen von `Haupt-Skill` und `Neben-Skill` auf die üblichen Kurzformen `MS` und `OS` geändert

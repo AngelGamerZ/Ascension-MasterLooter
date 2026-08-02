@@ -12,6 +12,10 @@ local function now()
     return type(GetTime) == "function" and GetTime() or 0
 end
 
+local function baseName(name)
+    return type(name) == "string" and string.lower(string.match(name, "^[^-]+") or name) or ""
+end
+
 local function value(source, ...)
     if type(source) ~= "table" then return nil end
     for i = 1, select("#", ...) do
@@ -143,6 +147,7 @@ function RollWindow:ShowSession(session)
     self.sessionId = value(session, "id", "sessionId", "rollId")
     self.itemLink = value(session, "itemLink", "link") or value(session.item, "link", "itemLink")
     local duration = tonumber(value(session, "duration", "seconds", "timeout")) or 30
+    self.osRollMaximum = math.max(2, math.min(99, math.floor(tonumber(value(session, "osRollMaximum", "osMaximum")) or 99)))
     self.endsAt = tonumber(value(session, "endsAt", "endTime", "expiresAt")) or (now() + duration)
     self.elapsed = 0
 
@@ -166,21 +171,32 @@ end
 function RollWindow:Submit(choice)
     if not self.session then return end
     local manager = GA.RollSession
-    local ok, result
-    if type(manager) == "table" then
-        if choice == "PASS" and type(manager.Pass) == "function" then
-            ok, result = pcall(manager.Pass, manager, self.sessionId)
-        elseif type(manager.SubmitRoll) == "function" then
-            ok, result = pcall(manager.SubmitRoll, manager, self.sessionId, choice)
+    if choice == "PASS" then
+        local ok, result = type(manager) == "table" and type(manager.Pass) == "function" and
+            pcall(manager.Pass, manager, self.sessionId)
+        if ok and result ~= nil and result ~= false then
+            self.status:SetText("Du hast gepasst.")
+            self.status:SetTextColor(unpack(Theme.colors.green))
+            self:SetButtonsEnabled(false)
+        else
+            self.status:SetText("Passen konnte nicht gesendet werden.")
+            self.status:SetTextColor(unpack(Theme.colors.red))
         end
+        return
     end
-
-    if ok and result ~= nil and result ~= false then
-        self.status:SetText(choice == "PASS" and "Du hast gepasst." or ("Gesendet: " .. choice))
+    local maximum = choice == "MS" and 100 or (choice == "OS" and self.osRollMaximum)
+    if not maximum or type(RandomRoll) ~= "function" then
+        self.status:SetText("Die /roll-Funktion ist nicht verfügbar.")
+        self.status:SetTextColor(unpack(Theme.colors.red))
+        return
+    end
+    local ok = pcall(RandomRoll, 1, maximum)
+    if ok then
+        self.status:SetText("/roll " .. tostring(maximum) .. " ausgeführt – warte auf das Ergebnis.")
         self.status:SetTextColor(unpack(Theme.colors.green))
         self:SetButtonsEnabled(false)
     else
-        self.status:SetText("Antwort konnte nicht gesendet werden.")
+        self.status:SetText("Der öffentliche Wurf konnte nicht ausgeführt werden.")
         self.status:SetTextColor(unpack(Theme.colors.red))
     end
 end
@@ -262,6 +278,15 @@ function RollWindow:Initialize()
         if select(2, ...) == "GA_ROLL_SESSION_UPDATED" then action, participant = select(4, ...), select(5, ...)
         elseif select(1, ...) == "GA_ROLL_SESSION_UPDATED" then action, participant = select(3, ...), select(4, ...) end
         if action == "ROLL_ACK" then RollWindow:Confirm(participant) end
+    end)
+    registerMessage("GA_PUBLIC_ROLL_SEEN", function(...)
+        local state, participant
+        if select(2, ...) == "GA_PUBLIC_ROLL_SEEN" then state, participant = select(3, ...), select(4, ...)
+        elseif select(1, ...) == "GA_PUBLIC_ROLL_SEEN" then state, participant = select(2, ...), select(3, ...) end
+        if state and participant and tostring(value(state, "id", "sessionId")) == tostring(RollWindow.sessionId) and
+            baseName(value(participant, "name", "player")) == baseName(UnitName("player")) then
+            RollWindow:Confirm(participant)
+        end
     end)
     registerMessage("GA_ROLL_SESSION_STOPPED", function(...)
         local _, reason = eventArguments("GA_ROLL_SESSION_STOPPED", ...)

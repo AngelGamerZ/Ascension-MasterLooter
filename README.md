@@ -11,7 +11,7 @@ Copy both folders into `Interface/AddOns/`:
 - `MasterLooter`
 - `MasterLooter_ItemData`
 
-All group members need the main addon for synchronized roll windows. The ItemData addon is optional.
+Players need the main addon for synchronized roll windows, but group members without it can participate through the announced public `/roll` commands. The ItemData addon is optional.
 
 Open the addon with `/ml` or `/masterlooter`.
 

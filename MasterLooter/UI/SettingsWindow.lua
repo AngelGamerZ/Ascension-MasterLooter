@@ -49,7 +49,7 @@ function SettingsWindow:EnsureFrame()
 
     local frame = CreateFrame("Frame", "MasterLooterSettingsWindow", UIParent)
     frame:SetWidth(455)
-    frame:SetHeight(450)
+    frame:SetHeight(480)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
@@ -76,14 +76,23 @@ function SettingsWindow:EnsureFrame()
     local seconds = Theme:CreateLabel(frame, "Sekunden", 12, Theme.colors.muted)
     seconds:SetPoint("LEFT", duration, "RIGHT", 8, 0)
 
+    local osLabel = Theme:CreateLabel(frame, "OS-Wurfmaximum (/roll X)", 12)
+    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -247)
+    local osMaximum = Theme:CreateEditBox(frame, 55, 24, true)
+    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", 269, -240)
+    if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
+    self.osMaximumEdit = osMaximum
+    local osHint = Theme:CreateLabel(frame, "2–99 (MS bleibt 100)", 11, Theme.colors.muted)
+    osHint:SetPoint("LEFT", osMaximum, "RIGHT", 8, 0)
+
     local save = Theme:CreateButton(frame, "Speichern", 100, 25)
-    save:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -246)
+    save:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -278)
     save:SetScript("OnClick", function() SettingsWindow:SaveDuration() end)
 
     local links = Theme:CreateLabel(frame, "Fenster", 14, Theme.colors.gold)
-    links:SetPoint("TOPLEFT", frame, "TOPLEFT", 24, -293)
+    links:SetPoint("TOPLEFT", frame, "TOPLEFT", 24, -321)
     local master = Theme:CreateButton(frame, "Lootmaster", 125, 27)
-    master:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -320)
+    master:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -348)
     master:SetScript("OnClick", function()
         if GA.UI.MasterLooterWindow then GA.UI.MasterLooterWindow:Show() end
     end)
@@ -93,7 +102,7 @@ function SettingsWindow:EnsureFrame()
         if GA.UI.HistoryWindow then GA.UI.HistoryWindow:Show() end
     end)
     local auction = Theme:CreateButton(frame, "GDKP-Auktion", 125, 27)
-    auction:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -350)
+    auction:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -378)
     auction:SetScript("OnClick", function()
         if GA.UI.GDKPAuctionWindow then GA.UI.GDKPAuctionWindow:Show() end
     end)
@@ -103,7 +112,7 @@ function SettingsWindow:EnsureFrame()
         if GA.UI.RaidManagerWindow then GA.UI.RaidManagerWindow:Show() end
     end)
     local versions = Theme:CreateButton(frame, "Versionscheck", 125, 27)
-    versions:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -380)
+    versions:SetPoint("TOPLEFT", frame, "TOPLEFT", 29, -408)
     versions:SetScript("OnClick", function()
         if GA.UI.VersionWindow then GA.UI.VersionWindow:Show() end
     end)
@@ -133,8 +142,14 @@ function SettingsWindow:SaveDuration()
         self:SetStatus("Bitte eine gültige Dauer eingeben.", Theme.colors.red)
         return
     end
+    local osMaximum = tonumber(self.osMaximumEdit and self.osMaximumEdit:GetText())
+    if not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 then
+        self:SetStatus("Das OS-Wurfmaximum muss zwischen 2 und 99 liegen.", Theme.colors.red)
+        return
+    end
     duration = math.max(5, math.min(600, math.floor(duration)))
     profile().defaultRollDuration = duration
+    profile().osRollMaximum = osMaximum
     self.durationEdit:SetText(tostring(duration))
     self:SetStatus("Standarddauer gespeichert.", Theme.colors.green)
 end
@@ -148,6 +163,7 @@ function SettingsWindow:Refresh()
     current.minimap = current.minimap or {}
     self.minimap:SetChecked(current.minimap.hide ~= true)
     self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
+    self.osMaximumEdit:SetText(tostring(tonumber(current.osRollMaximum) or 99))
 end
 
 function SettingsWindow:Show()

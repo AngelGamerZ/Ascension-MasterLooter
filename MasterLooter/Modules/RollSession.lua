@@ -10,12 +10,13 @@ end
 local RollSession = GA.RollSession or {}
 GA.RollSession = RollSession
 
-RollSession.PROTOCOL = 2
+RollSession.PROTOCOL = 3
 RollSession.sessions = RollSession.sessions or {}
 RollSession.activeID = RollSession.activeID
 RollSession.counter = RollSession.counter or 0
 RollSession.handlersBound = RollSession.handlersBound or false
 RollSession.DEFAULT_DURATION = 30
+RollSession.DEFAULT_OS_ROLL_MAXIMUM = 99
 RollSession.CLIENT_TIMEOUT_GRACE = 8
 RollSession.SYNC_INTERVAL = 5
 RollSession.SESSION_TTL = 900
@@ -153,6 +154,11 @@ local function sanitizeChoices(choices)
     return result
 end
 
+local function sanitizeOSMaximum(value)
+    value = floor(tonumber(value) or RollSession.DEFAULT_OS_ROLL_MAXIMUM)
+    return math.max(2, math.min(99, value))
+end
+
 local function hasChoice(state, choice)
     for i = 1, #state.choices do if state.choices[i] == choice then return true end end
     return false
@@ -189,10 +195,12 @@ function RollSession:Start(itemLink, options)
     options = options or {}
     local duration = tonumber(options.duration) or self.DEFAULT_DURATION
     duration = math.max(5, math.min(600, floor(duration)))
+    local osRollMaximum = sanitizeOSMaximum(options.osRollMaximum)
     local now = GetTimeSafe()
     local state = {
         id = makeID(), itemLink = itemLink, owner = playerName(), createdAt = TimeSafe(),
         receivedAt = now, duration = duration, expiresAt = now + duration, timeSource = "GetTime", status = "ACTIVE",
+        osRollMaximum = osRollMaximum,
         choices = sanitizeChoices(options.choices), note = tostring(options.note or ""),
         participants = {}, participantSequences = {}, rollAssignments = {}, sequence = 0,
     }
@@ -201,7 +209,7 @@ function RollSession:Start(itemLink, options)
     local seq = nextSequence(state)
     state.authoritySequence = seq
     local packet, err = send("START", { self.PROTOCOL, state.id, seq, state.itemLink,
-        state.createdAt, state.duration, encodeList(state.choices), state.note })
+        state.createdAt, state.duration, encodeList(state.choices), state.note, state.osRollMaximum })
     if not packet then self.sessions[state.id] = nil; self.activeID = nil; return nil, err end
     emit("GA_ROLL_SESSION_STARTED", state, "LOCAL")
     return state
@@ -284,6 +292,44 @@ function RollSession:Pass(sessionID, note)
     return participant
 end
 
+function RollSession:GetChoiceForMaximum(sessionID, maximum)
+    local state = type(sessionID) == "table" and sessionID or resolveState(sessionID)
+    maximum = tonumber(maximum)
+    if not state or not maximum then return nil end
+    if maximum == 100 then return "MS" end
+    if maximum == sanitizeOSMaximum(state.osRollMaximum) then return "OS" end
+    return nil
+end
+
+function RollSession:RecordPublicRoll(player, roll, minimum, maximum, sessionID)
+    local state = resolveState(sessionID)
+    if not state or state.status ~= "ACTIVE" then return nil, "no active session" end
+    if not samePlayer(state.owner, playerName()) or not self:IsAuthority(playerName()) then
+        return nil, "only the session authority records public rolls"
+    end
+    roll, minimum, maximum = tonumber(roll), tonumber(minimum), tonumber(maximum)
+    local choice = self:GetChoiceForMaximum(state, maximum)
+    if not choice or minimum ~= 1 or not roll or roll < minimum or roll > maximum or roll ~= floor(roll) then
+        return nil, "roll range does not match this session"
+    end
+    local key = baseName(player)
+    if key == "" then return nil, "invalid player" end
+    if not isGroupMember(player) then return nil, "player is not in the group" end
+    local existing = state.participants[key]
+    if existing and existing.choice then return nil, "player already rolled" end
+    local participant = {
+        name = player, choice = choice, roll = floor(roll), passed = false, pending = false,
+        publicRoll = true, minimum = minimum, maximum = maximum,
+        sequence = (existing and existing.sequence or 0) + 1,
+        updatedAt = GetTimeSafe(), acknowledged = true,
+    }
+    state.participants[key] = participant
+    state.participantSequences[key] = participant.sequence
+    state.rollAssignments[key] = participant.roll
+    emit("GA_ROLL_SESSION_UPDATED", state, "ROLL", participant)
+    return participant
+end
+
 function RollSession:Award(sessionID, winner, choice, roll, note)
     local state = resolveState(sessionID)
     if not state then return nil, "unknown session" end
@@ -354,6 +400,7 @@ local function receiveStart(fields, sender, source)
     state.itemLink, state.owner, state.createdAt = itemLink, sender, createdAt or TimeSafe()
     state.receivedAt, state.duration, state.expiresAt = now, duration, now + duration
     state.timeSource, state.syncedAt = "GetTime", isSync and now or nil
+    state.osRollMaximum = sanitizeOSMaximum(fields[9])
     state.status, state.choices, state.note = "ACTIVE", sanitizeChoices(decodeList(fields[7])), fields[8] or ""
     state.authoritySequence = seq
     RollSession.sessions[id], RollSession.activeID = state, id
@@ -468,11 +515,11 @@ local function receiveSync(fields, sender)
         local seq = nextSequence(state)
         state.authoritySequence = seq
         local packet = send("SYNC", { RollSession.PROTOCOL, "STATE", state.id, seq, state.itemLink,
-            state.createdAt, remaining, encodeList(state.choices), state.note }, "WHISPER", sender)
+            state.createdAt, remaining, encodeList(state.choices), state.note, state.osRollMaximum }, "WHISPER", sender)
         if not packet then state.sequence, state.authoritySequence = previousSequence, previousAuthoritySequence end
     elseif mode == "STATE" then
         -- Convert STATE to START's field layout and pass through identical validation/state creation.
-        receiveStart({ fields[1], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8], fields[9] }, sender, "SYNC")
+        receiveStart({ fields[1], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8], fields[9], fields[10] }, sender, "SYNC")
     end
 end
 

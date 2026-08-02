@@ -6,12 +6,14 @@ Eigenständige Loot- und Raidverwaltung für Project Ascension auf dem 3.3.5a-Cl
 
 1. Die Ordner `MasterLooter` und `MasterLooter_ItemData` nach `Interface/AddOns/` kopieren.
 2. Im Charakterbildschirm **Veraltete Addons laden** aktivieren, falls der verwendete Ascension-Build dies verlangt.
-3. Alle Gruppenmitglieder benötigen `MasterLooter`; `MasterLooter_ItemData` ist optional und wird bei einer Suche nachgeladen.
+3. Nur Spieler mit `MasterLooter` erhalten das Rollfenster. Spieler ohne Addon können über die im Gruppenchat angekündigten `/roll`-Befehle teilnehmen. `MasterLooter_ItemData` ist optional.
 4. Im Spiel `/ml` eingeben.
 
 ## Wichtigster Ablauf
 
 Der Lootmaster zieht ein Item direkt aus der Tasche, dem Blizzard-Lootfenster oder der MasterLooter-Lootliste auf die Item-Ablagefläche, stellt Dauer und Notiz ein und klickt **Roll starten**. Das Addon sendet eine versionierte Sitzung an Raid oder Gruppe. Auf allen Clients öffnet sich das Teilnehmerfenster mit Item, Restzeit und den Schaltflächen **MS**, **OS** und **Passen**. Antworten werden der Sitzungs-ID zugeordnet und erscheinen live beim Lootmaster. **Item vergeben** veröffentlicht das Ergebnis und versucht bei geöffnetem Lootfenster die 3.3.5a-Masterloot-API zu verwenden.
+
+Die Rollbuttons führen echte öffentliche Würfe aus: `MS` verwendet immer `/roll 100`, `OS` verwendet das in den Einstellungen festgelegte `/roll X` zwischen 2 und 99. Der Masterlooter liest die Blizzard-Systemmeldung und erfasst dadurch auch Würfe von Spielern ohne installiertes Addon. Pro Spieler zählt der erste zur laufenden Sitzung passende Wurf.
 
 Der Eingabebereich prüft diesen Ablauf unmittelbar: **Roll starten** wird erst mit einem gültigen Item und einer Rollzeit zwischen 5 und 300 Sekunden aktiv. Die Zeit lässt sich in Fünf-Sekunden-Schritten ändern, die optionale Notiz ist auf 160 Zeichen begrenzt und ein Rechtsklick entfernt das abgelegte Item. Während eine Session läuft, sind die Eingaben gesperrt; Status- und Feldfarben zeigen Fehler, Versand und Abschluss verständlich an.
 

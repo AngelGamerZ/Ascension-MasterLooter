@@ -6,6 +6,7 @@ local files = {
     "MasterLooter/Core/Events.lua", "MasterLooter/Core/DB.lua", "MasterLooter/Core/Bootstrap.lua",
     "MasterLooter/Modules/Comm.lua", "MasterLooter/Modules/BagInspector.lua",
     "MasterLooter/Modules/RollSession.lua", "MasterLooter/Modules/NativeLootRoll.lua",
+    "MasterLooter/Modules/ChatRolls.lua",
     "MasterLooter/Modules/Loot.lua", "MasterLooter/Modules/PackMule.lua", "MasterLooter/Modules/Trade.lua",
     "MasterLooter/Modules/Award.lua", "MasterLooter/Modules/SoftRes.lua", "MasterLooter/Modules/PlusOnes.lua",
     "MasterLooter/Modules/Priority.lua", "MasterLooter/Modules/BoostedRolls.lua",

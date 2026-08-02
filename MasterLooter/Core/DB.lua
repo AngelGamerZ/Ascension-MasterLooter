@@ -13,6 +13,7 @@ local DEFAULTS = {
         autoOpenRollWindow = true,
         autoGiveAwards = true,
         defaultRollDuration = 30,
+        osRollMaximum = 99,
         sound = true,
     },
     profiles = {},
