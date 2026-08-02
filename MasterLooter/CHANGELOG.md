@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.14-beta
+
+- Garguls lokales Erfassungsprinzip ergänzt: Der Lootmaster verarbeitet sichtbare Würfe zusätzlich über `ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM")`
+- Spieler ohne MasterLooter werden ausschließlich aus der beim Lootmaster angezeigten Systemmeldung erfasst und benötigen weiterhin keinerlei Addon-Kommunikation
+- Direkter Eventframe, zentraler Eventbus und Chat-Ausgabefilter arbeiten redundant; doppelt empfangene Meldungen bleiben durch die bestehende Erstwurfregel folgenlos
+- Regressionstest simuliert einen Spieler ohne Addon, dessen Wurf nur im Chat-Ausgabefilter des Lootmasters ankommt
+- Ingame-Versionsanzeige und Versionsabgleich auf `0.9.14-beta` beziehungsweise Rollprotokoll 3 aktualisiert
+
 ## 0.9.13-beta
 
 - Eigenes öffentliches `/roll`-Ergebnis wird vom Teilnehmer-Addon zusätzlich an den Lootmaster übermittelt, falls Ascension die Systemmeldung nicht an dessen Client verteilt

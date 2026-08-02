@@ -5,8 +5,8 @@ local ADDON_NAME, ns = ...
 ns = ns or {}
 
 ns.ADDON_NAME = ADDON_NAME or "MasterLooter"
-ns.VERSION = "0.9.0-beta"
-ns.PROTOCOL_VERSION = 2
+ns.VERSION = "0.9.14-beta"
+ns.PROTOCOL_VERSION = 3
 ns.DB_SCHEMA = 1
 ns.modules = ns.modules or {}
 ns.moduleOrder = ns.moduleOrder or {}

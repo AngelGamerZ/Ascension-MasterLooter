@@ -69,15 +69,24 @@ function ChatRolls:OnSystemMessage(...)
 end
 
 function ChatRolls:OnInitialize()
-    -- Use a dedicated frame for this critical game event. This avoids relying
-    -- on other event-bus registrations on Ascension's modified client.
+    -- Keep independent capture paths for this critical game event. Gargul also
+    -- uses the chat-message filter path; Ascension builds can display a system
+    -- line even when an addon's regular event dispatch does not receive it.
     if type(CreateFrame) == "function" then
         self.frame = self.frame or CreateFrame("Frame")
         self.frame:RegisterEvent("CHAT_MSG_SYSTEM")
         self.frame:SetScript("OnEvent", function(_, _, ...) ChatRolls:OnSystemMessage(...) end)
-    else
+    end
+    if GA.Events then
         GA.Events:On("CHAT_MSG_SYSTEM", function(_, _, ...) ChatRolls:OnSystemMessage(...) end, self)
         GA.Events:RegisterGameEvent("CHAT_MSG_SYSTEM")
+    end
+    if type(ChatFrame_AddMessageEventFilter) == "function" and not self.chatFilter then
+        self.chatFilter = function(_, _, message, ...)
+            ChatRolls:OnSystemMessage(message, ...)
+            return false
+        end
+        ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", self.chatFilter)
     end
     return true
 end

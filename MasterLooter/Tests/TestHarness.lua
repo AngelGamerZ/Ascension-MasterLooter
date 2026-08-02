@@ -67,7 +67,7 @@ local function deliver(prefix, payload, channel, sender, target)
 end
 
 local function makeClient(name, savedDB)
-    local client = { name = name, now = 100, frames = {}, prefixes = {}, chatMessages = {} }
+    local client = { name = name, now = 100, frames = {}, prefixes = {}, chatMessages = {}, chatFilters = {} }
     local env = { _G = false }
     env._G = env
     setmetatable(env, { __index = hostGlobal })
@@ -107,6 +107,10 @@ local function makeClient(name, savedDB)
     end
     env.SendChatMessage = function(message, channel)
         client.chatMessages[#client.chatMessages + 1] = { message = message, channel = channel }
+    end
+    env.ChatFrame_AddMessageEventFilter = function(event, callback)
+        client.chatFilters[event] = client.chatFilters[event] or {}
+        client.chatFilters[event][#client.chatFilters[event] + 1] = callback
     end
 
     clients[#clients + 1] = client
@@ -324,6 +328,17 @@ fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 41 (1-42)")
 same(aliceGA.RollSession:GetState(publicOSSession.id).participants.bob.roll, 31,
     "a second public roll cannot replace the first accepted result")
 expect(aliceGA.RollSession:Stop(publicOSSession.id, "TEST"), "public OS session stops")
+
+-- Gargul's chat-filter path is required on clients that display a system line
+-- without dispatching the regular event to every addon frame. The roller has
+-- no addon involvement in this scenario; only the loot master's filter runs.
+local filterSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+expect(#alice.chatFilters.CHAT_MSG_SYSTEM > 0, "the loot master installs a CHAT_MSG_SYSTEM display filter")
+alice.chatFilters.CHAT_MSG_SYSTEM[1](nil, "CHAT_MSG_SYSTEM", "Noaddon rolls 64 (1 - 100)")
+local filterRoll = aliceGA.RollSession:GetState(filterSession.id).participants.noaddon
+same(filterRoll.roll, 64, "the loot master's chat filter captures a player without the addon")
+same(filterRoll.choice, "MS", "the chat-filter-only result is classified as MS")
+expect(aliceGA.RollSession:Stop(filterSession.id, "TEST"), "chat-filter public-roll session stops")
 
 -- If Ascension only delivers the system line to the rolling client, that
 -- client relays its own exact public result to the session authority.
