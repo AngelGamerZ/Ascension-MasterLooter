@@ -15,6 +15,8 @@ Der Lootmaster zieht ein Item direkt aus der Tasche, dem Blizzard-Lootfenster od
 
 Der Eingabebereich prüft diesen Ablauf unmittelbar: **Roll starten** wird erst mit einem gültigen Item und einer Rollzeit zwischen 5 und 300 Sekunden aktiv. Die Zeit lässt sich in Fünf-Sekunden-Schritten ändern, die optionale Notiz ist auf 160 Zeichen begrenzt und ein Rechtsklick entfernt das abgelegte Item. Während eine Session läuft, sind die Eingaben gesperrt; Status- und Feldfarben zeigen Fehler, Versand und Abschluss verständlich an.
 
+Teilnehmer sehen MasterLooter- und native Gruppenloot-Rolls als kompakte, 720 Pixel breite Leiste im unteren Bildschirmviertel. Beide Oberflächen unterstützen ein ausdrückliches **Passen**; die neue Layout-Position ersetzt gespeicherte Positionen aus den früheren hohen Beta-Fenstern.
+
 ## Module
 
 - Mehrclient-Kommunikation mit Fragmentierung, Deduplizierung und Sitzungs-Synchronisierung

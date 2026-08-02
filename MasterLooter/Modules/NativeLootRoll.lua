@@ -22,7 +22,7 @@ local function readRoll(rollID, rollTime)
         rollID = tonumber(rollID) or rollID, link = link, itemID = GA.Compat:GetItemID(link),
         texture = texture, name = name, count = math.max(1, tonumber(count) or 1), quality = quality,
         bindOnPickUp = enabled(bindOnPickUp),
-        canNeed = enabled(canNeed), canGreed = enabled(canGreed), canDE = enabled(canDisenchant),
+        canNeed = enabled(canNeed), canGreed = enabled(canGreed), canDE = enabled(canDisenchant), canPass = true,
         reasonNeed = reasonNeed, reasonGreed = reasonGreed, reasonDE = reasonDisenchant,
         timeout = timeout, startedAt = now(), expiresAt = now() + timeout, status = "ACTIVE",
     }

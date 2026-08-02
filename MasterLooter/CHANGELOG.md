@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3-beta
+
+- MasterLooter- und native Gruppenloot-Rollfenster auf kompakte 720×124 Pixel reduziert
+- Beide Fenster öffnen mit einer neuen Positions-ID garantiert im unteren Bildschirmviertel
+- Kleinere Item-Icons, Schriften und Aktionsbuttons für freie Sicht auf das Spielgeschehen
+- Natives Gruppenloot erlaubt `Passen` jetzt immer ausdrücklich und aktiviert den Button korrekt
+- Der verteilte MasterLooter-Pass-Pfad wird vollständig bis zur Host-Bestätigung getestet
+
 ## 0.9.2-beta
 
 - Teilnehmerfenster als breite, flache Leiste im unteren Bildschirmdrittel neu gestaltet

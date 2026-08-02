@@ -40,6 +40,7 @@ local function normalizeActive(source)
 end
 
 local function isAllowed(state, choice)
+    if choice == "PASS" then return state and field(state, "status") ~= "ENDED" end
     local allowed = field(state, "allowedChoices", "choices", "allowed")
     if type(allowed) == "table" then
         if allowed[choice] ~= nil then return allowed[choice] and true or false end
@@ -58,28 +59,28 @@ function NativeLootWindow:EnsureFrame()
     if self.frame then return self.frame end
     if not Theme then return nil end
     local frame = CreateFrame("Frame", "MasterLooterNativeLootWindow", UIParent)
-    frame:SetWidth(455); frame:SetHeight(250); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
+    frame:SetWidth(720); frame:SetHeight(124); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
     Theme:ApplyPanel(frame); Theme:AddTitle(frame, "Gruppenloot")
-    Theme:MakeMovable(frame, "nativeLootWindow"); Theme:RestorePosition(frame, "nativeLootWindow", "CENTER", 0, 125); Theme:RegisterForEscape(frame); self.frame = frame
+    Theme:MakeMovable(frame, "nativeLootWindowCompactV2"); Theme:RestorePosition(frame, "nativeLootWindowCompactV2", "BOTTOM", 0, 45); Theme:RegisterForEscape(frame); self.frame = frame
 
-    local previous = Theme:CreateButton(frame, "<", 30, 21); previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 19, -39); previous:SetScript("OnClick", function() NativeLootWindow:Previous() end); self.previousButton = previous
-    local page = Theme:CreateLabel(frame, "0 / 0", 11, Theme.colors.muted); page:SetPoint("LEFT", previous, "RIGHT", 5, 0); page:SetWidth(55); page:SetJustifyH("CENTER"); self.pageLabel = page
-    local nextButton = Theme:CreateButton(frame, ">", 30, 21); nextButton:SetPoint("LEFT", page, "RIGHT", 5, 0); nextButton:SetScript("OnClick", function() NativeLootWindow:Next() end); self.nextButton = nextButton
-    local timer = Theme:CreateLabel(frame, "0:00", 14, Theme.colors.gold); timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -42); timer:SetWidth(70); timer:SetJustifyH("RIGHT"); self.timerLabel = timer
+    local previous = Theme:CreateButton(frame, "<", 24, 20); previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -39); previous:SetScript("OnClick", function() NativeLootWindow:Previous() end); self.previousButton = previous
+    local page = Theme:CreateLabel(frame, "0 / 0", 10, Theme.colors.muted); page:SetPoint("LEFT", previous, "RIGHT", 3, 0); page:SetWidth(42); page:SetJustifyH("CENTER"); self.pageLabel = page
+    local nextButton = Theme:CreateButton(frame, ">", 24, 20); nextButton:SetPoint("LEFT", page, "RIGHT", 3, 0); nextButton:SetScript("OnClick", function() NativeLootWindow:Next() end); self.nextButton = nextButton
+    local timer = Theme:CreateLabel(frame, "0:00", 12, Theme.colors.gold); timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -42); timer:SetWidth(55); timer:SetJustifyH("RIGHT"); self.timerLabel = timer
 
-    local icon = CreateFrame("Button", nil, frame); icon:SetWidth(52); icon:SetHeight(52); icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 24, -76)
+    local icon = CreateFrame("Button", nil, frame); icon:SetWidth(32); icon:SetHeight(32); icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 122, -35)
     icon.texture = icon:CreateTexture(nil, "ARTWORK"); icon.texture:SetAllPoints(icon); icon.texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark"); self.icon = icon
-    local item = Theme:CreateLabel(frame, "Kein aktiver Roll.", 14); item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -4); item:SetPoint("RIGHT", frame, "RIGHT", -22, 0); item:SetHeight(42); item:SetJustifyV("TOP"); self.itemLabel = item
-    local status = Theme:CreateLabel(frame, "", 11, Theme.colors.muted); status:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -39); status:SetPoint("RIGHT", frame, "RIGHT", -22, 0); self.statusLabel = status
+    local item = Theme:CreateLabel(frame, "Kein aktiver Roll.", 12); item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -1); item:SetPoint("RIGHT", frame, "RIGHT", -85, 0); item:SetHeight(16); item:SetWordWrap(false); self.itemLabel = item
+    local status = Theme:CreateLabel(frame, "", 10, Theme.colors.muted); status:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -18); status:SetPoint("RIGHT", frame, "RIGHT", -85, 0); status:SetWordWrap(false); self.statusLabel = status
 
     self.buttons = {}
     for index, choice in ipairs(CHOICES) do
-        local button = Theme:CreateButton(frame, choice.text, 98, 28)
-        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22 + ((index - 1) * 105), 48)
+        local button = Theme:CreateButton(frame, choice.text, 88, 24)
+        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20 + ((index - 1) * 92), 13)
         button:SetScript("OnClick", function() NativeLootWindow:Submit(choice.key) end)
         button:Disable(); self.buttons[choice.key] = button
     end
-    local hint = Theme:CreateLabel(frame, "Nicht erlaubte Optionen bleiben deaktiviert.", 11, Theme.colors.muted); hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 23, 21); hint:SetPoint("RIGHT", frame, "RIGHT", -22, 0); hint:SetJustifyH("CENTER")
+    local hint = Theme:CreateLabel(frame, "Nicht verfügbare Optionen bleiben deaktiviert.", 10, Theme.colors.muted); hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 398, 19); hint:SetPoint("RIGHT", frame, "RIGHT", -18, 0); hint:SetJustifyH("RIGHT")
     frame:SetScript("OnUpdate", function(_, elapsed) NativeLootWindow:OnUpdate(elapsed) end)
     return frame
 end

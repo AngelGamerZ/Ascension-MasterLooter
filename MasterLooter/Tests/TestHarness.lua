@@ -252,6 +252,16 @@ same(bobGA.RollSession:GetState(submitSession.id).participants.bob, nil, "failed
 bob.env.SendAddonMessage = originalBobSend
 expect(aliceGA.RollSession:Stop(submitSession.id, "TEST"), "submit rollback session stops")
 
+local passSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
+local passed, passError = bobGA.RollSession:Pass(passSession.id)
+expect(passed ~= nil, passError or "remote client explicitly passes")
+local hostPass = aliceGA.RollSession:GetState(passSession.id).participants.bob
+same(hostPass.choice, "PASS", "loot master receives the pass choice")
+same(hostPass.roll, 0, "passing never creates a roll value")
+expect(hostPass.passed, "pass participant is marked as passed")
+expect(not passed.pending, "pass acknowledgement clears the participant pending state")
+expect(aliceGA.RollSession:Stop(passSession.id, "TEST"), "pass test session stops")
+
 -- Roll deadlines are local monotonic GetTime values, never transmitted wall-clock timestamps.
 alice.now, bob.now = 5000, 20
 local clockSession = aliceGA.RollSession:Start(itemLink, { duration = 20 })
@@ -322,6 +332,7 @@ same(native.link, itemLink, "native roll captures its item link")
 same(native.texture, "native-icon", "native roll captures its texture")
 same(native.quality, 4, "native roll captures item quality")
 expect(native.canNeed and native.canGreed and native.canDE, "native roll captures available choices")
+expect(native.canPass, "native roll always exposes an explicit pass choice")
 same(native.timeout, 30, "native roll converts timeout milliseconds to seconds")
 expect(aliceGA.NativeLootRoll:Roll(77, "DE"), "explicit disenchant choice calls RollOnLoot")
 same(nativeActions[1][1], 77, "native action keeps roll id")

@@ -57,69 +57,69 @@ function RollWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterRollWindow", UIParent)
-    frame:SetWidth(650)
-    frame:SetHeight(168)
+    frame:SetWidth(720)
+    frame:SetHeight(124)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     Theme:AddTitle(frame, "Beuteverteilung")
-    Theme:MakeMovable(frame, "rollWindow")
-    Theme:RestorePosition(frame, "rollWindow", "BOTTOM", 0, 115)
+    Theme:MakeMovable(frame, "rollWindowCompactV2")
+    Theme:RestorePosition(frame, "rollWindowCompactV2", "BOTTOM", 0, 45)
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
     local icon = CreateFrame("Button", nil, frame)
-    icon:SetWidth(48)
-    icon:SetHeight(48)
-    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -44)
+    icon:SetWidth(32)
+    icon:SetHeight(32)
+    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -37)
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
     icon.texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     self.icon = icon
 
-    local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 14)
-    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -2)
-    item:SetPoint("RIGHT", frame, "RIGHT", -125, 0)
-    item:SetHeight(23)
+    local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 12)
+    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -1)
+    item:SetPoint("RIGHT", frame, "RIGHT", -90, 0)
+    item:SetHeight(16)
     item:SetJustifyV("TOP")
     item:SetWordWrap(false)
     self.item = item
 
-    local note = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -28)
-    note:SetPoint("RIGHT", frame, "RIGHT", -125, 0)
-    note:SetHeight(18)
+    local note = Theme:CreateLabel(frame, "", 10, Theme.colors.muted)
+    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -18)
+    note:SetPoint("RIGHT", frame, "RIGHT", -90, 0)
+    note:SetHeight(14)
     note:SetWordWrap(false)
     self.note = note
 
     local timerCaption = Theme:CreateLabel(frame, "Verbleibend", 11, Theme.colors.muted)
-    timerCaption:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -44)
-    timerCaption:SetWidth(90)
+    timerCaption:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -36)
+    timerCaption:SetWidth(65)
     timerCaption:SetJustifyH("RIGHT")
-    local timer = Theme:CreateLabel(frame, "0:00", 14, Theme.colors.gold)
-    timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -62)
-    timer:SetWidth(90)
+    local timer = Theme:CreateLabel(frame, "0:00", 12, Theme.colors.gold)
+    timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -53)
+    timer:SetWidth(65)
     timer:SetJustifyH("RIGHT")
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "Haupt-Skill", x = -115 },
-        { key = "OS", text = "Neben-Skill", x = 0 },
-        { key = "PASS", text = "Passen", x = 115 },
+        { key = "MS", text = "Haupt-Skill", x = 20 },
+        { key = "OS", text = "Neben-Skill", x = 122 },
+        { key = "PASS", text = "Passen", x = 224 },
     }
     self.buttons = {}
     for _, definition in ipairs(buttons) do
-        local button = Theme:CreateButton(frame, definition.text, 108, 28)
-        button:SetPoint("TOP", frame, "TOP", definition.x, -102)
+        local button = Theme:CreateButton(frame, definition.text, 98, 24)
+        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", definition.x, 13)
         button:SetScript("OnClick", function() RollWindow:Submit(definition.key) end)
         self.buttons[definition.key] = button
     end
 
     local status = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 17)
-    status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 17)
-    status:SetJustifyH("CENTER")
+    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 338, 18)
+    status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 18)
+    status:SetJustifyH("RIGHT")
     self.status = status
 
     frame:SetScript("OnUpdate", function(_, elapsed) RollWindow:OnUpdate(elapsed) end)
