@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.2-beta
+
+- Teilnehmerfenster als breite, flache Leiste im unteren Bildschirmdrittel neu gestaltet
+- Item, Notiz, Restzeit, Rollaktionen und Status visuell klar getrennt
+- Countdown wird beim Öffnen sofort korrekt angezeigt
+- Zeitsynchronisation verwendet exakte Restsekunden und lokale monotone `GetTime()`-Deadlines
+- Späte Synchronisation verlängert den Countdown nicht mehr künstlich auf fünf Sekunden
+- Lootmaster-Eingaben mit klarer Ablagefläche, validierter Rollzeit, ±5-Schritten und optionaler Notiz verbessert
+- Start-, Fehler-, Versand-, Aktiv- und Abschlusszustände liefern direktes visuelles Feedback
+- Eingaben werden während einer laufenden Session gesperrt und danach zuverlässig reaktiviert
+
 ## 0.9.1-beta
 
 - Das Lootmaster-Fenster verwendet jetzt eine echte Item-Ablagefläche mit Icon, Itemname und Tooltip statt eines sichtbaren Itemlink-Textfelds

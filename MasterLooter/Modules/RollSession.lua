@@ -192,7 +192,7 @@ function RollSession:Start(itemLink, options)
     local now = GetTimeSafe()
     local state = {
         id = makeID(), itemLink = itemLink, owner = playerName(), createdAt = TimeSafe(),
-        receivedAt = now, duration = duration, expiresAt = now + duration, status = "ACTIVE",
+        receivedAt = now, duration = duration, expiresAt = now + duration, timeSource = "GetTime", status = "ACTIVE",
         choices = sanitizeChoices(options.choices), note = tostring(options.note or ""),
         participants = {}, participantSequences = {}, rollAssignments = {}, sequence = 0,
     }
@@ -327,18 +327,33 @@ local function validSequence(value)
     return value and value >= 1 and value <= 1000000000 and value == floor(value) and value or nil
 end
 
+local function normalizedDuration(value, isSync)
+    value = tonumber(value)
+    if not value then return nil end
+    if isSync then
+        -- SYNC carries remaining monotonic seconds, not the original duration.
+        -- It must not be rounded up to the five-second START minimum.
+        return math.max(0, math.min(600, value))
+    end
+    return math.max(5, math.min(600, floor(value)))
+end
+
 local function receiveStart(fields, sender, source)
     if not validVersion(fields) or not RollSession:IsAuthority(sender) then return end
     local id, seq = fields[2], validSequence(fields[3])
-    local itemLink, createdAt, duration = fields[4], tonumber(fields[5]), tonumber(fields[6])
+    local itemLink, createdAt = fields[4], tonumber(fields[5])
+    local isSync = source == "SYNC"
+    local duration = normalizedDuration(fields[6], isSync)
     if not id or id == "" or #id > 96 or not seq or not itemLink or itemLink == "" or #itemLink > 8192 then return end
-    duration = math.max(5, math.min(600, floor(duration or RollSession.DEFAULT_DURATION)))
+    if not duration then duration = isSync and 0 or RollSession.DEFAULT_DURATION end
+    if isSync and duration <= 0 then return end
     local existing = RollSession.sessions[id]
     if existing and (existing.authoritySequence or 0) >= seq then return end
     local now = GetTimeSafe()
     local state = existing or { id = id, participants = {}, participantSequences = {}, rollAssignments = {} }
     state.itemLink, state.owner, state.createdAt = itemLink, sender, createdAt or TimeSafe()
     state.receivedAt, state.duration, state.expiresAt = now, duration, now + duration
+    state.timeSource, state.syncedAt = "GetTime", isSync and now or nil
     state.status, state.choices, state.note = "ACTIVE", sanitizeChoices(decodeList(fields[7])), fields[8] or ""
     state.authoritySequence = seq
     RollSession.sessions[id], RollSession.activeID = state, id
@@ -436,16 +451,23 @@ local function receiveSync(fields, sender)
     local mode, id = fields[2], fields[3]
     if mode == "REQ" then
         if not RollSession:IsAuthority(playerName()) then return end
+        -- Group addon messages echo to their sender. The authority already owns
+        -- the canonical deadline and must never resynchronize against itself.
+        if samePlayer(sender, playerName()) then return end
         local throttleKey = baseName(sender) .. "\031" .. tostring(id or "")
         local current = GetTimeSafe()
         if current - (RollSession.syncRequests[throttleKey] or -1000) < RollSession.SYNC_INTERVAL then return end
         RollSession.syncRequests[throttleKey] = current
         local state = resolveState(id ~= "" and id or nil)
         if not state or state.status ~= "ACTIVE" or not samePlayer(state.owner, playerName()) then return end
+        local remaining = state.expiresAt - current
+        if remaining <= 0 then return end
+        local previousSequence, previousAuthoritySequence = state.sequence, state.authoritySequence
         local seq = nextSequence(state)
-        send("SYNC", { RollSession.PROTOCOL, "STATE", state.id, seq, state.itemLink,
-            state.createdAt, math.max(5, floor(state.expiresAt - GetTimeSafe())), encodeList(state.choices), state.note },
-            "WHISPER", sender)
+        state.authoritySequence = seq
+        local packet = send("SYNC", { RollSession.PROTOCOL, "STATE", state.id, seq, state.itemLink,
+            state.createdAt, remaining, encodeList(state.choices), state.note }, "WHISPER", sender)
+        if not packet then state.sequence, state.authoritySequence = previousSequence, previousAuthoritySequence end
     elseif mode == "STATE" then
         -- Convert STATE to START's field layout and pass through identical validation/state creation.
         receiveStart({ fields[1], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8], fields[9] }, sender, "SYNC")

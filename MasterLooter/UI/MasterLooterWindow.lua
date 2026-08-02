@@ -80,7 +80,7 @@ function MasterLooterWindow:EnsureFrame()
 
     local frame = CreateFrame("Frame", "MasterLooterMainWindow", UIParent)
     frame:SetWidth(520)
-    frame:SetHeight(465)
+    frame:SetHeight(505)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
@@ -91,48 +91,72 @@ function MasterLooterWindow:EnsureFrame()
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
-    local itemLabel = Theme:CreateLabel(frame, "Item", 12, Theme.colors.muted)
+    local itemLabel = Theme:CreateLabel(frame, "Beute-Item", 12, Theme.colors.muted)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -48)
     local item = CreateFrame("Button", nil, frame)
-    item:SetWidth(365); item:SetHeight(30)
+    item:SetWidth(365); item:SetHeight(38)
     item:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -42)
     item:EnableMouse(true); item:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     Theme:ApplyInset(item)
     local itemIcon = item:CreateTexture(nil, "ARTWORK")
-    itemIcon:SetWidth(22); itemIcon:SetHeight(22); itemIcon:SetPoint("LEFT", item, "LEFT", 5, 0)
+    itemIcon:SetWidth(28); itemIcon:SetHeight(28); itemIcon:SetPoint("LEFT", item, "LEFT", 6, 0)
     itemIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-    local itemText = Theme:CreateLabel(item, "Item hier ablegen (Tasche oder Lootfenster)", 11, Theme.colors.muted)
-    itemText:SetPoint("LEFT", itemIcon, "RIGHT", 7, 0); itemText:SetPoint("RIGHT", item, "RIGHT", -7, 0)
+    local itemText = Theme:CreateLabel(item, "Item hier ablegen", 12, Theme.colors.muted)
+    itemText:SetPoint("LEFT", itemIcon, "RIGHT", 9, 0); itemText:SetPoint("RIGHT", item, "RIGHT", -7, 0)
     itemText:SetJustifyH("LEFT")
     item:SetScript("OnReceiveDrag", function() MasterLooterWindow:AcceptCursorItem() end)
     item:SetScript("OnMouseUp", function(_, button)
-        if button == "RightButton" then MasterLooterWindow:SetItem(nil) else MasterLooterWindow:AcceptCursorItem() end
+        if button == "RightButton" then
+            MasterLooterWindow:SetItem(nil)
+            MasterLooterWindow:SetStatus("Item entfernt. Ziehe ein neues Item auf die Ablagefläche.", Theme.colors.muted)
+        elseif not MasterLooterWindow:AcceptCursorItem() then
+            MasterLooterWindow:RefreshInputState(true)
+        end
     end)
     item:SetScript("OnEnter", function(self)
         if not MasterLooterWindow.itemLink then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(MasterLooterWindow.itemLink); GameTooltip:Show()
     end)
-    item:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    item:SetScript("OnLeave", function() GameTooltip:Hide(); MasterLooterWindow:RefreshInputState(false) end)
     self.itemDrop = item; self.itemIcon = itemIcon; self.itemText = itemText
 
-    local durationLabel = Theme:CreateLabel(frame, "Dauer", 12, Theme.colors.muted)
-    durationLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -80)
-    local duration = Theme:CreateEditBox(frame, 50, 24, true)
-    duration:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -74)
-    local profile = GA.DB and GA.DB:GetProfile()
-    duration:SetText(tostring((profile and profile.defaultRollDuration) or 30))
-    self.durationEdit = duration
-    local seconds = Theme:CreateLabel(frame, "Sekunden", 12, Theme.colors.muted)
-    seconds:SetPoint("LEFT", duration, "RIGHT", 7, 0)
+    local itemHelp = Theme:CreateLabel(frame, "Aus Tasche oder Lootfenster ziehen · Rechtsklick entfernt", 11, Theme.colors.muted)
+    itemHelp:SetPoint("TOPLEFT", item, "BOTTOMLEFT", 2, -2)
+    itemHelp:SetPoint("RIGHT", item, "RIGHT", 0, 0)
+    self.itemHelp = itemHelp
 
-    local noteLabel = Theme:CreateLabel(frame, "Notiz", 12, Theme.colors.muted)
-    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 235, -80)
-    local note = Theme:CreateEditBox(frame, 235, 24)
-    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 285, -74)
+    local durationLabel = Theme:CreateLabel(frame, "Rollzeit", 12, Theme.colors.muted)
+    durationLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -105)
+    local minus = Theme:CreateButton(frame, "-", 26, 24)
+    minus:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -99)
+    local duration = Theme:CreateEditBox(frame, 46, 24, true)
+    duration:SetPoint("LEFT", minus, "RIGHT", 4, 0)
+    if type(duration.SetMaxLetters) == "function" then duration:SetMaxLetters(3) end
+    local profile = GA.DB and GA.DB:GetProfile()
+    local initialDuration = tonumber(profile and profile.defaultRollDuration) or 30
+    initialDuration = math.max(5, math.min(300, math.floor(initialDuration + 0.5)))
+    duration:SetText(tostring(initialDuration))
+    self.durationEdit = duration
+    local plus = Theme:CreateButton(frame, "+", 26, 24)
+    plus:SetPoint("LEFT", duration, "RIGHT", 4, 0)
+    self.durationMinus, self.durationPlus = minus, plus
+    local seconds = Theme:CreateLabel(frame, "Sek. (5–300)", 12, Theme.colors.muted)
+    seconds:SetPoint("LEFT", plus, "RIGHT", 7, 0)
+    minus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(-5) end)
+    plus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(5) end)
+    duration:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
+    duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
+    duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
+
+    local noteLabel = Theme:CreateLabel(frame, "Notiz (optional)", 12, Theme.colors.muted)
+    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -105)
+    local note = Theme:CreateEditBox(frame, 123, 24)
+    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 375, -99)
+    if type(note.SetMaxLetters) == "function" then note:SetMaxLetters(160) end
     self.noteEdit = note
 
     local start = Theme:CreateButton(frame, "Roll starten", 115, 28)
-    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -111)
+    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -137)
     start:SetScript("OnClick", function() MasterLooterWindow:StartSession() end)
     self.startButton = start
     local stop = Theme:CreateButton(frame, "Stoppen", 90, 28)
@@ -141,14 +165,14 @@ function MasterLooterWindow:EnsureFrame()
     stop:Disable()
     self.stopButton = stop
 
-    local status = Theme:CreateLabel(frame, "Bereit.", 12, Theme.colors.muted)
+    local status = Theme:CreateLabel(frame, "Lege zuerst ein Item auf die Ablagefläche.", 12, Theme.colors.muted)
     status:SetPoint("LEFT", stop, "RIGHT", 12, 0)
     status:SetPoint("RIGHT", frame, "RIGHT", -22, 0)
     status:SetJustifyH("RIGHT")
     self.status = status
 
     local tableFrame = CreateFrame("Frame", nil, frame)
-    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -154)
+    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -180)
     tableFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 61)
     Theme:ApplyInset(tableFrame)
     self.tableFrame = tableFrame
@@ -207,23 +231,104 @@ function MasterLooterWindow:EnsureFrame()
     award:Disable()
     self.awardButton = award
 
+    start:Disable()
     self:HookLootButtons()
+    self:RefreshInputState(false)
     return frame
+end
+
+function MasterLooterWindow:GetInputIssue()
+    if type(self.itemLink) ~= "string" or not string.find(self.itemLink, "|Hitem:", 1, true) then
+        return "ITEM", "Bitte ein Item aus Tasche oder Lootfenster auf die Ablagefläche ziehen."
+    end
+    if GA.SoftRes and GA.SoftRes:IsHardReserved(self.itemLink) then
+        return "ITEM", "Dieses Item ist als Hard-Reserve markiert und kann nicht ausgerollt werden."
+    end
+    local duration = tonumber(self.durationEdit and self.durationEdit:GetText())
+    if not duration or duration ~= math.floor(duration) or duration < 5 or duration > 300 then
+        return "DURATION", "Die Rollzeit muss eine ganze Zahl zwischen 5 und 300 Sekunden sein."
+    end
+    return nil, nil, duration
+end
+
+function MasterLooterWindow:RefreshInputState(showFeedback)
+    if not self.startButton or not self.durationEdit then return false end
+    local issue, message = self:GetInputIssue()
+    local enabled = not issue and not self.sessionActive and not self.sessionStarting
+    if enabled then self.startButton:Enable() else self.startButton:Disable() end
+    if self.itemDrop and type(self.itemDrop.SetBackdropBorderColor) == "function" then
+        if issue == "ITEM" and showFeedback then self.itemDrop:SetBackdropBorderColor(unpack(Theme.colors.red))
+        elseif self.itemLink and not issue then self.itemDrop:SetBackdropBorderColor(unpack(Theme.colors.green))
+        else self.itemDrop:SetBackdropBorderColor(0.30, 0.30, 0.34, 1) end
+    end
+    if type(self.durationEdit.SetTextColor) == "function" then
+        self.durationEdit:SetTextColor(unpack(issue == "DURATION" and Theme.colors.red or Theme.colors.text))
+    end
+    if showFeedback then
+        if issue then self:SetStatus(message, Theme.colors.red)
+        elseif not self.sessionActive then self:SetStatus("Bereit. Der Roll kann gestartet werden.", Theme.colors.green) end
+    end
+    return enabled, message
+end
+
+function MasterLooterWindow:NormalizeDuration()
+    if not self.durationEdit then return end
+    local duration = tonumber(self.durationEdit:GetText())
+    if not duration then
+        local profile = GA.DB and GA.DB:GetProfile()
+        duration = (profile and profile.defaultRollDuration) or 30
+    end
+    duration = math.max(5, math.min(300, math.floor(duration + 0.5)))
+    self.durationEdit:SetText(tostring(duration))
+    self:RefreshInputState(false)
+end
+
+function MasterLooterWindow:AdjustDuration(delta)
+    local duration = tonumber(self.durationEdit and self.durationEdit:GetText()) or 30
+    duration = math.max(5, math.min(300, math.floor(duration + (tonumber(delta) or 0))))
+    self.durationEdit:SetText(tostring(duration))
+    self:RefreshInputState(true)
+end
+
+function MasterLooterWindow:SetSessionActive(active)
+    self.sessionActive, self.sessionStarting = active and true or false, false
+    if not self.startButton then return end
+    if active then
+        self.startButton:Disable(); self.stopButton:Enable()
+        if self.durationMinus then self.durationMinus:Disable() end
+        if self.durationPlus then self.durationPlus:Disable() end
+        if self.durationEdit.Disable then self.durationEdit:Disable() end
+        if self.noteEdit.Disable then self.noteEdit:Disable() end
+        if self.itemDrop then self.itemDrop:EnableMouse(false) end
+    else
+        if self.awardButton then self.awardButton:Disable() end
+        self.stopButton:Disable()
+        if self.durationMinus then self.durationMinus:Enable() end
+        if self.durationPlus then self.durationPlus:Enable() end
+        if self.durationEdit.Enable then self.durationEdit:Enable() end
+        if self.noteEdit.Enable then self.noteEdit:Enable() end
+        if self.itemDrop then self.itemDrop:EnableMouse(true) end
+        self:RefreshInputState(false)
+    end
 end
 
 function MasterLooterWindow:SetItem(itemLink)
     self.itemLink = type(itemLink) == "string" and itemLink or nil
     if not self.itemText or not self.itemIcon then return end
     if not self.itemLink then
-        self.itemText:SetText("Item hier ablegen (Tasche oder Lootfenster)")
+        self.itemText:SetText("Item hier ablegen")
         self.itemText:SetTextColor(unpack(Theme.colors.muted))
         self.itemIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        if self.itemHelp then self.itemHelp:SetText("Aus Tasche oder Lootfenster ziehen · Rechtsklick entfernt") end
+        self:RefreshInputState(false)
         return
     end
     self.itemText:SetText(self.itemLink)
     self.itemText:SetTextColor(unpack(Theme.colors.text))
     local texture = type(GetItemInfo) == "function" and select(10, GetItemInfo(self.itemLink))
     self.itemIcon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+    if self.itemHelp then self.itemHelp:SetText("Ausgewählt · Rechtsklick entfernt · Tooltip beim Darüberfahren") end
+    self:RefreshInputState(true)
 end
 
 function MasterLooterWindow:AcceptCursorItem()
@@ -238,7 +343,7 @@ function MasterLooterWindow:AcceptCursorItem()
     if not itemLink then return false end
     self:SetItem(itemLink)
     if type(ClearCursor) == "function" then ClearCursor() end
-    self:SetStatus("Item übernommen.", Theme.colors.green)
+    self:SetStatus("Item übernommen. Dauer prüfen und Roll starten.", Theme.colors.green)
     return true
 end
 
@@ -271,18 +376,10 @@ function MasterLooterWindow:SetStatus(text, color)
 end
 
 function MasterLooterWindow:StartSession()
+    local issue, validationMessage, duration = self:GetInputIssue()
+    if issue then self:RefreshInputState(true); return end
     local itemLink = self.itemLink
-    local duration = tonumber(self.durationEdit:GetText()) or 30
     local note = self.noteEdit:GetText()
-    if not itemLink or not string.find(itemLink, "|Hitem:") then
-        self:SetStatus("Bitte ein Item aus Tasche oder Lootfenster ablegen.", Theme.colors.red)
-        return
-    end
-    if GA.SoftRes and GA.SoftRes:IsHardReserved(itemLink) then
-        self:SetStatus("Dieses Item ist als Hard-Reserve markiert.", Theme.colors.red)
-        return
-    end
-    duration = math.max(5, math.min(300, duration))
     self.durationEdit:SetText(tostring(duration))
     local manager = GA.RollSession
     local method = manager and (manager.StartSession or manager.Start)
@@ -290,32 +387,40 @@ function MasterLooterWindow:StartSession()
         self:SetStatus("RollSession ist nicht verfügbar.", Theme.colors.red)
         return
     end
+    self.sessionStarting = true
+    self:RefreshInputState(false)
+    self:SetStatus("Session wird an die Gruppe gesendet …", Theme.colors.gold)
     local ok, result, errorMessage = pcall(method, manager, itemLink, {
         duration = duration,
         note = note,
         choices = { "MS", "OS", "PASS" },
     })
     if not ok or result == nil or result == false then
-        self:SetStatus(errorMessage or "Session konnte nicht gestartet werden.", Theme.colors.red)
+        self.sessionStarting = false
+        self:RefreshInputState(false)
+        self:SetStatus((not ok and result) or errorMessage or "Session konnte nicht gestartet werden.", Theme.colors.red)
         return
     end
+    local profile = GA.DB and GA.DB:GetProfile()
+    if profile then profile.defaultRollDuration = duration end
     self:UpdateSession(result)
-    self.startButton:Disable()
-    self.stopButton:Enable()
-    self:SetStatus("Session läuft.", Theme.colors.green)
+    self:SetSessionActive(true)
+    self:SetStatus("Session läuft. Antworten erscheinen unten in der Liste.", Theme.colors.green)
 end
 
 function MasterLooterWindow:StopSession()
     local manager = GA.RollSession
     local method = manager and (manager.StopSession or manager.Stop)
-    if type(method) ~= "function" then return end
-    local ok, result = pcall(method, manager, self.sessionId)
+    if type(method) ~= "function" then self:SetStatus("RollSession ist nicht verfügbar.", Theme.colors.red); return end
+    self.stopButton:Disable()
+    self:SetStatus("Session wird beendet …", Theme.colors.gold)
+    local ok, result, errorMessage = pcall(method, manager, self.sessionId)
     if ok and result == true then
-        self.startButton:Enable()
-        self.stopButton:Disable()
-        self:SetStatus("Session beendet.")
+        self:SetSessionActive(false)
+        self:SetStatus("Session beendet. Das Item bleibt für einen erneuten Roll ausgewählt.", Theme.colors.muted)
     else
-        self:SetStatus("Session konnte nicht beendet werden.", Theme.colors.red)
+        self:SetSessionActive(true)
+        self:SetStatus((not ok and result) or errorMessage or "Session konnte nicht beendet werden.", Theme.colors.red)
     end
 end
 
@@ -326,6 +431,7 @@ function MasterLooterWindow:UpdateSession(session)
     self.sessionId = field(session, "id", "sessionId", "rollId")
     local link = field(session, "itemLink", "link") or field(session.item, "link", "itemLink")
     if link then self:SetItem(link) end
+    self:SetSessionActive(session.status == nil or session.status == "ACTIVE")
     self.rolls = getRolls(session)
     self.selected = nil
     self.page = math.min(self.page or 1, math.max(1, math.ceil(#self.rolls / ROWS)))
@@ -422,8 +528,9 @@ function MasterLooterWindow:Initialize()
     registerMessage("GA_ROLL_SESSION_UPDATED", update)
     local stopped = function()
         if not MasterLooterWindow.frame then return end
-        MasterLooterWindow.startButton:Enable()
-        MasterLooterWindow.stopButton:Disable()
+        MasterLooterWindow:SetSessionActive(false)
+        MasterLooterWindow:RefreshInputState(false)
+        MasterLooterWindow:SetStatus("Session beendet. Das Item bleibt für einen erneuten Roll ausgewählt.", Theme.colors.muted)
     end
     registerMessage("GA_ROLL_SESSION_STOPPED", stopped)
     registerMessage("GA_ROLL_SESSION_ENDED", stopped)

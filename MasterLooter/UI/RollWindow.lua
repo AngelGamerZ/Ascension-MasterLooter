@@ -8,6 +8,10 @@ local Theme = GA.UI.Theme
 local RollWindow = {}
 GA.UI.RollWindow = RollWindow
 
+local function now()
+    return type(GetTime) == "function" and GetTime() or 0
+end
+
 local function value(source, ...)
     if type(source) ~= "table" then return nil end
     for i = 1, select("#", ...) do
@@ -53,61 +57,68 @@ function RollWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterRollWindow", UIParent)
-    frame:SetWidth(390)
-    frame:SetHeight(226)
+    frame:SetWidth(650)
+    frame:SetHeight(168)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     Theme:AddTitle(frame, "Beuteverteilung")
     Theme:MakeMovable(frame, "rollWindow")
-    Theme:RestorePosition(frame, "rollWindow", "CENTER", 0, 120)
+    Theme:RestorePosition(frame, "rollWindow", "BOTTOM", 0, 115)
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
     local icon = CreateFrame("Button", nil, frame)
-    icon:SetWidth(52)
-    icon:SetHeight(52)
-    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -43)
+    icon:SetWidth(48)
+    icon:SetHeight(48)
+    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -44)
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
     icon.texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     self.icon = icon
 
     local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 14)
-    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -3)
-    item:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    item:SetHeight(38)
+    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -2)
+    item:SetPoint("RIGHT", frame, "RIGHT", -125, 0)
+    item:SetHeight(23)
     item:SetJustifyV("TOP")
+    item:SetWordWrap(false)
     self.item = item
 
     local note = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -39)
-    note:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    note:SetHeight(22)
+    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 12, -28)
+    note:SetPoint("RIGHT", frame, "RIGHT", -125, 0)
+    note:SetHeight(18)
+    note:SetWordWrap(false)
     self.note = note
 
+    local timerCaption = Theme:CreateLabel(frame, "Verbleibend", 11, Theme.colors.muted)
+    timerCaption:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -44)
+    timerCaption:SetWidth(90)
+    timerCaption:SetJustifyH("RIGHT")
     local timer = Theme:CreateLabel(frame, "0:00", 14, Theme.colors.gold)
-    timer:SetPoint("TOP", frame, "TOP", 0, -105)
-    timer:SetJustifyH("CENTER")
+    timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -62)
+    timer:SetWidth(90)
+    timer:SetJustifyH("RIGHT")
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "Haupt-Skill", x = -108 },
+        { key = "MS", text = "Haupt-Skill", x = -115 },
         { key = "OS", text = "Neben-Skill", x = 0 },
-        { key = "PASS", text = "Passen", x = 108 },
+        { key = "PASS", text = "Passen", x = 115 },
     }
     self.buttons = {}
     for _, definition in ipairs(buttons) do
-        local button = Theme:CreateButton(frame, definition.text, 98, 28)
-        button:SetPoint("TOP", frame, "TOP", definition.x, -132)
+        local button = Theme:CreateButton(frame, definition.text, 108, 28)
+        button:SetPoint("TOP", frame, "TOP", definition.x, -102)
         button:SetScript("OnClick", function() RollWindow:Submit(definition.key) end)
         self.buttons[definition.key] = button
     end
 
     local status = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 20)
-    status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 20)
+    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 17)
+    status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 17)
     status:SetJustifyH("CENTER")
     self.status = status
 
@@ -132,7 +143,7 @@ function RollWindow:ShowSession(session)
     self.sessionId = value(session, "id", "sessionId", "rollId")
     self.itemLink = value(session, "itemLink", "link") or value(session.item, "link", "itemLink")
     local duration = tonumber(value(session, "duration", "seconds", "timeout")) or 30
-    self.endsAt = tonumber(value(session, "endsAt", "endTime", "expiresAt")) or (GetTime() + duration)
+    self.endsAt = tonumber(value(session, "endsAt", "endTime", "expiresAt")) or (now() + duration)
     self.elapsed = 0
 
     self.item:SetText(self.itemLink or value(session, "itemName", "name") or "Unbekanntes Item")
@@ -146,6 +157,7 @@ function RollWindow:ShowSession(session)
     self.status:SetText("Bitte wähle deine Roll-Kategorie.")
     self.status:SetTextColor(unpack(Theme.colors.muted))
     self:SetButtonsEnabled(true)
+    self:UpdateTimer()
     if profile and profile.autoOpenRollWindow == false then return end
     frame:Show()
     if profile and profile.sound and type(PlaySound) == "function" then pcall(PlaySound, "igQuestListOpen") end
@@ -214,12 +226,9 @@ function RollWindow:Toggle()
     if frame:IsShown() then self:Hide() else self:Show() end
 end
 
-function RollWindow:OnUpdate(elapsed)
-    if not self.endsAt or not self.frame:IsShown() then return end
-    self.elapsed = (self.elapsed or 0) + elapsed
-    if self.elapsed < 0.1 then return end
-    self.elapsed = 0
-    local remaining = self.endsAt - GetTime()
+function RollWindow:UpdateTimer()
+    if not self.endsAt then return end
+    local remaining = self.endsAt - now()
     self.timer:SetText(Theme:FormatTime(remaining))
     if remaining <= 0 then
         self.endsAt = nil
@@ -227,6 +236,14 @@ function RollWindow:OnUpdate(elapsed)
         self.status:SetText("Zeit abgelaufen.")
         self.status:SetTextColor(unpack(Theme.colors.red))
     end
+end
+
+function RollWindow:OnUpdate(elapsed)
+    if not self.endsAt or not self.frame:IsShown() then return end
+    self.elapsed = (self.elapsed or 0) + elapsed
+    if self.elapsed < 0.1 then return end
+    self.elapsed = 0
+    self:UpdateTimer()
 end
 
 function RollWindow:Initialize()

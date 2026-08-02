@@ -252,6 +252,26 @@ same(bobGA.RollSession:GetState(submitSession.id).participants.bob, nil, "failed
 bob.env.SendAddonMessage = originalBobSend
 expect(aliceGA.RollSession:Stop(submitSession.id, "TEST"), "submit rollback session stops")
 
+-- Roll deadlines are local monotonic GetTime values, never transmitted wall-clock timestamps.
+alice.now, bob.now = 5000, 20
+local clockSession = aliceGA.RollSession:Start(itemLink, { duration = 20 })
+expect(clockSession ~= nil, "clock-skew session starts")
+local remoteClockSession = bobGA.RollSession:GetState(clockSession.id)
+same(clockSession.expiresAt, 5020, "host deadline uses host-local GetTime")
+same(remoteClockSession.expiresAt, 40, "participant deadline uses participant-local GetTime")
+expect(clockSession.createdAt > clockSession.expiresAt, "wall-clock creation time is metadata, not a UI deadline")
+local hostDeadline = clockSession.expiresAt
+expect(aliceGA.RollSession:RequestSync(clockSession.id) ~= nil, "host may broadcast a sync request")
+same(clockSession.expiresAt, hostDeadline, "self-echoed sync never rewrites the host deadline")
+alice.now, bob.now = 5018.75, 123.5
+expect(bobGA.RollSession:RequestSync(clockSession.id) ~= nil, "participant requests late-session sync")
+remoteClockSession = bobGA.RollSession:GetState(clockSession.id)
+expect(math.abs((remoteClockSession.expiresAt - bob.now) - 1.25) < 0.001,
+    "late sync preserves the exact remaining time instead of extending to five seconds")
+same(remoteClockSession.timeSource, "GetTime", "synced deadline documents its monotonic clock source")
+expect(aliceGA.RollSession:Stop(clockSession.id, "TEST"), "clock-skew session stops cleanly")
+alice.now, bob.now = 6000, 6000 -- keep subsequent integration scenarios on one forward-moving clock
+
 -- A pending award follows through the observed 3.3.5 trade lifecycle.
 alice.target = "Bob"
 alice.env.GetContainerNumSlots = function(bag) return bag == 0 and 1 or 0 end
