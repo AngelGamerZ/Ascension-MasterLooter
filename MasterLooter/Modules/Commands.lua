@@ -60,14 +60,12 @@ function Commands:Handle(message)
         else GA:Print("gdkp start <Name> | sale <Link> <Käufer> <Gold> | finish") end
     elseif command == "version" then GA:Print("Version " .. GA.VERSION .. ", Protokoll " .. GA.PROTOCOL_VERSION)
     elseif command == "rolldebug" then
-        local tracker = GA.ChatRolls
-        local diagnostics = tracker and tracker:GetDiagnostics() or {}
-        local state = GA.RollSession and GA.RollSession:GetState()
-        GA:Print("Roll-Diagnose: Version " .. tostring(GA.VERSION) ..
-            ", Tracker " .. tostring(tracker and tracker.initialized == true) ..
-            ", Sitzung " .. tostring(state and state.id or "keine"))
-        GA:Print("Letzte Meldung: " .. tostring(diagnostics.raw or "keine"))
-        GA:Print("Ergebnis: " .. tostring(diagnostics.status or "keine Diagnose"))
+        local window = GA.UI and GA.UI.RollDebugWindow
+        if window and type(window.Show) == "function" then window:Show()
+        else
+            local tracker = GA.ChatRolls
+            GA:Print(tracker and tracker:GetDiagnosticText() or "Rolltracker ist nicht geladen.")
+        end
     else self:Help() end
 end
 

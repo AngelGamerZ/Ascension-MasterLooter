@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.16-beta
+
+- Rolltracker initialisiert seine lokalen Chat-Erfassungswege bereits beim Laden der Moduldatei und nicht erst über den späteren Bootstrap-Durchlauf
+- Potenziell problematische Unicode-Zeichen aus dem Lua-Quelltext entfernt; Halbgeviert- und Geviertstriche werden bytebasiert normalisiert
+- `/ml rolldebug` öffnet ein verschiebbares Diagnosefenster mit mehrzeiligem, markierbarem Text für Strg+A und Strg+C
+- Diagnosefenster zeigt Version, Trackerkomponenten, Sitzung, Ereigniszähler, Rohmeldung, erkannte Werte und Übernahmeergebnis
+- Eigene Meldung erklärt ausdrücklich, wenn `Modules\\ChatRolls.lua` auf dem Client überhaupt nicht geladen wurde
+
 ## 0.9.15-beta
 
 - Zusätzlicher Hook auf WoWs niedrigen `ChatFrame_MessageEventHandler`, um sichtbare Systemwürfe auch bei abweichender Ascension-Eventweitergabe lokal beim Lootmaster zu erfassen

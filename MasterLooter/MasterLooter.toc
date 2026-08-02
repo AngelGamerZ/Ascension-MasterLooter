@@ -2,7 +2,7 @@
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.9.15-beta
+## Version: 0.9.16-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
@@ -35,6 +35,7 @@ Modules\ImportExport.lua
 Modules\Commands.lua
 
 UI\Theme.lua
+UI\RollDebugWindow.lua
 UI\RollWindow.lua
 UI\MasterLooterWindow.lua
 UI\HistoryWindow.lua

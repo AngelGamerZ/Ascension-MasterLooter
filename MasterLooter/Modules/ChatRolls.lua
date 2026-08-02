@@ -21,6 +21,8 @@ end
 local localizedRollPattern = createFormatPattern(_G and _G.RANDOM_ROLL_RESULT)
 
 local function visibleMessage(message)
+    message = string.gsub(message, "\226\128\147", "-")
+    message = string.gsub(message, "\226\128\148", "-")
     message = string.gsub(message, "|c%x%x%x%x%x%x%x%x", "")
     message = string.gsub(message, "|r", "")
     message = string.gsub(message, "|H[^|]+|h%[([^%]]+)%]|h", "%1")
@@ -37,9 +39,9 @@ local function parseSystemRoll(message)
         end
     end
     message = visibleMessage(message)
-    local roll, minimum, maximum = string.match(message, "(%d+)%s*%(%s*(%d+)%s*[%-%–—]%s*(%d+)%s*%)")
+    local roll, minimum, maximum = string.match(message, "(%d+)%s*%(%s*(%d+)%s*%-%s*(%d+)%s*%)")
     if not roll then
-        minimum, maximum, roll = string.match(message, "%(%s*(%d+)%s*[%-%–—]%s*(%d+)%s*%)%D+(%d+)")
+        minimum, maximum, roll = string.match(message, "%(%s*(%d+)%s*%-%s*(%d+)%s*%)%D+(%d+)")
     end
     roll, minimum, maximum = tonumber(roll), tonumber(minimum), tonumber(maximum)
     if not roll or not minimum or not maximum then return nil end
@@ -94,7 +96,31 @@ function ChatRolls:GetDiagnostics()
     return self.diagnostics
 end
 
+function ChatRolls:GetDiagnosticText()
+    local diagnostics = self.diagnostics or {}
+    local state = GA.RollSession and GA.RollSession:GetState()
+    return table.concat({
+        "MasterLooter Roll-Diagnose",
+        "Version: " .. tostring(GA.VERSION),
+        "Protokoll: " .. tostring(GA.PROTOCOL_VERSION),
+        "Tracker vorhanden: ja",
+        "Tracker initialisiert: " .. tostring(self.captureInitialized == true),
+        "Direkter Eventframe: " .. tostring(self.frame ~= nil),
+        "Chatfilter: " .. tostring(self.chatFilter ~= nil),
+        "Chat-Handler-Hook: " .. tostring(self.handlerHooked == true),
+        "Aktive Sitzung: " .. tostring(state and state.id or "keine"),
+        "Sitzungsstatus: " .. tostring(state and state.status or "keiner"),
+        "Empfangene Systemereignisse: " .. tostring(diagnostics.received or 0),
+        "Letzte Meldung: " .. tostring(diagnostics.raw or "keine"),
+        "Spieler: " .. tostring(diagnostics.player or "keiner"),
+        "Wurf: " .. tostring(diagnostics.roll or "keiner"),
+        "Bereich: " .. tostring(diagnostics.minimum or "?") .. "-" .. tostring(diagnostics.maximum or "?"),
+        "Ergebnis: " .. tostring(diagnostics.status or "keine Diagnose"),
+    }, "\n")
+end
+
 function ChatRolls:OnInitialize()
+    if self.captureInitialized then return true end
     -- Keep independent capture paths for this critical game event. Gargul also
     -- uses the chat-message filter path; Ascension builds can display a system
     -- line even when an addon's regular event dispatch does not receive it.
@@ -120,7 +146,10 @@ function ChatRolls:OnInitialize()
         end)
         self.handlerHooked = ok and true or false
     end
+    self.captureInitialized = true
     return true
 end
 
 GA:RegisterModule("ChatRolls", ChatRolls)
+local initialized, initializeError = pcall(ChatRolls.OnInitialize, ChatRolls)
+if not initialized and type(GA.ReportError) == "function" then GA.ReportError("ChatRolls", initializeError) end
