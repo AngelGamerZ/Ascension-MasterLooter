@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5-beta
+
+- Sichtbare Rolloptionen von `Haupt-Skill` und `Neben-Skill` auf die üblichen Kurzformen `MS` und `OS` geändert
+- Rückmeldungen beim Masterlooter verwenden ebenfalls durchgehend `MS` und `OS`
+
 ## 0.9.4-beta
 
 - Beide Rollfenster auf 560×124 Pixel reduziert und standardmäßig weiter nach oben auf `BOTTOM +105` gesetzt

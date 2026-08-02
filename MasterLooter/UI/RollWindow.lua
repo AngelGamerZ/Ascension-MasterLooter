@@ -104,8 +104,8 @@ function RollWindow:EnsureFrame()
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "Haupt-Skill", x = 18 },
-        { key = "OS", text = "Neben-Skill", x = 112 },
+        { key = "MS", text = "MS", x = 18 },
+        { key = "OS", text = "OS", x = 112 },
         { key = "PASS", text = "Passen", x = 206 },
     }
     self.buttons = {}

@@ -92,7 +92,7 @@ function MasterLooterWindow:ShowParticipantResponse(action, participant)
     if type(participant) ~= "table" or (action ~= "ROLL" and action ~= "PASS") then return end
     local name = field(participant, "name", "player", "playerName") or "Unbekannt"
     local choice = field(participant, "choice", "category") or action
-    local labels = { MS = "Haupt-Skill", OS = "Neben-Skill", PASS = "Passen" }
+    local labels = { MS = "MS", OS = "OS", PASS = "Passen" }
     local roll = tonumber(field(participant, "roll", "value")) or 0
     local suffix = choice ~= "PASS" and roll > 0 and (" – " .. tostring(roll)) or ""
     self:SetStatus(name .. ": " .. (labels[choice] or tostring(choice)) .. suffix, Theme.colors.green)
