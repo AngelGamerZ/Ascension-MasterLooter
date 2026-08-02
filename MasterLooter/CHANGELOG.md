@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-beta
+
+- Das Lootmaster-Fenster verwendet jetzt eine echte Item-Ablagefläche mit Icon, Itemname und Tooltip statt eines sichtbaren Itemlink-Textfelds
+- Drag-and-drop aus Taschen, dem Blizzard-Lootfenster und der MasterLooter-Lootliste
+- Rechtsklick auf die Ablagefläche entfernt die aktuelle Auswahl
+- Dokumentation und Ingame-Testcheckliste für den neuen Ablauf aktualisiert
+
 ## 0.9.0-beta
 
 - Eigenständiger Core für Interface 30300 mit Legacy-Kompatibilität, Profilen und Migrationen

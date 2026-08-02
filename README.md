@@ -29,3 +29,4 @@ The current integration harness covers two isolated addon clients and 128 assert
 
 More details are available in [MasterLooter/README.md](MasterLooter/README.md).
 
+The current implementation status and remaining expansion areas are documented in [FEATURE_STATUS.md](FEATURE_STATUS.md).

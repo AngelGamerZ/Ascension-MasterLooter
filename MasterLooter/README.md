@@ -11,7 +11,7 @@ Eigenständige Loot- und Raidverwaltung für Project Ascension auf dem 3.3.5a-Cl
 
 ## Wichtigster Ablauf
 
-Der Lootmaster zieht einen Itemlink in das Lootmaster-Fenster, stellt Dauer und Notiz ein und klickt **Roll starten**. Das Addon sendet eine versionierte Sitzung an Raid oder Gruppe. Auf allen Clients öffnet sich das Teilnehmerfenster mit Item, Restzeit und den Schaltflächen **Haupt-Skill**, **Neben-Skill** und **Passen**. Antworten werden der Sitzungs-ID zugeordnet und erscheinen live beim Lootmaster. **Item vergeben** veröffentlicht das Ergebnis und versucht bei geöffnetem Lootfenster die 3.3.5a-Masterloot-API zu verwenden.
+Der Lootmaster zieht ein Item direkt aus der Tasche, dem Blizzard-Lootfenster oder der MasterLooter-Lootliste auf die Item-Ablagefläche, stellt Dauer und Notiz ein und klickt **Roll starten**. Das Addon sendet eine versionierte Sitzung an Raid oder Gruppe. Auf allen Clients öffnet sich das Teilnehmerfenster mit Item, Restzeit und den Schaltflächen **Haupt-Skill**, **Neben-Skill** und **Passen**. Antworten werden der Sitzungs-ID zugeordnet und erscheinen live beim Lootmaster. **Item vergeben** veröffentlicht das Ergebnis und versucht bei geöffnetem Lootfenster die 3.3.5a-Masterloot-API zu verwenden.
 
 ## Module
 

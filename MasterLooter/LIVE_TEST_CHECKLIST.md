@@ -4,7 +4,7 @@ Der automatisierte Harness prüft die Lua- und Mehrclient-Logik außerhalb des S
 
 1. Beide Addonordner auf zwei Clients installieren und Lua-Fehleranzeige aktivieren (`/console scriptErrors 1`).
 2. Gruppe bilden, Master Loot aktivieren und `/ml version` sowie das Versionsfenster prüfen.
-3. Lootmaster: `/ml`, echten Itemlink einsetzen, 15 Sekunden wählen und starten.
+3. Lootmaster: `/ml`, je ein echtes Item aus Tasche und geöffnetem Lootfenster auf die Item-Ablagefläche ziehen, 15 Sekunden wählen und starten.
 4. Teilnehmer: kontrollieren, dass Item, Timer und MS/OS/Pass automatisch erscheinen; einmal klicken.
 5. Lootmaster: prüfen, dass nur eine hostgenerierte Wurfzahl erscheint; Gewinner vergeben.
 6. Mit offenem Lootfenster direkte Vergabe prüfen. Danach einen absichtlich nicht direkt vergebbaren Fall testen und die Trade-Warteschlange kontrollieren.

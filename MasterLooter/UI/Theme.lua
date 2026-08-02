@@ -165,6 +165,26 @@ function Theme:SetItemTooltip(widget, itemLink)
     widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
+function Theme:BeginItemDrag(itemLink)
+    if type(itemLink) ~= "string" or not string.find(itemLink, "|Hitem:", 1, true) then return false end
+    GA.UI.draggedItem = {
+        link = itemLink,
+        startedAt = type(GetTime) == "function" and GetTime() or 0,
+    }
+    if type(SetCursor) == "function" then pcall(SetCursor, "INSPECT_CURSOR") end
+    return true
+end
+
+function Theme:TakeDraggedItem()
+    local payload = GA.UI.draggedItem
+    GA.UI.draggedItem = nil
+    if type(payload) ~= "table" or type(payload.link) ~= "string" then return nil end
+    if payload.startedAt and payload.startedAt > 0 and type(GetTime) == "function" and GetTime() - payload.startedAt > 10 then
+        return nil
+    end
+    return payload.link
+end
+
 function Theme:FormatTime(seconds)
     seconds = math.max(0, math.ceil(tonumber(seconds) or 0))
     return string.format("%d:%02d", math.floor(seconds / 60), math.mod(seconds, 60))

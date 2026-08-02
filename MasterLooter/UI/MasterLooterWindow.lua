@@ -91,15 +91,29 @@ function MasterLooterWindow:EnsureFrame()
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
-    local itemLabel = Theme:CreateLabel(frame, "Itemlink", 12, Theme.colors.muted)
+    local itemLabel = Theme:CreateLabel(frame, "Item", 12, Theme.colors.muted)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -48)
-    local item = Theme:CreateEditBox(frame, 365, 24)
+    local item = CreateFrame("Button", nil, frame)
+    item:SetWidth(365); item:SetHeight(30)
     item:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -42)
+    item:EnableMouse(true); item:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    Theme:ApplyInset(item)
+    local itemIcon = item:CreateTexture(nil, "ARTWORK")
+    itemIcon:SetWidth(22); itemIcon:SetHeight(22); itemIcon:SetPoint("LEFT", item, "LEFT", 5, 0)
+    itemIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    local itemText = Theme:CreateLabel(item, "Item hier ablegen (Tasche oder Lootfenster)", 11, Theme.colors.muted)
+    itemText:SetPoint("LEFT", itemIcon, "RIGHT", 7, 0); itemText:SetPoint("RIGHT", item, "RIGHT", -7, 0)
+    itemText:SetJustifyH("LEFT")
     item:SetScript("OnReceiveDrag", function() MasterLooterWindow:AcceptCursorItem() end)
-    item:SetScript("OnMouseDown", function(_, button)
-        if button == "RightButton" then MasterLooterWindow:AcceptCursorItem() end
+    item:SetScript("OnMouseUp", function(_, button)
+        if button == "RightButton" then MasterLooterWindow:SetItem(nil) else MasterLooterWindow:AcceptCursorItem() end
     end)
-    self.itemEdit = item
+    item:SetScript("OnEnter", function(self)
+        if not MasterLooterWindow.itemLink then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(MasterLooterWindow.itemLink); GameTooltip:Show()
+    end)
+    item:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    self.itemDrop = item; self.itemIcon = itemIcon; self.itemText = itemText
 
     local durationLabel = Theme:CreateLabel(frame, "Dauer", 12, Theme.colors.muted)
     durationLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -80)
@@ -193,24 +207,62 @@ function MasterLooterWindow:EnsureFrame()
     award:Disable()
     self.awardButton = award
 
-    if hooksecurefunc and type(ChatEdit_InsertLink) == "function" and not GA.UI.itemLinkHooked then
-        GA.UI.itemLinkHooked = true
-        hooksecurefunc("ChatEdit_InsertLink", function(link)
-            if MasterLooterWindow.itemEdit and MasterLooterWindow.itemEdit:HasFocus() then
-                MasterLooterWindow.itemEdit:SetText(link or "")
-                MasterLooterWindow.itemEdit:HighlightText(0, 0)
-            end
-        end)
-    end
+    self:HookLootButtons()
     return frame
 end
 
+function MasterLooterWindow:SetItem(itemLink)
+    self.itemLink = type(itemLink) == "string" and itemLink or nil
+    if not self.itemText or not self.itemIcon then return end
+    if not self.itemLink then
+        self.itemText:SetText("Item hier ablegen (Tasche oder Lootfenster)")
+        self.itemText:SetTextColor(unpack(Theme.colors.muted))
+        self.itemIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        return
+    end
+    self.itemText:SetText(self.itemLink)
+    self.itemText:SetTextColor(unpack(Theme.colors.text))
+    local texture = type(GetItemInfo) == "function" and select(10, GetItemInfo(self.itemLink))
+    self.itemIcon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+end
+
 function MasterLooterWindow:AcceptCursorItem()
-    local cursorType, itemId, itemLink = GetCursorInfo()
-    if cursorType ~= "item" then return end
-    itemLink = itemLink or select(2, GetItemInfo(itemId))
-    if itemLink then self.itemEdit:SetText(itemLink) end
-    ClearCursor()
+    local itemLink = Theme:TakeDraggedItem()
+    if not itemLink and type(GetCursorInfo) == "function" then
+        local cursorType, itemId, cursorLink = GetCursorInfo()
+        if cursorType == "item" then
+            itemLink = cursorLink
+            if not itemLink and type(GetItemInfo) == "function" then itemLink = select(2, GetItemInfo(itemId)) end
+        end
+    end
+    if not itemLink then return false end
+    self:SetItem(itemLink)
+    if type(ClearCursor) == "function" then ClearCursor() end
+    self:SetStatus("Item übernommen.", Theme.colors.green)
+    return true
+end
+
+function MasterLooterWindow:HookLootButtons()
+    if self.lootButtonsHooked then return end
+    local count = tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4
+    local hooked = false
+    for index = 1, count do
+        local fallbackIndex = index
+        local button = _G["LootButton" .. index]
+        if button and type(button.HookScript) == "function" then
+            button:RegisterForDrag("LeftButton")
+            button:HookScript("OnDragStart", function(self)
+                local slot = tonumber(self.slot) or (type(self.GetID) == "function" and self:GetID()) or fallbackIndex
+                if not self.slot and _G.LootFrame and tonumber(_G.LootFrame.page) and _G.LootFrame.page > 1 then
+                    slot = slot + ((_G.LootFrame.page - 1) * count)
+                end
+                local link = type(GetLootSlotLink) == "function" and GetLootSlotLink(slot)
+                if link then Theme:BeginItemDrag(link) end
+            end)
+            hooked = true
+        end
+    end
+    self.lootButtonsHooked = hooked
 end
 
 function MasterLooterWindow:SetStatus(text, color)
@@ -219,11 +271,11 @@ function MasterLooterWindow:SetStatus(text, color)
 end
 
 function MasterLooterWindow:StartSession()
-    local itemLink = self.itemEdit:GetText()
+    local itemLink = self.itemLink
     local duration = tonumber(self.durationEdit:GetText()) or 30
     local note = self.noteEdit:GetText()
     if not itemLink or not string.find(itemLink, "|Hitem:") then
-        self:SetStatus("Bitte einen Itemlink einfügen.", Theme.colors.red)
+        self:SetStatus("Bitte ein Item aus Tasche oder Lootfenster ablegen.", Theme.colors.red)
         return
     end
     if GA.SoftRes and GA.SoftRes:IsHardReserved(itemLink) then
@@ -273,7 +325,7 @@ function MasterLooterWindow:UpdateSession(session)
     self.session = session
     self.sessionId = field(session, "id", "sessionId", "rollId")
     local link = field(session, "itemLink", "link") or field(session.item, "link", "itemLink")
-    if link then self.itemEdit:SetText(link) end
+    if link then self:SetItem(link) end
     self.rolls = getRolls(session)
     self.selected = nil
     self.page = math.min(self.page or 1, math.max(1, math.ceil(#self.rolls / ROWS)))
@@ -363,6 +415,7 @@ function MasterLooterWindow:Initialize()
     registerMessage("GA_ROLL_SESSION_STARTED", function(...)
         MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_STARTED", ...))
     end)
+    registerMessage("GA_LOOT_OPENED", function() MasterLooterWindow:HookLootButtons() end)
     local update = function(...)
         MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_UPDATED", ...))
     end

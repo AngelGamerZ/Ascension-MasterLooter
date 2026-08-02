@@ -45,6 +45,10 @@ function LootWindow:EnsureFrame()
         row.quantity = Theme:CreateLabel(row, "", 12); row.quantity:SetPoint("LEFT", row, "LEFT", 384, 0); row.quantity:SetWidth(55)
         row.state = Theme:CreateLabel(row, "", 12); row.state:SetPoint("LEFT", row, "LEFT", 449, 0); row.state:SetWidth(55)
         row:SetScript("OnClick", function() LootWindow:Select(row.record) end)
+        row:RegisterForDrag("LeftButton")
+        row:SetScript("OnDragStart", function(self)
+            if self.record and self.record.link then Theme:BeginItemDrag(self.record.link) end
+        end)
         row:SetScript("OnEnter", function(self) if self.record and self.record.link then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(self.record.link); GameTooltip:Show() end end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)
         self.rows[index] = row
@@ -99,7 +103,7 @@ end
 function LootWindow:UseSelected()
     if not self.selected or not self.selected.link then return end
     local window = GA.UI.MasterLooterWindow; if not window then return end
-    window:Show(); if window.itemEdit then window.itemEdit:SetText(self.selected.link) end
+    window:Show(); if type(window.SetItem) == "function" then window:SetItem(self.selected.link) end
     self:SetStatus("Item in das Lootmaster-Fenster übernommen.", Theme.colors.green)
 end
 
