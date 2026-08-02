@@ -17,7 +17,7 @@ Die Rollbuttons führen echte öffentliche Würfe aus: `MS` verwendet immer `/ro
 
 Der Eingabebereich prüft diesen Ablauf unmittelbar: **Roll starten** wird erst mit einem gültigen Item und einer Rollzeit zwischen 5 und 300 Sekunden aktiv. Die Zeit lässt sich in Fünf-Sekunden-Schritten ändern, die optionale Notiz ist auf 160 Zeichen begrenzt und ein Rechtsklick entfernt das abgelegte Item. Während eine Session läuft, sind die Eingaben gesperrt; Status- und Feldfarben zeigen Fehler, Versand und Abschluss verständlich an.
 
-Teilnehmer sehen MasterLooter-Rolls als kompakte, 560 Pixel breite Leiste im unteren Bildschirmbereich. Die Oberfläche unterstützt ein ausdrückliches **Passen**, schließt bei Ablauf automatisch und verwendet eine versionierte Standardposition oberhalb des unteren Bildschirmrands. Der Masterlooter kündigt die verbleibende Zeit regelmäßig in Gruppe oder Raid an und zählt ab zehn Sekunden jede Sekunde herunter. Normale Bedarf-/Gier-/Entzaubern-Würfe verbleiben vollständig in der Blizzard-Oberfläche.
+Teilnehmer sehen MasterLooter-Rolls nach dem Gargul-Prinzip als kompakte 520×84-Pixel-Leiste im unteren Bildschirmbereich: Status und Rollbuttons oben, Itemicon, Itemlink, Notiz und Restzeit in einer schmalen farbigen Itemzeile darunter. Die Oberfläche unterstützt ein ausdrückliches **Passen**, schließt bei Ablauf automatisch und verwendet eine versionierte Standardposition oberhalb des unteren Bildschirmrands. Der Masterlooter kündigt die verbleibende Zeit regelmäßig in Gruppe oder Raid an und zählt ab zehn Sekunden jede Sekunde herunter. Normale Bedarf-/Gier-/Entzaubern-Würfe verbleiben vollständig in der Blizzard-Oberfläche.
 
 Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet sich ausschließlich manuell über `/ml loot` oder den Minimap-Menüpunkt **Loot**. Crafting, Entzaubern, Behälter und normales Aufsammeln öffnen es nicht automatisch.
 
@@ -40,7 +40,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - `/ml sr <Spieler> <Item-ID>` – SoftRes setzen
 - `/ml plus <Spieler> [Wert]` – +1 ändern
 - `/ml gdkp start|sale|finish` – GDKP steuern
-- `/ml auction|raid|version|bags|native` – zusätzliche Werkzeuge öffnen
+- `/ml auction|raid|version|bags` – zusätzliche Werkzeuge öffnen
 - `/ml version` – Build- und Protokollversion
 
 ## Entwicklungstest

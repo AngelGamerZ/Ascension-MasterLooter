@@ -513,6 +513,8 @@ aliceGA.UI.Theme = { colors = { muted = { 0.5, 0.5, 0.5, 1 }, green = { 0, 1, 0,
 alice.env.unpack = alice.env.unpack or table.unpack
 loadFile(alice, "UI/RollWindow.lua")
 local rollWindow = aliceGA.UI.RollWindow
+same(rollWindow.WIDTH, 520, "the Gargul-style participant widget stays compact")
+same(rollWindow.HEIGHT, 84, "the participant widget remains a shallow bar instead of a dialog")
 rollWindow.frame = { Hide = function() end }
 rollWindow.session, rollWindow.sessionId = {}, "queue-item-2"
 rollWindow.status = { SetText = function() end, SetTextColor = function() end }
@@ -526,6 +528,11 @@ same(rollWindow.lastButtonsEnabled, nil, "a stale acknowledgement cannot gray th
 expect(rollWindow:EndSession("STOPPED", { id = "queue-item-2" }),
     "the current queue item's own end event is still applied")
 same(rollWindow.lastButtonsEnabled, false, "the current queue item disables its buttons when it actually ends")
+
+loadFile(alice, "UI/MasterLooterWindow.lua")
+same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
+same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
+same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")

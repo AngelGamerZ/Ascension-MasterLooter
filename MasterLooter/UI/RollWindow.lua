@@ -5,7 +5,7 @@ _G.MasterLooter = GA
 GA.UI = GA.UI or {}
 
 local Theme = GA.UI.Theme
-local RollWindow = {}
+local RollWindow = { WIDTH = 520, HEIGHT = 84 }
 GA.UI.RollWindow = RollWindow
 
 local function now()
@@ -61,70 +61,72 @@ function RollWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterRollWindow", UIParent)
-    frame:SetWidth(560)
-    frame:SetHeight(124)
+    frame:SetWidth(self.WIDTH)
+    frame:SetHeight(self.HEIGHT)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
-    Theme:AddTitle(frame, "Beuteverteilung")
-    Theme:MakeMovable(frame, "rollWindowCompactV3")
-    Theme:RestorePosition(frame, "rollWindowCompactV3", "BOTTOM", 0, 105)
+    Theme:MakeMovable(frame, "rollWidgetGargulV1")
+    Theme:RestorePosition(frame, "rollWidgetGargulV1", "BOTTOM", 0, 125)
     Theme:RegisterForEscape(frame)
     self.frame = frame
+    frame:SetScript("OnMouseUp", function(_, button) if button == "RightButton" then frame:Hide() end end)
+
+    local itemStrip = frame:CreateTexture(nil, "BACKGROUND")
+    itemStrip:SetTexture(0.05, 0.22, 0.07, 0.78)
+    itemStrip:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -37)
+    itemStrip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 6)
+
+    local status = Theme:CreateLabel(frame, "Bitte wähle deine Roll-Kategorie.", 10, Theme.colors.muted)
+    status:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
+    status:SetWidth(228)
+    status:SetJustifyH("LEFT")
+    self.status = status
 
     local icon = CreateFrame("Button", nil, frame)
     icon:SetWidth(32)
     icon:SetHeight(32)
-    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -37)
+    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -42)
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
     icon.texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     self.icon = icon
 
     local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 12)
-    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -1)
-    item:SetPoint("RIGHT", frame, "RIGHT", -80, 0)
+    item:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, 1)
+    item:SetPoint("RIGHT", frame, "RIGHT", -58, 0)
     item:SetHeight(16)
     item:SetJustifyV("TOP")
     item:SetWordWrap(false)
     self.item = item
 
     local note = Theme:CreateLabel(frame, "", 10, Theme.colors.muted)
-    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -18)
-    note:SetPoint("RIGHT", frame, "RIGHT", -80, 0)
+    note:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -16)
+    note:SetPoint("RIGHT", frame, "RIGHT", -58, 0)
     note:SetHeight(14)
     note:SetWordWrap(false)
     self.note = note
 
-    local timerCaption = Theme:CreateLabel(frame, "Verbleibend", 11, Theme.colors.muted)
-    timerCaption:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -36)
-    timerCaption:SetWidth(65)
-    timerCaption:SetJustifyH("RIGHT")
     local timer = Theme:CreateLabel(frame, "0:00", 12, Theme.colors.gold)
-    timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -53)
-    timer:SetWidth(65)
+    timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -48)
+    timer:SetWidth(48)
     timer:SetJustifyH("RIGHT")
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "MS", x = 18 },
-        { key = "OS", text = "OS", x = 112 },
-        { key = "PASS", text = "Passen", x = 206 },
+        { key = "MS", text = "MS", x = 244, width = 86 },
+        { key = "OS", text = "OS", x = 334, width = 86 },
+        { key = "PASS", text = "Passen", x = 424, width = 86 },
     }
     self.buttons = {}
     for _, definition in ipairs(buttons) do
-        local button = Theme:CreateButton(frame, definition.text, 90, 24)
-        button:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", definition.x, 13)
+        local button = Theme:CreateButton(frame, definition.text, definition.width, 24)
+        button:SetPoint("TOPLEFT", frame, "TOPLEFT", definition.x, -6)
         button:SetScript("OnClick", function() RollWindow:Submit(definition.key) end)
+        if button.GetFontString and button:GetFontString() then button:GetFontString():SetTextColor(unpack(Theme.colors.gold)) end
         self.buttons[definition.key] = button
     end
-
-    local status = Theme:CreateLabel(frame, "", 12, Theme.colors.muted)
-    status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 306, 18)
-    status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 18)
-    status:SetJustifyH("RIGHT")
-    self.status = status
 
     frame:SetScript("OnUpdate", function(_, elapsed) RollWindow:OnUpdate(elapsed) end)
     return frame

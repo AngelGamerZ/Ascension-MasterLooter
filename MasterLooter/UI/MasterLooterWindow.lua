@@ -5,10 +5,10 @@ _G.MasterLooter = GA
 GA.UI = GA.UI or {}
 
 local Theme = GA.UI.Theme
-local MasterLooterWindow = { page = 1 }
+local MasterLooterWindow = { page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6 }
 GA.UI.MasterLooterWindow = MasterLooterWindow
 
-local ROWS = 8
+local ROWS = MasterLooterWindow.VISIBLE_ROWS
 
 local function field(source, ...)
     if type(source) ~= "table" then return nil end
@@ -103,23 +103,23 @@ function MasterLooterWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterMainWindow", UIParent)
-    frame:SetWidth(520)
-    frame:SetHeight(537)
+    frame:SetWidth(self.WIDTH)
+    frame:SetHeight(self.HEIGHT)
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     local title, close = Theme:AddTitle(frame, "MasterLooter – Lootmaster")
-    Theme:MakeMovable(frame, "masterLooterWindow")
-    Theme:RestorePosition(frame, "masterLooterWindow", "CENTER", 0, 20)
+    Theme:MakeMovable(frame, "masterLooterGargulV1")
+    Theme:RestorePosition(frame, "masterLooterGargulV1", "CENTER", 0, 20)
     Theme:RegisterForEscape(frame)
     self.frame = frame
 
-    local itemLabel = Theme:CreateLabel(frame, "Beute-Item", 12, Theme.colors.muted)
-    itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -48)
+    local itemLabel = Theme:CreateLabel(frame, "ITEM", 11, Theme.colors.muted)
+    itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -54)
     local item = CreateFrame("Button", nil, frame)
-    item:SetWidth(365); item:SetHeight(38)
-    item:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -42)
+    item:SetWidth(230); item:SetHeight(36)
+    item:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -45)
     item:EnableMouse(true); item:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     Theme:ApplyInset(item)
     local itemIcon = item:CreateTexture(nil, "ARTWORK")
@@ -144,15 +144,15 @@ function MasterLooterWindow:EnsureFrame()
     item:SetScript("OnLeave", function() GameTooltip:Hide(); MasterLooterWindow:RefreshInputState(false) end)
     self.itemDrop = item; self.itemIcon = itemIcon; self.itemText = itemText
 
-    local itemHelp = Theme:CreateLabel(frame, "Aus Tasche oder Lootfenster ziehen · Rechtsklick entfernt", 11, Theme.colors.muted)
+    local itemHelp = Theme:CreateLabel(frame, "Ziehen · Rechtsklick entfernt", 10, Theme.colors.muted)
     itemHelp:SetPoint("TOPLEFT", item, "BOTTOMLEFT", 2, -2)
     itemHelp:SetPoint("RIGHT", item, "RIGHT", 0, 0)
     self.itemHelp = itemHelp
 
-    local durationLabel = Theme:CreateLabel(frame, "Rollzeit", 12, Theme.colors.muted)
-    durationLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -105)
+    local durationLabel = Theme:CreateLabel(frame, "TIMER", 11, Theme.colors.muted)
+    durationLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -142)
     local minus = Theme:CreateButton(frame, "-", 26, 24)
-    minus:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -99)
+    minus:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -136)
     local duration = Theme:CreateEditBox(frame, 46, 24, true)
     duration:SetPoint("LEFT", minus, "RIGHT", 4, 0)
     if type(duration.SetMaxLetters) == "function" then duration:SetMaxLetters(3) end
@@ -164,7 +164,7 @@ function MasterLooterWindow:EnsureFrame()
     local plus = Theme:CreateButton(frame, "+", 26, 24)
     plus:SetPoint("LEFT", duration, "RIGHT", 4, 0)
     self.durationMinus, self.durationPlus = minus, plus
-    local seconds = Theme:CreateLabel(frame, "Sek. (5–300)", 12, Theme.colors.muted)
+    local seconds = Theme:CreateLabel(frame, "Sek.", 11, Theme.colors.muted)
     seconds:SetPoint("LEFT", plus, "RIGHT", 7, 0)
     minus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(-5) end)
     plus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(5) end)
@@ -172,44 +172,46 @@ function MasterLooterWindow:EnsureFrame()
     duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
 
-    local osLabel = Theme:CreateLabel(frame, "OS /roll", 12, Theme.colors.muted)
-    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -105)
+    local osLabel = Theme:CreateLabel(frame, "OS /ROLL", 11, Theme.colors.muted)
+    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 245, -142)
     local osMaximum = Theme:CreateEditBox(frame, 46, 24, true)
-    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", 350, -99)
+    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", 315, -136)
     if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
     osMaximum:SetText(tostring(math.max(2, math.min(99, math.floor(tonumber(profile and profile.osRollMaximum) or 99)))))
     self.osMaximumEdit = osMaximum
-    local osHint = Theme:CreateLabel(frame, "(2–99)", 12, Theme.colors.muted)
+    local osHint = Theme:CreateLabel(frame, "2–99 · MS bleibt 100", 11, Theme.colors.muted)
     osHint:SetPoint("LEFT", osMaximum, "RIGHT", 7, 0)
     osMaximum:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
     osMaximum:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     osMaximum:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeOSMaximum() end)
 
-    local noteLabel = Theme:CreateLabel(frame, "Notiz (optional)", 12, Theme.colors.muted)
-    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -137)
-    local note = Theme:CreateEditBox(frame, 365, 24)
-    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 105, -131)
+    local noteLabel = Theme:CreateLabel(frame, "NOTE", 11, Theme.colors.muted)
+    noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -109)
+    local note = Theme:CreateEditBox(frame, 448, 24)
+    note:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -103)
     if type(note.SetMaxLetters) == "function" then note:SetMaxLetters(160) end
     self.noteEdit = note
 
     local start = Theme:CreateButton(frame, "Roll starten", 115, 28)
-    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -169)
+    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 307, -49)
     start:SetScript("OnClick", function() MasterLooterWindow:StartSession() end)
     self.startButton = start
+    if start.GetFontString and start:GetFontString() then start:GetFontString():SetTextColor(unpack(Theme.colors.gold)) end
     local stop = Theme:CreateButton(frame, "Stoppen", 90, 28)
     stop:SetPoint("LEFT", start, "RIGHT", 8, 0)
     stop:SetScript("OnClick", function() MasterLooterWindow:StopSession() end)
     stop:Disable()
     self.stopButton = stop
+    if stop.GetFontString and stop:GetFontString() then stop:GetFontString():SetTextColor(unpack(Theme.colors.gold)) end
 
     local status = Theme:CreateLabel(frame, "Lege zuerst ein Item auf die Ablagefläche.", 12, Theme.colors.muted)
-    status:SetPoint("LEFT", stop, "RIGHT", 12, 0)
+    status:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -174)
     status:SetPoint("RIGHT", frame, "RIGHT", -22, 0)
-    status:SetJustifyH("RIGHT")
+    status:SetJustifyH("LEFT")
     self.status = status
 
     local tableFrame = CreateFrame("Frame", nil, frame)
-    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -212)
+    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -194)
     tableFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 61)
     Theme:ApplyInset(tableFrame)
     self.tableFrame = tableFrame
@@ -266,6 +268,7 @@ function MasterLooterWindow:EnsureFrame()
     award:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 17)
     award:SetScript("OnClick", function() MasterLooterWindow:AwardSelected() end)
     award:Disable()
+    if award.GetFontString and award:GetFontString() then award:GetFontString():SetTextColor(unpack(Theme.colors.gold)) end
     self.awardButton = award
 
     start:Disable()

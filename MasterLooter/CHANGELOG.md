@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.11-beta
+
+- Lootmaster-Fenster nach dem kompakten Gargul-Aufbau neu gegliedert: Item und Start/Stop oben, breite Notizzeile, Timer und autoritativer OS-Bereich darunter
+- Rolltabelle auf sechs dichte sichtbare Zeilen reduziert und das gesamte Lootmaster-Fenster auf 540×470 Pixel verkleinert
+- Teilnehmerfenster als flaches 520×84-Pixel-Widget mit Rollaktionen oben und grüner Item-, Notiz- und Timerleiste darunter gestaltet
+- Neue Positionsversionen setzen beide überarbeiteten Fenster einmalig auf passende Standardpositionen zurück
+- Layoutabmessungen und sichtbare Tabellenzeilen durch Regressionstests abgesichert
+
 ## 0.9.10-beta
 
 - **Erfasster Loot** aktualisiert sich bei Lootereignissen nur noch im Hintergrund und öffnet ausschließlich manuell über `/ml loot` oder das Minimap-Menü
