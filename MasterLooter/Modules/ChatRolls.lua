@@ -1,7 +1,7 @@
 -- Tracks Blizzard /roll results so players without MasterLooter can participate.
 local _, GA = ...
 
-local ChatRolls = {}
+local ChatRolls = { diagnostics = { received = 0, status = "Noch keine Systemmeldung empfangen." } }
 GA.ChatRolls = ChatRolls
 
 local function createFormatPattern(format)
@@ -37,7 +37,10 @@ local function parseSystemRoll(message)
         end
     end
     message = visibleMessage(message)
-    local roll, minimum, maximum = string.match(message, "(%d+)%s*%(%s*(%d+)%s*%-%s*(%d+)%s*%)")
+    local roll, minimum, maximum = string.match(message, "(%d+)%s*%(%s*(%d+)%s*[%-%–—]%s*(%d+)%s*%)")
+    if not roll then
+        minimum, maximum, roll = string.match(message, "%(%s*(%d+)%s*[%-%–—]%s*(%d+)%s*%)%D+(%d+)")
+    end
     roll, minimum, maximum = tonumber(roll), tonumber(minimum), tonumber(maximum)
     if not roll or not minimum or not maximum then return nil end
     local player = string.match(message, "^%s*([^%s]+)")
@@ -49,23 +52,46 @@ end
 
 function ChatRolls:OnSystemMessage(...)
     local player, roll, minimum, maximum
+    local diagnostics = self.diagnostics
+    diagnostics.received = (diagnostics.received or 0) + 1
     for index = 1, select("#", ...) do
-        player, roll, minimum, maximum = parseSystemRoll(select(index, ...))
+        local candidate = select(index, ...)
+        if type(candidate) == "string" then diagnostics.raw = candidate end
+        player, roll, minimum, maximum = parseSystemRoll(candidate)
         if player then break end
     end
-    if not player then return nil end
+    if not player and _G and type(_G.arg1) == "string" then
+        diagnostics.raw = _G.arg1
+        player, roll, minimum, maximum = parseSystemRoll(_G.arg1)
+    end
+    if not player then diagnostics.status = "Systemmeldung empfangen, aber nicht als /roll erkannt."; return nil end
+    diagnostics.player, diagnostics.roll = player, roll
+    diagnostics.minimum, diagnostics.maximum = minimum, maximum
     local manager = GA.RollSession
     local state = manager and manager:GetState()
+    diagnostics.session = state and state.id or nil
     local choice = state and manager:GetChoiceForMaximum(state, maximum)
-    if not choice or minimum ~= 1 then return nil end
+    if not state then diagnostics.status = "Roll erkannt, aber keine aktive Sitzung gefunden."; return nil end
+    if not choice or minimum ~= 1 then diagnostics.status = "Roll erkannt, aber der Bereich passt nicht zu MS/OS."; return nil end
     local participant = {
         name = player, choice = choice, roll = roll, minimum = minimum, maximum = maximum,
         publicRoll = true, pending = false,
     }
     GA.Events:Emit("GA_PUBLIC_ROLL_SEEN", state, participant)
     local method = manager.ObservePublicRoll or manager.RecordPublicRoll
-    local recorded = method(manager, player, roll, minimum, maximum, state.id)
+    local recorded, recordError = method(manager, player, roll, minimum, maximum, state.id)
+    if recorded then
+        diagnostics.status = "Erfasst: " .. player .. " " .. choice .. " " .. roll
+    elseif recordError == "player already rolled" then
+        diagnostics.status = "Bereits erfasst: " .. player
+    else
+        diagnostics.status = "Nicht übernommen: " .. tostring(recordError or "unbekannter Grund")
+    end
     return recorded or participant
+end
+
+function ChatRolls:GetDiagnostics()
+    return self.diagnostics
 end
 
 function ChatRolls:OnInitialize()
@@ -87,6 +113,12 @@ function ChatRolls:OnInitialize()
             return false
         end
         ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", self.chatFilter)
+    end
+    if type(hooksecurefunc) == "function" and type(ChatFrame_MessageEventHandler) == "function" and not self.handlerHooked then
+        local ok = pcall(hooksecurefunc, "ChatFrame_MessageEventHandler", function(_, event, ...)
+            if event == "CHAT_MSG_SYSTEM" then ChatRolls:OnSystemMessage(...) end
+        end)
+        self.handlerHooked = ok and true or false
     end
     return true
 end

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.15-beta
+
+- Zusätzlicher Hook auf WoWs niedrigen `ChatFrame_MessageEventHandler`, um sichtbare Systemwürfe auch bei abweichender Ascension-Eventweitergabe lokal beim Lootmaster zu erfassen
+- Altes 3.3.5-Eventformat über das globale `arg1` wird als weiterer Fallback unterstützt
+- Rollparser akzeptiert neben Bindestrichen auch Halbgeviert- und Geviertstriche sowie eine alternative Reihenfolge von Rollbereich und Ergebnis
+- `/ml rolldebug` zeigt geladene Version, Trackerstatus, aktive Sitzung, letzten empfangenen Rohtext und den genauen Erfassungs- oder Ablehnungsgrund
+
 ## 0.9.14-beta
 
 - Garguls lokales Erfassungsprinzip ergänzt: Der Lootmaster verarbeitet sichtbare Würfe zusätzlich über `ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM")`
