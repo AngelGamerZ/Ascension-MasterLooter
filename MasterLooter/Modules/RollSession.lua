@@ -52,16 +52,30 @@ local function unitName(unit)
     return UnitName and UnitName(unit) or nil
 end
 
+local function resolvedUnitName(unit)
+    local name = unitName(unit)
+    if not name and GetUnitName then
+        local ok, value = pcall(GetUnitName, unit, true)
+        if ok then name = value end
+    end
+    if not name and UnitFullName then
+        local ok, value = pcall(UnitFullName, unit)
+        if ok then name = value end
+    end
+    return name
+end
+
 local function groupUnitForName(name)
     local raids = GetNumRaidMembers and GetNumRaidMembers() or 0
     for i = 1, raids do
         local unit = "raid" .. i
-        if samePlayer(name, unitName(unit)) then return unit end
+        local rosterName = GetRaidRosterInfo and GetRaidRosterInfo(i) or nil
+        if samePlayer(name, rosterName) or samePlayer(name, resolvedUnitName(unit)) then return unit end
     end
     local parties = GetNumPartyMembers and GetNumPartyMembers() or 0
     for i = 1, parties do
         local unit = "party" .. i
-        if samePlayer(name, unitName(unit)) then return unit end
+        if samePlayer(name, resolvedUnitName(unit)) then return unit end
     end
     if samePlayer(name, playerName()) then return "player" end
     return nil

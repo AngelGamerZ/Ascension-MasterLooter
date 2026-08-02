@@ -38,8 +38,12 @@ local function parseSystemRoll(message)
     return player, roll, minimum, maximum
 end
 
-function ChatRolls:OnSystemMessage(message)
-    local player, roll, minimum, maximum = parseSystemRoll(message)
+function ChatRolls:OnSystemMessage(...)
+    local player, roll, minimum, maximum
+    for index = 1, select("#", ...) do
+        player, roll, minimum, maximum = parseSystemRoll(select(index, ...))
+        if player then break end
+    end
     if not player then return nil end
     local manager = GA.RollSession
     local state = manager and manager:GetState()
@@ -55,7 +59,7 @@ function ChatRolls:OnSystemMessage(message)
 end
 
 function ChatRolls:OnInitialize()
-    GA.Events:On("CHAT_MSG_SYSTEM", function(_, _, message) ChatRolls:OnSystemMessage(message) end, self)
+    GA.Events:On("CHAT_MSG_SYSTEM", function(_, _, ...) ChatRolls:OnSystemMessage(...) end, self)
     GA.Events:RegisterGameEvent("CHAT_MSG_SYSTEM")
     return true
 end

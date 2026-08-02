@@ -283,15 +283,25 @@ expect(aliceGA.RollSession:Stop(passSession.id, "TEST"), "pass test session stop
 
 -- Public Blizzard /roll messages allow group members without the addon to participate.
 bobGA.DB:GetProfile().osRollMaximum = 17
+local originalRaidCount, originalPartyCount = alice.env.GetNumRaidMembers, alice.env.GetNumPartyMembers
+local originalUnitFullName = alice.env.UnitFullName
+alice.env.GetNumRaidMembers = function() return 0 end
+alice.env.GetNumPartyMembers = function() return 1 end
+alice.env.UnitFullName = function(unit)
+    if unit == "party1" then return "Flexdeineex", "Ascension" end
+    return originalUnitFullName(unit)
+end
 local publicMSSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
 same(bobGA.RollSession:GetState(publicMSSession.id).osRollMaximum, 42, "START synchronizes the configured OS maximum")
 same(bobGA.DB:GetProfile().osRollMaximum, 17, "a participant's local preference cannot override the loot master's session")
-fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 87 (1-100)")
-local publicMS = aliceGA.RollSession:GetState(publicMSSession.id).participants.bob
+fire(alice, "CHAT_MSG_SYSTEM", "Flexdeineex rolls 37 (1 - 100)")
+local publicMS = aliceGA.RollSession:GetState(publicMSSession.id).participants.flexdeineex
 same(publicMS.choice, "MS", "/roll 100 is classified as MS")
-same(publicMS.roll, 87, "public MS preserves the Blizzard roll result")
+same(publicMS.roll, 37, "public MS preserves the exact Ascension system-message result")
 expect(publicMS.publicRoll, "public MS is marked as a chat-tracked roll")
 expect(aliceGA.RollSession:Stop(publicMSSession.id, "TEST"), "public MS session stops")
+alice.env.GetNumRaidMembers, alice.env.GetNumPartyMembers = originalRaidCount, originalPartyCount
+alice.env.UnitFullName = originalUnitFullName
 
 local publicOSSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
 fire(alice, "CHAT_MSG_SYSTEM", "Bob rolls 31 (1-99)")

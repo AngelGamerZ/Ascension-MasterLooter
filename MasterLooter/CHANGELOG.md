@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.8-beta
+
+- Ascension-Systemmeldungen mit Leerzeichen im Bereich wie `Flexdeineex rolls 37 (1 - 100)` als Regressionstest ergänzt
+- Raidmitglieder werden zusätzlich über `GetRaidRosterInfo` aufgelöst; Gruppenmitglieder verwenden Fallbacks über `GetUnitName` und `UnitFullName`, falls `UnitName("partyX")` auf Ascension keinen Namen liefert
+- `CHAT_MSG_SYSTEM` wird robuster aus den tatsächlich gelieferten Eventargumenten ausgelesen
+
 ## 0.9.7-beta
 
 - OS-Wurfmaximum aus den allgemeinen Einstellungen direkt in das Lootmaster-Fenster verschoben
