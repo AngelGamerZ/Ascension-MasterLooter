@@ -1,0 +1,53 @@
+## Interface: 30300
+## Title: MasterLooter
+## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
+## Author: MasterLooter Team
+## Version: 0.9.0-beta
+## SavedVariables: MasterLooterDB
+## DefaultState: Enabled
+
+Core\Namespace.lua
+Core\Compat.lua
+Core\Events.lua
+Core\DB.lua
+Core\Bootstrap.lua
+
+Modules\Comm.lua
+Modules\BagInspector.lua
+Modules\RollSession.lua
+Modules\NativeLootRoll.lua
+Modules\Loot.lua
+Modules\PackMule.lua
+Modules\Trade.lua
+Modules\Award.lua
+Modules\SoftRes.lua
+Modules\PlusOnes.lua
+Modules\Priority.lua
+Modules\BoostedRolls.lua
+Modules\Ranking.lua
+Modules\GDKP.lua
+Modules\GDKPAuction.lua
+Modules\RaidManager.lua
+Modules\ItemDataBridge.lua
+Modules\VersionCheck.lua
+Modules\Announcements.lua
+Modules\ImportExport.lua
+Modules\Commands.lua
+
+UI\Theme.lua
+UI\RollWindow.lua
+UI\MasterLooterWindow.lua
+UI\HistoryWindow.lua
+UI\SettingsWindow.lua
+UI\SoftResWindow.lua
+UI\GDKPWindow.lua
+UI\GDKPAuctionWindow.lua
+UI\RaidManagerWindow.lua
+UI\VersionWindow.lua
+UI\BagInspectorWindow.lua
+UI\NativeLootWindow.lua
+UI\LootWindow.lua
+UI\TradeWindow.lua
+UI\RulesWindow.lua
+UI\ImportExportWindow.lua
+UI\Launcher.lua

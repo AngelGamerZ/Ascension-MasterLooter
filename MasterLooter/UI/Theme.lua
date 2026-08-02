@@ -1,0 +1,171 @@
+local addonName, GA = ...
+
+GA = GA or _G.MasterLooter or {}
+_G.MasterLooter = GA
+
+GA.UI = GA.UI or {}
+GA.UI.Theme = GA.UI.Theme or {}
+
+local Theme = GA.UI.Theme
+
+Theme.colors = {
+    panel = { 0.055, 0.065, 0.085, 0.96 },
+    panelLight = { 0.10, 0.12, 0.16, 0.98 },
+    border = { 0.38, 0.31, 0.17, 1 },
+    gold = { 1.00, 0.82, 0.20, 1 },
+    text = { 0.92, 0.92, 0.92, 1 },
+    muted = { 0.62, 0.65, 0.70, 1 },
+    green = { 0.20, 0.80, 0.30, 1 },
+    red = { 0.85, 0.18, 0.18, 1 },
+}
+
+local PANEL_BACKDROP = {
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true,
+    tileSize = 32,
+    edgeSize = 24,
+    insets = { left = 6, right = 6, top = 6, bottom = 6 },
+}
+
+local INSET_BACKDROP = {
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+}
+
+function Theme:ApplyPanel(frame)
+    frame:SetBackdrop(PANEL_BACKDROP)
+    frame:SetBackdropColor(unpack(self.colors.panel))
+    frame:SetBackdropBorderColor(unpack(self.colors.border))
+end
+
+function Theme:ApplyInset(frame)
+    frame:SetBackdrop(INSET_BACKDROP)
+    frame:SetBackdropColor(unpack(self.colors.panelLight))
+    frame:SetBackdropBorderColor(0.30, 0.30, 0.34, 1)
+end
+
+function Theme:CreateLabel(parent, text, size, color)
+    local label = parent:CreateFontString(nil, "OVERLAY", size and size >= 14 and "GameFontNormalLarge" or "GameFontNormal")
+    label:SetText(text or "")
+    label:SetTextColor(unpack(color or self.colors.text))
+    label:SetJustifyH("LEFT")
+    return label
+end
+
+function Theme:CreateButton(parent, text, width, height)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetWidth(width or 90)
+    button:SetHeight(height or 24)
+    button:SetText(text or "")
+    return button
+end
+
+function Theme:CreateEditBox(parent, width, height, numeric)
+    local edit = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    edit:SetWidth(width or 120)
+    edit:SetHeight(height or 22)
+    edit:SetAutoFocus(false)
+    edit:SetTextInsets(4, 4, 0, 0)
+    edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    edit:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    if numeric then
+        edit:SetNumeric(true)
+    end
+    return edit
+end
+
+function Theme:AddTitle(frame, text)
+    local title = self:CreateLabel(frame, text, 14, self.colors.gold)
+    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
+    title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -42, -14)
+    title:SetJustifyH("CENTER")
+
+    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, -3)
+    return title, close
+end
+
+local function fallbackPositionStore()
+    if type(_G.MasterLooterDB) ~= "table" then
+        _G.MasterLooterDB = {}
+    end
+    local db = _G.MasterLooterDB
+    db.ui = db.ui or {}
+    db.ui.positions = db.ui.positions or {}
+    return db.ui.positions
+end
+
+local function profilePosition(key)
+    if type(GA.DB) == "table" and type(GA.DB.GetProfile) == "function" then
+        local ok, profile = pcall(GA.DB.GetProfile, GA.DB)
+        if ok and type(profile) == "table" then
+            profile[key] = profile[key] or {}
+            return profile[key]
+        end
+    end
+    local store = fallbackPositionStore()
+    store[key] = store[key] or {}
+    return store[key]
+end
+
+function Theme:SavePosition(frame, key)
+    local point, _, relativePoint, x, y = frame:GetPoint(1)
+    if not point then return end
+    local saved = profilePosition(key)
+    saved.point = point
+    saved.relativePoint = relativePoint
+    saved.x = math.floor((x or 0) + 0.5)
+    saved.y = math.floor((y or 0) + 0.5)
+end
+
+function Theme:RestorePosition(frame, key, defaultPoint, defaultX, defaultY)
+    local saved = profilePosition(key)
+    frame:ClearAllPoints()
+    if saved and saved.point and saved.relativePoint then
+        frame:SetPoint(saved.point, UIParent, saved.relativePoint, saved.x or 0, saved.y or 0)
+    else
+        frame:SetPoint(defaultPoint or "CENTER", UIParent, defaultPoint or "CENTER", defaultX or 0, defaultY or 0)
+    end
+end
+
+function Theme:MakeMovable(frame, key)
+    frame:SetMovable(true)
+    frame:SetClampedToScreen(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        Theme:SavePosition(self, key)
+    end)
+end
+
+function Theme:RegisterForEscape(frame)
+    local name = frame:GetName()
+    if not name then return end
+    for _, registered in ipairs(UISpecialFrames) do
+        if registered == name then return end
+    end
+    table.insert(UISpecialFrames, name)
+end
+
+function Theme:SetItemTooltip(widget, itemLink)
+    widget.itemLink = itemLink
+    widget:SetScript("OnEnter", function(self)
+        if not self.itemLink then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetHyperlink(self.itemLink)
+        GameTooltip:Show()
+    end)
+    widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+function Theme:FormatTime(seconds)
+    seconds = math.max(0, math.ceil(tonumber(seconds) or 0))
+    return string.format("%d:%02d", math.floor(seconds / 60), math.mod(seconds, 60))
+end

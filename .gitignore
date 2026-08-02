@@ -1,0 +1,17 @@
+# Reverse-engineering references and local analysis
+Retail/
+REVERSE_ENGINEERING_REPORT.md
+ASCENSION_335A_MACHBARKEITSANALYSE.md
+api_modern.txt
+
+# Local build artifacts
+dist/
+*.zip
+*.disabled
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
