@@ -1,10 +1,11 @@
--- Award delivery assistant for 3.3.5a. A verified open trade can be filled
--- automatically; opening and final acceptance remain user-controlled.
+-- Award delivery assistant for 3.3.5a. Verified winners are contacted,
+-- traded, filled and accepted automatically with strict content checks.
 local _, GA = ...
 
 local Trade = {
     pending = {}, nextID = 0, state = "IDLE", offered = {}, bothAccepted = false,
     TRADE_SECONDS = 7200, REMINDER_COOLDOWN = 180, REMINDER_LIMIT = 2,
+    AUTO_TRADE_COOLDOWN = 15,
 }
 GA.Trade = Trade
 
@@ -106,6 +107,44 @@ function Trade:CoordinateWinner(entry)
     return true
 end
 
+function Trade:TryAutoInitiate(entry)
+    if type(entry) ~= "table" or entry.status ~= "READY" or type(entry.winner) ~= "string" or
+        sameName(entry.winner, UnitName and UnitName("player")) then return false, "not eligible" end
+    if self.state == "OPEN" or self.state == "OPENING" or self.state == "WAITING_COMPLETE" or self.state == "AUTO_ACCEPTED" then
+        return false, "trade already active"
+    end
+    local rangeStatus, unit = self:GetWinnerRangeStatus(entry.winner)
+    entry.rangeStatus, entry.rangeCheckedAt = rangeStatus, timestamp()
+    if (rangeStatus ~= "IN_RANGE" and rangeStatus ~= "GROUP_RANGE") or not unit then return false, "winner out of range" end
+    if type(InitiateTrade) ~= "function" then return false, "InitiateTrade unavailable" end
+    self.autoInitiations = self.autoInitiations or {}
+    local key = string.lower(baseName(entry.winner) or entry.winner)
+    local last = tonumber(self.autoInitiations[key]) or 0
+    if timestamp() - last < self.AUTO_TRADE_COOLDOWN then return false, "initiation rate limited" end
+    local ready = self:PrepareGroup(entry.winner)
+    if type(ready) ~= "table" or #ready == 0 then return false, "no ready items" end
+    self.autoInitiations[key] = timestamp()
+    local ok, err = pcall(InitiateTrade, unit)
+    if not ok then
+        if GA.Trace then GA:Trace("TRADE", "AUTO_INITIATE_FAILED", entry.winner, unit, err) end
+        return false, tostring(err)
+    end
+    self.state, self.partner, self.deliveryStatus = "OPENING", entry.winner, "AUTO_OPENING"
+    if GA.Trace then GA:Trace("TRADE", "AUTO_INITIATE", entry.winner, unit, #ready) end
+    emitState("AUTO_INITIATED_TRADE")
+    if GA.Compat and type(GA.Compat.After) == "function" then
+        local winner = entry.winner
+        GA.Compat:After(4, function()
+            if Trade.state == "OPENING" and sameName(Trade.partner, winner) then
+                Trade.state, Trade.partner, Trade.deliveryStatus = "IDLE", nil, "AUTO_OPEN_TIMEOUT"
+                if GA.Trace then GA:Trace("TRADE", "AUTO_INITIATE_TIMEOUT", winner) end
+                emitState("AUTO_INITIATE_TIMEOUT")
+            end
+        end)
+    end
+    return true
+end
+
 function Trade:ScheduleRangePoll()
     if self.rangePollActive or type(GA.Compat.After) ~= "function" or #self:GetPending() == 0 then return end
     self.rangePollActive = true
@@ -133,6 +172,10 @@ function Trade:RefreshWinnerStatuses(remind)
         if not seen["coord:" .. key] then
             self:CoordinateWinner(entry)
             seen["coord:" .. key] = true
+        end
+        if not seen["trade:" .. key] then
+            self:TryAutoInitiate(entry)
+            seen["trade:" .. key] = true
         end
     end
 end
@@ -197,6 +240,7 @@ function Trade:QueueAward(result, source)
     self:Assess(entry)
     self:RemindWinner(entry)
     self:CoordinateWinner(entry)
+    self:TryAutoInitiate(entry)
     self.rangePollAttempts = 0
     self:ScheduleRangePoll()
     return entry
@@ -286,8 +330,8 @@ function Trade:BeginTrade(winner)
     return true
 end
 
--- User-clicked convenience only: places exact bag stacks in the already open
--- trade window. It never opens, accepts or confirms the trade.
+-- Places exact bag stacks in an already open trade. Automatic orchestration
+-- performs the separate final validation and acceptance after this returns.
 function Trade:PlacePreparedGroup(winner, limit)
     if self.state ~= "OPEN" then return nil, "Handelsfenster ist nicht geöffnet." end
     if not self.partner or not sameName(self.partner, winner) then return nil, "Falscher Handelspartner." end
@@ -354,8 +398,9 @@ function Trade:AutoPlacePreparedGroup(winner)
             emitState("AUTO_ITEM_PLACED")
         end
         if Trade.autoPlaced >= 6 then
-            Trade.deliveryStatus = "WAITING_MANUAL_ACCEPT"
+            Trade.deliveryStatus = "AUTO_PLACEMENT_COMPLETE"
             emitState("AUTO_PLACEMENT_COMPLETE")
+            Trade:TryAutoAccept("AUTO_PLACEMENT_COMPLETE")
             return
         end
         local hasRemaining = false
@@ -365,11 +410,67 @@ function Trade:AutoPlacePreparedGroup(winner)
         if hasRemaining and type(GA.Compat.After) == "function" then
             GA.Compat:After(0.15, step)
         else
-            Trade.deliveryStatus = Trade.autoPlaced > 0 and "WAITING_MANUAL_ACCEPT" or "NOTHING_PLACED"
+            Trade.deliveryStatus = Trade.autoPlaced > 0 and "AUTO_PLACEMENT_COMPLETE" or "NOTHING_PLACED"
             emitState("AUTO_PLACEMENT_COMPLETE")
+            if Trade.autoPlaced > 0 then Trade:TryAutoAccept("AUTO_PLACEMENT_COMPLETE") end
         end
     end
     step()
+    return true
+end
+
+function Trade:ValidateAutoAccept()
+    if self.state ~= "OPEN" or not self.partnerVerified or not self.partner then return false, "partner not verified" end
+    local expected, expectedCount = {}, 0
+    for _, entry in ipairs(self.pending or {}) do
+        if self.placedThisTrade and self.placedThisTrade[entry.id] and sameName(entry.winner, self.partner) then
+            if entry.status ~= "PLACED" then return false, "placed item not verified" end
+            local itemID, quantity = tonumber(entry.itemID), math.max(1, tonumber(entry.quantity) or 1)
+            if not itemID then return false, "placed item has no id" end
+            expected[itemID], expectedCount = (expected[itemID] or 0) + quantity, expectedCount + quantity
+        end
+    end
+    if expectedCount == 0 then return false, "no verified winner items" end
+    local offered, offeredCount = {}, 0
+    for _, item in ipairs(self:ScanOfferedItems()) do
+        local itemID, quantity = tonumber(item.itemID), math.max(1, tonumber(item.quantity) or 1)
+        if not itemID or not expected[itemID] then return false, "unexpected player item" end
+        offered[itemID], offeredCount = (offered[itemID] or 0) + quantity, offeredCount + quantity
+    end
+    if offeredCount ~= expectedCount then return false, "offered quantity mismatch" end
+    for itemID, quantity in pairs(expected) do if offered[itemID] ~= quantity then return false, "offered item mismatch" end end
+    if type(GetPlayerTradeMoney) == "function" and (tonumber(GetPlayerTradeMoney()) or 0) > 0 then return false, "player money offered" end
+    if type(GetTargetTradeMoney) == "function" and (tonumber(GetTargetTradeMoney()) or 0) > 0 then return false, "target money offered" end
+    if type(GetTradeTargetItemLink) == "function" then
+        for slot = 1, 6 do if GetTradeTargetItemLink(slot) then return false, "target item offered" end end
+    end
+    local signatureParts = { string.lower(baseName(self.partner) or self.partner) }
+    for itemID, quantity in pairs(expected) do signatureParts[#signatureParts + 1] = tostring(itemID) .. ":" .. tostring(quantity) end
+    table.sort(signatureParts)
+    return true, table.concat(signatureParts, ",")
+end
+
+function Trade:TryAutoAccept(reason)
+    local valid, signatureOrError = self:ValidateAutoAccept()
+    if not valid then
+        self.deliveryStatus = "AUTO_ACCEPT_BLOCKED:" .. tostring(signatureOrError)
+        if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT_BLOCKED", self.partner, signatureOrError, reason) end
+        emitState("AUTO_ACCEPT_BLOCKED")
+        return false, signatureOrError
+    end
+    if self.autoAcceptSignature == signatureOrError then return false, "already attempted" end
+    if type(AcceptTrade) ~= "function" then return false, "AcceptTrade unavailable" end
+    self.autoAcceptSignature = signatureOrError
+    local ok, err = pcall(AcceptTrade)
+    if not ok then
+        self.deliveryStatus = "AUTO_ACCEPT_FAILED"
+        if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT_FAILED", self.partner, err) end
+        emitState("AUTO_ACCEPT_FAILED")
+        return false, tostring(err)
+    end
+    self.autoAccepted, self.deliveryStatus = true, "AUTO_ACCEPTED"
+    if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT", self.partner, signatureOrError, reason) end
+    emitState("AUTO_ACCEPTED")
     return true
 end
 
@@ -425,7 +526,7 @@ end
 function Trade:OnTradeShow()
     self.partner, self.partnerVerified = tradePartner()
     self.state, self.bothAccepted = "OPEN", false
-    self.placedThisTrade, self.autoPlaced = {}, 0
+    self.placedThisTrade, self.autoPlaced, self.autoAccepted, self.autoAcceptSignature = {}, 0, false, nil
     self:ScanOfferedItems()
     local pending = self.partner and self:GetPending(self.partner) or {}
     if self.partnerVerified and self.partner and #pending > 0 then
@@ -452,14 +553,20 @@ function Trade:ResetTransientPlacements()
             GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
         end
     end
-    self.placedThisTrade, self.autoPlaced = nil, 0
+    self.placedThisTrade, self.autoPlaced, self.autoAccepted, self.autoAcceptSignature = nil, 0, false, nil
 end
 
 function Trade:OnTradeAcceptUpdate(playerAccepted, targetAccepted)
     self:ScanOfferedItems()
+    if playerAccepted ~= 1 and self.autoAccepted then
+        -- WoW clears our acceptance whenever either side changes the offer.
+        -- Permit one fresh validation/acceptance for the changed trade state.
+        self.autoAccepted, self.autoAcceptSignature = false, nil
+    end
     self.bothAccepted = playerAccepted == 1 and targetAccepted == 1
-    self.state = self.bothAccepted and "WAITING_COMPLETE" or "OPEN"
+    self.state = self.bothAccepted and "WAITING_COMPLETE" or (playerAccepted == 1 and "AUTO_ACCEPTED" or "OPEN")
     emitState("ACCEPT_UPDATE")
+    if playerAccepted ~= 1 and self.state == "OPEN" then self:TryAutoAccept("ACCEPT_UPDATE") end
 end
 
 function Trade:Complete(reason)
@@ -552,6 +659,7 @@ function Trade:OnInitialize()
     self.store = GA.DB.data.character.trade
     self.pending, self.nextID = self.store.pending or {}, tonumber(self.store.nextID) or 0
     self.reminders = {}
+    self.autoInitiations = {}
     self.store.pending = self.pending
     for index = 1, #self.pending do
         local entry = self.pending[index]

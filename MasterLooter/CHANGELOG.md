@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.1-beta
+
+- Gewinner mit handelsbereitem Item werden in Reichweite automatisch über ihre Gruppen- oder Raideinheit angehandelt
+- Beim verifizierten Gewinner werden ausschließlich die vorgemerkten Items automatisch eingelegt und der Handel automatisch angenommen
+- Vor jedem automatischen Annehmen werden Handelspartner, Item-IDs, Mengen und belegte Slots erneut vollständig abgeglichen
+- Zusätzliches eigenes Handelsgut, eigenes oder fremdes Gold sowie Gegenstände des Gewinners sperren die automatische Bestätigung
+- Ändert sich ein bereits angenommener Handel, wird die Annahme verworfen und erst nach einer erneuten erfolgreichen Prüfung wiederholt
+- Falsche oder nicht verifizierbare Partner erhalten weder Items noch eine automatische Handelsbestätigung
+- Automatische Handelsöffnung, Sperrgründe, Annahme und Clientfehler werden in `/ml debug` protokolliert
+
 ## 0.13.0-beta
 
 - Spielerzeilen im Lootmaster als direkte, sichtbar markierte Gewinnerauswahl umgesetzt

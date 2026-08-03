@@ -81,8 +81,8 @@ local groups = GA.Trade:GetGroups()
 same(#groups, 1, "pending trade entries are grouped by winner")
 same(groups[1].winner, "Alice", "group preserves winner")
 
--- No implicit trade open/accept exists: placing requires an open matching trade
--- and only invokes pickup/click from this explicit method.
+-- The manual fallback requires an open matching trade and only invokes
+-- pickup/click from this explicit placement method.
 local tradeClicks = {}
 ClickTradeButton = function(slot) tradeClicks[#tradeClicks + 1] = slot end
 UnitExists = function(unit) return unit == "target" end
@@ -103,7 +103,6 @@ placed = assert(GA.Trade:PlacePreparedGroup("Alice"))
 same(#placed, 1, "matching open trade accepts explicit placement")
 same(#pickups, 1, "explicit placement picks up bag item")
 same(#tradeClicks, 1, "explicit placement clicks one trade slot")
-expect(AcceptTrade == nil, "smoke environment confirms no auto-accept dependency")
 
 -- Oversized stacks are never placed wholesale and estimated expiry is surfaced.
 local second = assert(GA.Trade:QueueAward({ sessionID = "s2", itemLink = lootLink, winner = "Alice", quantity = 1 }, "SMOKE"))

@@ -1,4 +1,4 @@
-# Funktionsstatus 0.10.1-beta
+# Funktionsstatus 0.13.1-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
@@ -17,15 +17,16 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 - Der Lootmaster kann das Item per explizitem Klick an sich nehmen. Erst nach bestätigter Slotleerung entsteht ein Handelseintrag.
 - Handelsaufgaben sind je Gewinner gruppiert, prüfen Taschenbestand, Partner, Slots, Stapel und eine geschätzte Zwei-Stunden-Frist.
 - Außer Reichweite erhält der Gewinner nach bestätigtem Taschenfund eine rate-limitierte Whisper-Aufforderung, den Lootmaster anzuhandeln.
+- In Reichweite handelt MasterLooter den Gewinner automatisch über dessen Gruppen- oder Raideinheit an.
 - Öffnet der richtige Gewinner den Handel, werden bis zu sechs vorgesehene Items seriell automatisch in freie Slots gelegt – unabhängig davon, ob der Empfänger das Addon besitzt.
 - Zwei MasterLooter-Clients koordinieren eine anstehende Übergabe zusätzlich per sicherem Addon-Handshake.
-- Das Öffnen und endgültige Bestätigen des Handels bleibt wegen der Client-Schutzregeln benutzergesteuert; das Addon nimmt keinen Handel automatisch an.
+- Eine exakt geprüfte Übergabe wird automatisch angenommen. Zusätzliche Items, Gold, Mengenabweichungen oder ein nicht verifizierter Partner sperren die Annahme.
 
 ## Regeln und Historie
 
 - SoftRes, HardRes, Prioritäten, Boosted Rolls und separates +1-Ranking.
 - Strichliste mit Gesamt-, MS-, OS- und sonstigen Vergaben sowie Audit-Historie.
-- +1 wird niemals automatisch durch eine Vergabe oder einen Handel erhöht. Der Lootmaster trägt den gewünschten Wert bei der Gewinnervergabe bewusst von Hand ein; `0` erzeugt keinen Strich.
+- +1 wird niemals automatisch durch eine Vergabe oder einen Handel erhöht. Der Lootmaster vergibt einen Strich ausschließlich bewusst über den separaten `+1`-Button der Spielerzeile.
 - Doppelte Zustellereignisse werden über Sitzungs- beziehungsweise Handels-IDs nicht doppelt gebucht.
 - CSV-/TSV-Export für Vergaben, Prioritäten und Strichliste sowie validierter Import mit automatischer Sicherung und Wiederherstellung.
 
