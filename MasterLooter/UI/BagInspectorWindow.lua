@@ -88,7 +88,7 @@ end
 function BagInspectorWindow:NextPlayer()
     if #self.players == 0 then self:RefreshPlayers() end
     if #self.players == 0 then self.status:SetText("Keine Spieler-Snapshots bekannt."); return end
-    self.playerIndex = math.mod(self.playerIndex, #self.players) + 1; self.targetEdit:SetText(self.players[self.playerIndex])
+    self.playerIndex = (self.playerIndex % #self.players) + 1; self.targetEdit:SetText(self.players[self.playerIndex])
     local manager = GA.BagInspector; if manager and type(manager.GetSnapshot) == "function" then local snapshot = manager:GetSnapshot(self.players[self.playerIndex]); if snapshot then self:Render(snapshot, self.players[self.playerIndex]) end end
 end
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.9-beta
+
+- Ascension-Laufzeitfehler durch fehlendes `math.mod` in der Restzeitanzeige behoben
+- Weitere `math.mod`-Verwendungen in Import/Export und Tascheninspektor ebenfalls ersetzt
+- Build sperrt die auf diesem Client nicht vorhandene Funktion dauerhaft
+- Gemischte Installationen mit altem separatem TooltipDebug lösen keine doppelte Modulregistrierung mehr aus
+- Diagnose-Fallback zeigt Lua- und TOC-Version nun auch dann, wenn das Diagnosemodul fehlt
+
 ## 0.12.8-beta
 
 - Rollstart, Countdown, Ende und Vergabe verwenden im Raid standardmäßig `RAID_WARNING`

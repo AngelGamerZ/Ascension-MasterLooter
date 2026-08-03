@@ -115,7 +115,11 @@ if not GA.UI.TooltipDebugWindow then
             if GA.TooltipDebug and type(GA.TooltipDebug.GetText) == "function" then
                 text = GA.TooltipDebug:GetText()
             else
-                local errors = { "MasterLooter Tooltip-Diagnose", "TooltipDebug-Modul nicht geladen.", "", "MasterLooter-Ladefehler:" }
+                local tocVersion = type(GetAddOnMetadata) == "function" and GetAddOnMetadata("MasterLooter", "Version") or "API nicht verfügbar"
+                local errors = {
+                    "MasterLooter Tooltip-Diagnose", "TooltipDebug-Modul nicht geladen.",
+                    "Lua-Version: " .. tostring(GA.VERSION), "TOC-Version: " .. tostring(tocVersion), "", "MasterLooter-Ladefehler:",
+                }
                 for _, entry in ipairs(GA.errors or {}) do
                     errors[#errors + 1] = tostring(entry.context) .. ": " .. tostring(entry.message)
                 end

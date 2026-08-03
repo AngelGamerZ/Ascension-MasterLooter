@@ -17,18 +17,21 @@ hooksecurefunc = function(object, method, callback)
     hooks[method] = callback
 end
 
+local registeredModules = {}
 local GA = {
     VERSION = "test",
-    UI = {}, errors = {},
+    UI = {}, errors = {}, modules = { TooltipDebug = {} },
+    TooltipDebug = { entries = {}, maximumEntries = 180, hooked = false },
     Events = {
         On = function(_, event, callback) listeners[event] = callback end,
         RegisterGameEvent = function(_, event) registrations[event] = true end,
     },
-    RegisterModule = function() end,
+    RegisterModule = function(_, name) registeredModules[#registeredModules + 1] = name end,
 }
 SlashCmdList = {}
 local chunk = assert(loadfile("MasterLooter/Modules/Commands.lua"))
 chunk("MasterLooter", GA)
+expect(registeredModules[1] == "Commands" and registeredModules[2] == nil, "mixed installs do not register TooltipDebug twice")
 expect(GA.TooltipDebug:OnInitialize(), "tooltip diagnostics initialize")
 expect(type(hooks.Hide) == "function", "GameTooltip Hide is observed")
 expect(registrations.LOOT_SLOT_CLEARED and registrations.BAG_UPDATE, "loot and bag events are observed")

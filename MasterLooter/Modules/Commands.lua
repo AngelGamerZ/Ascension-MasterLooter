@@ -3,7 +3,7 @@ local _, GA = ...
 -- Kept in this long-established TOC file so diagnostics remain available even
 -- when a client installation accidentally retains an older manifest that does
 -- not know newer standalone files.
-local TooltipDebug = { entries = {}, maximumEntries = 180, hooked = false }
+local TooltipDebug = GA.TooltipDebug or { entries = {}, maximumEntries = 180, hooked = false }
 GA.TooltipDebug = TooltipDebug
 
 local function tooltipNow() return type(GetTime) == "function" and GetTime() or 0 end
@@ -100,7 +100,7 @@ function TooltipDebug:OnInitialize()
     self:Log("START", "Tooltip-Diagnose initialisiert | " .. self:TooltipState()); return true
 end
 
-GA:RegisterModule("TooltipDebug", TooltipDebug)
+if not (GA.modules and GA.modules.TooltipDebug) then GA:RegisterModule("TooltipDebug", TooltipDebug) end
 
 local Commands = {}
 
@@ -184,8 +184,9 @@ function Commands:Handle(message)
         end
         if not opened then
             local fallback = GA.UI and GA.UI.RollDebugWindow
+            local tocVersion = type(GetAddOnMetadata) == "function" and GetAddOnMetadata("MasterLooter", "Version") or "API nicht verfügbar"
             local text = GA.TooltipDebug and type(GA.TooltipDebug.GetText) == "function" and GA.TooltipDebug:GetText() or
-                "MasterLooter Tooltip-Diagnose\nDiagnosemodul oder Fenster konnte nicht geladen werden."
+                ("MasterLooter Tooltip-Diagnose\nDiagnosemodul oder Fenster konnte nicht geladen werden.\nLua-Version: " .. tostring(GA.VERSION) .. "\nTOC-Version: " .. tostring(tocVersion))
             if fallback and type(fallback.ShowText) == "function" then opened = fallback:ShowText(text) end
         end
         if not opened then GA:Print("Tooltip-Diagnose konnte nicht geöffnet werden. /ml rolldebug verwenden.") end

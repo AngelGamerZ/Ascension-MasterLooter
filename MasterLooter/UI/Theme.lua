@@ -231,5 +231,5 @@ end
 
 function Theme:FormatTime(seconds)
     seconds = math.max(0, math.ceil(tonumber(seconds) or 0))
-    return string.format("%d:%02d", math.floor(seconds / 60), math.mod(seconds, 60))
+    return string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 end

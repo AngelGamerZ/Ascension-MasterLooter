@@ -85,7 +85,7 @@ end
 
 function ImportExportWindow:CurrentModule() return self.modules[self.moduleIndex].key end
 function ImportExportWindow:NextModule()
-    self.moduleIndex = math.mod(self.moduleIndex, #self.modules) + 1; self.moduleButton:SetText(self.modules[self.moduleIndex].label); self:SetResult("")
+    self.moduleIndex = (self.moduleIndex % #self.modules) + 1; self.moduleButton:SetText(self.modules[self.moduleIndex].label); self:SetResult("")
 end
 function ImportExportWindow:SetResult(text, color)
     self.result:SetText(text or ""); self.result:SetTextColor(unpack(color or Theme.colors.muted))

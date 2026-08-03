@@ -42,7 +42,7 @@ try {
         throw "TOC versions do not match"
     }
 
-    $forbidden = rg -n --glob '*.lua' --glob '!**/Core/Compat.lua' 'C_Timer|C_Container|C_AddOns|ScrollBox|BackdropTemplate' MasterLooter MasterLooter_ItemData
+    $forbidden = rg -n --glob '*.lua' --glob '!**/Core/Compat.lua' 'C_Timer|C_Container|C_AddOns|ScrollBox|BackdropTemplate|math\.mod' MasterLooter MasterLooter_ItemData
     if ($LASTEXITCODE -eq 0) { throw "API incompatible with 3.3.5a found:`n$forbidden" }
     if ($LASTEXITCODE -gt 1) { throw "API scan could not run" }
 
