@@ -47,7 +47,7 @@ function TradeWindow:EnsureFrame()
     local take = Theme:CreateButton(frame, "An mich nehmen", 125, 27); take:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 15); take:SetScript("OnClick", function() TradeWindow:TakePendingAward() end); take:Disable(); self.take = take
     local prepare = Theme:CreateButton(frame, "Taschen prüfen", 115, 27); prepare:SetPoint("LEFT", take, "RIGHT", 8, 0); prepare:SetScript("OnClick", function() TradeWindow:PrepareSelected() end); prepare:Disable(); self.prepare = prepare
     local place = Theme:CreateButton(frame, "Items einlegen", 115, 27); place:SetPoint("LEFT", prepare, "RIGHT", 8, 0); place:SetScript("OnClick", function() TradeWindow:PlaceSelected() end); place:Disable(); self.place = place
-    local note = Theme:CreateLabel(frame, "Einlegen nur per Klick; niemals Auto-Accept.", 12, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 22); note:SetWidth(235); note:SetJustifyH("RIGHT")
+    local note = Theme:CreateLabel(frame, "Items werden beim richtigen Partner automatisch eingelegt; Bestätigung bleibt manuell.", 12, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 22); note:SetWidth(260); note:SetJustifyH("RIGHT")
     return frame
 end
 
@@ -64,7 +64,7 @@ function TradeWindow:Refresh()
         else row.group = nil; row:Hide() end
     end
     self.pageLabel:SetText(self.page .. " / " .. self.totalPages); if self.page > 1 then self.previous:Enable() else self.previous:Disable() end; if self.page < self.totalPages then self.next:Enable() else self.next:Disable() end
-    local state = GA.Trade and GA.Trade:GetState() or {}; self.stateLabel:SetText("Handel: " .. tostring(state.status or "IDLE") .. (state.partner and (" mit " .. state.partner) or ""))
+    local state = GA.Trade and GA.Trade:GetState() or {}; self.stateLabel:SetText("Handel: " .. tostring(state.status or "IDLE") .. (state.partner and (" mit " .. state.partner) or "") .. (state.autoPlaced and state.autoPlaced > 0 and (" – " .. state.autoPlaced .. " automatisch eingelegt") or ""))
     local deferred = GA.Award and GA.Award:GetDeferred() or {}; self.pendingAward = deferred[1]
     if self.pendingAward then self.take:Enable(); self.selectedLabel:SetText("Aktion nötig: " .. (self.pendingAward.itemLink or "Item") .. " für " .. tostring(self.pendingAward.winner)) else self.take:Disable() end
 end
@@ -89,7 +89,7 @@ end
 function TradeWindow:OpenSelectedTrade()
     if not self.selected then self.selectedLabel:SetText("Zuerst einen Gewinner auswählen."); return end
     local opened, err = GA.Trade:BeginTrade(self.selected.winner)
-    self.selectedLabel:SetText(opened and "Handel wird geöffnet; danach Items einlegen." or tostring(err)); self:Refresh()
+    self.selectedLabel:SetText(opened and "Handel wird geöffnet; passende Items werden automatisch eingelegt." or tostring(err)); self:Refresh()
 end
 
 function TradeWindow:TakePendingAward()

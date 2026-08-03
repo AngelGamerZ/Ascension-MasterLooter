@@ -2,7 +2,7 @@
 
 MasterLooter is a loot and raid-management addon developed specifically for Project Ascension on the WoW 3.3.5a client.
 
-It provides synchronized master-looter roll windows, public rolls for players without the addon, persistent loot and auction queues, verified direct assignment and trade assistance, a MS/OS item ledger, SoftRes/HardRes, priorities, +1, boosted rolls, GDKP, raid management, diagnostics, bag inspection, history, and safe import/export tools.
+It provides synchronized master-looter roll windows, public rolls for players without the addon, persistent loot and auction queues, verified direct assignment, automatic filling of verified trades, a MS/OS item ledger, SoftRes/HardRes, priorities, +1, boosted rolls, GDKP, raid management, diagnostics, bag inspection, history, and safe import/export tools.
 
 ## Installation
 

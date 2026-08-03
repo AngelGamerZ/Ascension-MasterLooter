@@ -59,6 +59,15 @@ end
 
 function VersionCheck:GetPlayer(name) return self.participants[baseName(name)] end
 
+-- Presence is deliberately short lived. A HELLO from an earlier group must
+-- never be treated as proof that the player is still reachable with the addon.
+function VersionCheck:HasAddon(name, maximumAge)
+    local entry = self:GetPlayer(name)
+    maximumAge = math.max(1, math.min(self.staleAfter, tonumber(maximumAge) or self.staleAfter))
+    if not entry or not isGroupMember(entry.name) or now() - entry.lastSeen > maximumAge then return false end
+    return entry.addon == (GA.ADDON_NAME or "MasterLooter"), entry
+end
+
 function VersionCheck:GetParticipants(includeStale)
     if not includeStale then self:Prune() end
     local result, cutoff = {}, now() - self.staleAfter

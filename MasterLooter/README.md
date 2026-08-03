@@ -26,6 +26,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - Mehrclient-Kommunikation mit Fragmentierung, Deduplizierung und Sitzungs-Synchronisierung
 - Lootmaster- und Teilnehmerfenster
 - Loot-Erfassung, Award-Historie, PackMule- und Trade-Warteschlangen
+- Automatisches Einlegen ausstehender Items beim verifizierten Handelspartner und Whisper-Erinnerung außerhalb der Reichweite
 - SoftRes, HardRes, Prioritäten, +1 und Boosted Rolls
 - GDKP-Sitzungen, Verkäufe, Pot und Cuts
 - Synchronisierte GDKP-Auktionen mit Mindestschritt, Anti-Snipe und Replay-Schutz

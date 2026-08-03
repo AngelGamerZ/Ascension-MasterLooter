@@ -2,7 +2,7 @@
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.10.0-beta
+## Version: 0.10.1-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
@@ -30,6 +30,7 @@ Modules\GDKPAuction.lua
 Modules\RaidManager.lua
 Modules\ItemDataBridge.lua
 Modules\VersionCheck.lua
+Modules\TradeCoordination.lua
 Modules\Announcements.lua
 Modules\ImportExport.lua
 Modules\Commands.lua

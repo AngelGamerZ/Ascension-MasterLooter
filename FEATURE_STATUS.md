@@ -1,4 +1,4 @@
-# Funktionsstatus 0.10.0-beta
+# Funktionsstatus 0.10.1-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
@@ -16,7 +16,10 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 - Ist ein Gewinner zu weit entfernt oder kein gültiger Kandidat, bleibt das Item sichtbar als Aktion offen; es wird kein erfundener Tascheneintrag erzeugt.
 - Der Lootmaster kann das Item per explizitem Klick an sich nehmen. Erst nach bestätigter Slotleerung entsteht ein Handelseintrag.
 - Handelsaufgaben sind je Gewinner gruppiert, prüfen Taschenbestand, Partner, Slots, Stapel und eine geschätzte Zwei-Stunden-Frist.
-- „Handel öffnen“, Einlegen und Bestätigen bleiben wegen der Client-Schutzregeln benutzergesteuert; das Addon nimmt keinen Handel automatisch an.
+- Außer Reichweite erhält der Gewinner nach bestätigtem Taschenfund eine rate-limitierte Whisper-Aufforderung, den Lootmaster anzuhandeln.
+- Öffnet der richtige Gewinner den Handel, werden bis zu sechs vorgesehene Items seriell automatisch in freie Slots gelegt – unabhängig davon, ob der Empfänger das Addon besitzt.
+- Zwei MasterLooter-Clients koordinieren eine anstehende Übergabe zusätzlich per sicherem Addon-Handshake.
+- Das Öffnen und endgültige Bestätigen des Handels bleibt wegen der Client-Schutzregeln benutzergesteuert; das Addon nimmt keinen Handel automatisch an.
 
 ## Regeln und Historie
 

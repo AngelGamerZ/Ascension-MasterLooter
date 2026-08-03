@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.1-beta
+
+- Ausstehende Gewinner werden erst nach bestätigtem Taschenfund als handelsbereit behandelt
+- Spieler außerhalb der Handelsreichweite erhalten eine begrenzte automatische Whisper-Erinnerung
+- MasterLooter-Clients koordinieren Übergaben über einen validierten, deduplizierten und zeitlich begrenzten Handshake
+- Beim eindeutig erkannten Handelspartner werden passende Items automatisch und seriell in freie Handelsslots gelegt
+- Bestehende Angebote, falsche Partner, gesperrte oder zu große Stapel, mehr als sechs Items und Handelsabbrüche werden sicher behandelt
+- Spieler ohne Addon können den Lootmaster anhandeln und erhalten ihre vorgesehenen Items ebenfalls automatisch eingelegt
+- Das endgültige Annehmen des Handels bleibt auf beiden Seiten eine manuelle Bestätigung
+
 ## 0.10.0-beta
 
 - Persistente Lootslot-Warteschlange und STRG+Rechtsklick-Übernahme aus Blizzard-, XLoot- und ElvUI-Lootfenstern
