@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.2-beta
+
+- Gewinner können auch nach Ablauf oder manuellem Schließen der Rollzeit zuverlässig vergeben werden
+- Ein bereits in der eigenen Tasche vorhandenes Item wird bei Selbstvergabe direkt als zugestellt verbucht und erzeugt keinen Selbsthandel
+- Selbstvergabe aktualisiert Strichliste und +1-Regeln wie jede andere bestätigte Übergabe
+- OS-Wurfbereich kompakter und eindeutig als `/roll 2–99` neben dem festen MS-Bereich `/roll 100` dargestellt
+- Seitennavigation aus dem Tabellenkopf verschoben, damit die Spalte `G/MS/OS · +1` vollständig sichtbar bleibt
+- Vergabefehler zeigen künftig den tatsächlichen internen Ablehnungsgrund
+- Smoke-Runner erkennt nun auch Lua-Fehler, bei denen der verwendete Interpreter fälschlich Exitcode 0 zurückgibt
+
 ## 0.10.1-beta
 
 - Ausstehende Gewinner werden erst nach bestätigtem Taschenfund als handelsbereit behandelt

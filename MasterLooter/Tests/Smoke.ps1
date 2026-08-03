@@ -15,8 +15,11 @@ Push-Location -LiteralPath $RepositoryRoot
 try {
     foreach ($test in $tests) {
         if (-not (Test-Path -LiteralPath $test)) { throw "Smoke-Test fehlt: $test" }
-        & npx --yes --package fengari-node-cli fengari ".\$($test -replace '/', '\')"
-        if ($LASTEXITCODE -ne 0) { throw "Smoke test failed: $test" }
+        $output = @(& npx --yes --package fengari-node-cli fengari ".\$($test -replace '/', '\')" 2>&1)
+        $exitCode = $LASTEXITCODE
+        $output | ForEach-Object { Write-Host $_ }
+        $passed = $output | Where-Object { "$_" -match '^PASS:' } | Select-Object -First 1
+        if ($exitCode -ne 0 -or -not $passed) { throw "Smoke test failed: $test" }
     }
 
     $tocVersions = @{}

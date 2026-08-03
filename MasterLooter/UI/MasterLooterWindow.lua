@@ -5,7 +5,10 @@ _G.MasterLooter = GA
 GA.UI = GA.UI or {}
 
 local Theme = GA.UI.Theme
-local MasterLooterWindow = { page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6 }
+local MasterLooterWindow = {
+    page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6,
+    LAYOUT_VERSION = 2, OS_EDIT_X = 275, PAGINATION_Y = -170,
+}
 GA.UI.MasterLooterWindow = MasterLooterWindow
 
 local ROWS = MasterLooterWindow.VISIBLE_ROWS
@@ -190,15 +193,15 @@ function MasterLooterWindow:EnsureFrame()
     duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
 
-    local osLabel = Theme:CreateLabel(frame, "OS /ROLL", 11, Theme.colors.muted)
+    local osLabel = Theme:CreateLabel(frame, "OS", 11, Theme.colors.muted)
     osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 245, -142)
-    local osMaximum = Theme:CreateEditBox(frame, 46, 24, true)
-    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", 315, -136)
+    local osMaximum = Theme:CreateEditBox(frame, 42, 24, true)
+    osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", self.OS_EDIT_X, -136)
     if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
     osMaximum:SetText(tostring(math.max(2, math.min(99, math.floor(tonumber(profile and profile.osRollMaximum) or 99)))))
     self.osMaximumEdit = osMaximum
-    local osHint = Theme:CreateLabel(frame, "2–99 · MS bleibt 100", 11, Theme.colors.muted)
-    osHint:SetPoint("LEFT", osMaximum, "RIGHT", 7, 0)
+    local osHint = Theme:CreateLabel(frame, "/roll 2–99 · MS /roll 100", 10, Theme.colors.muted)
+    osHint:SetPoint("LEFT", osMaximum, "RIGHT", 8, 0)
     osMaximum:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
     osMaximum:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     osMaximum:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeOSMaximum() end)
@@ -224,7 +227,7 @@ function MasterLooterWindow:EnsureFrame()
 
     local status = Theme:CreateLabel(frame, "Lege zuerst ein Item auf die Ablagefläche.", 12, Theme.colors.muted)
     status:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -174)
-    status:SetPoint("RIGHT", frame, "RIGHT", -22, 0)
+    status:SetPoint("RIGHT", frame, "RIGHT", -120, 0)
     status:SetJustifyH("LEFT")
     self.status = status
 
@@ -243,19 +246,19 @@ function MasterLooterWindow:EnsureFrame()
         label:SetPoint("TOPLEFT", tableFrame, "TOPLEFT", header.x, -10)
     end
 
-    local previous = Theme:CreateButton(tableFrame, "<", 28, 20)
-    previous:SetPoint("TOPRIGHT", tableFrame, "TOPRIGHT", -72, -5)
+    local previous = Theme:CreateButton(frame, "<", 24, 19)
+    previous:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -82, self.PAGINATION_Y)
     previous:SetScript("OnClick", function()
         MasterLooterWindow.page = math.max(1, MasterLooterWindow.page - 1)
         MasterLooterWindow:RefreshRows()
     end)
     self.previousButton = previous
-    local pageLabel = Theme:CreateLabel(tableFrame, "1/1", 12, Theme.colors.muted)
+    local pageLabel = Theme:CreateLabel(frame, "1/1", 11, Theme.colors.muted)
     pageLabel:SetPoint("LEFT", previous, "RIGHT", 4, 0)
     pageLabel:SetWidth(34)
     pageLabel:SetJustifyH("CENTER")
     self.pageLabel = pageLabel
-    local nextButton = Theme:CreateButton(tableFrame, ">", 28, 20)
+    local nextButton = Theme:CreateButton(frame, ">", 24, 19)
     nextButton:SetPoint("LEFT", pageLabel, "RIGHT", 4, 0)
     nextButton:SetScript("OnClick", function()
         MasterLooterWindow.page = math.min(MasterLooterWindow.totalPages or 1, MasterLooterWindow.page + 1)
@@ -600,12 +603,13 @@ function MasterLooterWindow:AwardSelected()
         self:SetStatus("Award-Funktion ist nicht verfügbar.", Theme.colors.red)
         return
     end
-    local ok, result = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
+    local ok, result, errorMessage = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
     if ok and result ~= nil and result ~= false then
         self:SetStatus("Vergeben an " .. self.selected.player .. ".", Theme.colors.green)
         self.awardButton:Disable()
     else
-        self:SetStatus("Item konnte nicht vergeben werden.", Theme.colors.red)
+        local reason = ok and errorMessage or result
+        self:SetStatus("Item konnte nicht vergeben werden" .. (reason and (": " .. tostring(reason)) or "."), Theme.colors.red)
     end
 end
 
@@ -638,11 +642,15 @@ function MasterLooterWindow:Initialize()
         MasterLooterWindow:ShowParticipantResponse(action, participant)
     end
     registerMessage("GA_ROLL_SESSION_UPDATED", update)
-    local stopped = function()
+    local stopped = function(...)
         if not MasterLooterWindow.frame then return end
+        local state = eventArgument("GA_ROLL_SESSION_ENDED", ...)
         MasterLooterWindow:SetSessionActive(false)
         MasterLooterWindow:RefreshInputState(false)
-        MasterLooterWindow:SetStatus("Session beendet. Das Item bleibt für einen erneuten Roll ausgewählt.", Theme.colors.muted)
+        if state and state.status == "STOPPED" and MasterLooterWindow.selected and MasterLooterWindow.selected.choice ~= "PASS" then
+            MasterLooterWindow.awardButton:Enable()
+        end
+        MasterLooterWindow:SetStatus("Roll geschlossen. Ein Gewinner kann weiterhin vergeben werden.", Theme.colors.muted)
     end
     registerMessage("GA_ROLL_SESSION_STOPPED", stopped)
     registerMessage("GA_ROLL_SESSION_ENDED", stopped)

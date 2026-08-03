@@ -445,6 +445,19 @@ advance(alice, aliceGA.Award.confirmTimeout + 0.1)
 same(aliceGA.DB.data.history.awards[#aliceGA.DB.data.history.awards].delivery, "PENDING", "masterloot timeout falls back to pending trade")
 same(aliceGA.Trade.pending[#aliceGA.Trade.pending].winner, "Bob", "timeout creates the correct trade entry")
 
+-- A closed roll remains awardable, and an inventory item awarded to the loot
+-- master is complete immediately instead of creating an impossible self-trade.
+alice.env.GetNumLootItems = function() return 0 end
+alice.env.GetLootSlotLink = function() return nil end
+local selfTradeCount, selfLedgerBefore = #aliceGA.Trade.pending, aliceGA.PlusOnes:GetStats("Alice").total
+local selfInventorySession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
+expect(aliceGA.RollSession:Stop(selfInventorySession.id, "TIMEOUT"), "inventory roll closes before winner selection")
+local selfInventoryResult, selfInventoryError = aliceGA.RollSession:Award(selfInventorySession.id, "Alice", "MS", 77)
+expect(selfInventoryResult ~= nil, selfInventoryError or "a closed roll can still award its winner")
+same(aliceGA.DB.data.history.awards[#aliceGA.DB.data.history.awards].delivery, "GIVEN", "self-owned inventory item is recorded as delivered")
+same(#aliceGA.Trade.pending, selfTradeCount, "self-owned inventory item never creates a self-trade")
+same(aliceGA.PlusOnes:GetStats("Alice").total, selfLedgerBefore + 1, "self inventory award reaches the item ledger")
+
 -- Persistent rule modules combine deterministically for master-looter ranking.
 expect(aliceGA.SoftRes:Reserve("Bob", itemLink), "soft reserve accepts an item link")
 expect(aliceGA.SoftRes:IsReserved("Bob-Ascension", itemLink), "soft reserve normalizes realm names")
@@ -585,6 +598,9 @@ loadFile(alice, "UI/MasterLooterWindow.lua")
 same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
 same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
+same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 2, "the non-overlapping loot-master layout is active")
+same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 275, "the OS input is separated from its label")
+same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -170, "pagination sits above rather than over the table headers")
 local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participants = {
     driomodo = { name = "Driomodo", choice = "MS", roll = 13 },
 } })

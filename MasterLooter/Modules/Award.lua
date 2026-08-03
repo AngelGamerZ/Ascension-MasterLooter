@@ -167,7 +167,7 @@ end
 
 function Award:OnResult(result, session)
     if type(result) ~= "table" then return end
-    local message, attempt = "RECORDED", nil
+    local message, attempt, confirmedInventory = "RECORDED", nil, false
     local profile, owner = GA.DB:GetProfile(), session and session.owner
     local localName = type(UnitName) == "function" and UnitName("player") or nil
     local isOwner = not owner or sameName(owner, localName)
@@ -186,7 +186,19 @@ function Award:OnResult(result, session)
             -- be a recovered/already-looted award, so retain the legacy pending
             -- trade fallback and let the bag scan prove whether it exists.
             local inOpenLoot = GA.Loot and GA.Loot.open and GA.Loot:FindSlot(result.itemLink)
-            if inOpenLoot then message = "ACTION_REQUIRED"; self:Defer(result, session, err) else message = "PENDING" end
+            if inOpenLoot then
+                message = "ACTION_REQUIRED"
+                self:Defer(result, session, err)
+            elseif sameName(result.winner, localName) and GA.Compat and type(GA.Compat.FindItems) == "function" and
+                #(GA.Compat:FindItems(result.itemLink) or {}) > 0 then
+                -- Inventory items can be rolled after they were looted. The
+                -- local winner already owns this item; never queue a trade to self.
+                message, confirmedInventory = "GIVEN", true
+            elseif sameName(result.winner, localName) then
+                message = "MISSING"
+            else
+                message = "PENDING"
+            end
         end
     end
     local record = self:Record(result, session, message)
@@ -195,6 +207,7 @@ function Award:OnResult(result, session)
         local deferred = self.deferred[#self.deferred]
         if deferred then deferred.history = record end
     end
+    if confirmedInventory then GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", result, "GIVEN", record) end
     GA.Events:Emit("GA_AWARD_RECORDED", result, message)
 end
 

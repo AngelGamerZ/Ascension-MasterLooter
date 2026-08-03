@@ -312,7 +312,7 @@ function RollSession:Stop(sessionID, reason)
         state.sequence, state.authoritySequence = previousSequence, previousAuthoritySequence
         return false, err
     end
-    state.status, state.endedAt = "STOPPED", GetTimeSafe()
+    state.status, state.endedAt, state.stopReason = "STOPPED", GetTimeSafe(), reason
     if self.activeID == state.id then self.activeID = nil end
     emit("GA_ROLL_SESSION_ENDED", state, reason)
     self:PersistActive()
@@ -436,7 +436,7 @@ end
 function RollSession:Award(sessionID, winner, choice, roll, note)
     local state = resolveState(sessionID)
     if not state then return nil, "unknown session" end
-    if state.status ~= "ACTIVE" then return nil, "session is not active" end
+    if state.status ~= "ACTIVE" and state.status ~= "STOPPED" then return nil, "session cannot be awarded" end
     if not self:IsAuthority(playerName()) or not samePlayer(state.owner, playerName()) then
         return nil, "only the session authority may award an item"
     end
@@ -588,7 +588,7 @@ local function receiveStop(fields, sender)
     if not validVersion(fields) or not RollSession:IsAuthority(sender) then return end
     local state, seq = resolveState(fields[2]), validSequence(fields[3])
     if not state or not samePlayer(state.owner, sender) or not seq or (state.authoritySequence or 0) >= seq then return end
-    state.authoritySequence, state.status, state.endedAt = seq, "STOPPED", GetTimeSafe()
+    state.authoritySequence, state.status, state.endedAt, state.stopReason = seq, "STOPPED", GetTimeSafe(), fields[4] or "STOPPED"
     if RollSession.activeID == state.id then RollSession.activeID = nil end
     emit("GA_ROLL_SESSION_ENDED", state, fields[4] or "STOPPED")
 end
