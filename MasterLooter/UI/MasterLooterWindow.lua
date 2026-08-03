@@ -71,7 +71,11 @@ local function getRolls(session)
         return a.player < b.player
     end)
     for _, entry in ipairs(result) do
-        if type(entry.raw) == "table" then entry.effectiveRoll = tonumber(entry.raw.effectiveRoll) or entry.roll end
+        if type(entry.raw) == "table" then
+            entry.effectiveRoll = tonumber(entry.raw.effectiveRoll) or entry.roll
+            entry.itemCounts = entry.raw.itemCounts or (GA.PlusOnes and GA.PlusOnes:GetStats(entry.player))
+            entry.plusOne = tonumber(entry.raw.plusOne) or (GA.PlusOnes and GA.PlusOnes:Get(entry.player)) or 0
+        end
     end
     return result
 end
@@ -231,7 +235,8 @@ function MasterLooterWindow:EnsureFrame()
     self.tableFrame = tableFrame
 
     local headers = {
-        { text = "Spieler", x = 12 }, { text = "Wahl", x = 257 }, { text = "Wurf", x = 342 },
+        { text = "Spieler", x = 12 }, { text = "Wahl", x = 207 }, { text = "Wurf", x = 269 },
+        { text = "Items G/MS/OS · +1", x = 335 },
     }
     for _, header in ipairs(headers) do
         local label = Theme:CreateLabel(tableFrame, header.text, 12, Theme.colors.gold)
@@ -268,9 +273,11 @@ function MasterLooterWindow:EnsureFrame()
         row.player = Theme:CreateLabel(row, "", 12)
         row.player:SetPoint("LEFT", row, "LEFT", 5, 0)
         row.choice = Theme:CreateLabel(row, "", 12)
-        row.choice:SetPoint("LEFT", row, "LEFT", 250, 0)
+        row.choice:SetPoint("LEFT", row, "LEFT", 200, 0)
         row.roll = Theme:CreateLabel(row, "", 12)
-        row.roll:SetPoint("LEFT", row, "LEFT", 375, 0)
+        row.roll:SetPoint("LEFT", row, "LEFT", 262, 0)
+        row.items = Theme:CreateLabel(row, "", 11, Theme.colors.muted)
+        row.items:SetPoint("LEFT", row, "LEFT", 328, 0)
         row:SetScript("OnClick", function() MasterLooterWindow:SelectRow(row.absoluteIndex) end)
         self.rows[index] = row
     end
@@ -562,6 +569,9 @@ function MasterLooterWindow:RefreshRows()
             else
                 row.roll:SetText(roll.roll > 0 and tostring(roll.roll) or "–")
             end
+            local counts = roll.itemCounts or {}
+            row.items:SetText(string.format("%d/%d/%d · +%d", tonumber(counts.total) or 0,
+                tonumber(counts.MS) or 0, tonumber(counts.OS) or 0, tonumber(roll.plusOne) or 0))
             row:Show()
         else
             row.absoluteIndex = nil

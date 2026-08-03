@@ -54,6 +54,12 @@ end
 
 local function selected(options, key) return not options or options[key] ~= false end
 
+local function csv(value)
+    value = tostring(value == nil and "" or value)
+    if string.find(value, '[,"\r\n]') then value = '"' .. string.gsub(value, '"', '""') .. '"' end
+    return value
+end
+
 function ImportExport:Export(options)
     local data, lines = GA.DB.data, { self.FORMAT .. "\t" .. tostring(self.VERSION) }
     if selected(options, "softRes") then
@@ -105,6 +111,61 @@ function ImportExport:Export(options)
     local text = table.concat(lines, "\n")
     GA.Events:Emit("GA_DATA_EXPORTED", #lines - 1, #text)
     return text, #lines - 1
+end
+
+function ImportExport:ExportCSV(kind)
+    kind = string.lower(tostring(kind or "awards"))
+    local lines = {}
+    if kind == "awards" then
+        lines[1] = "time,item,winner,choice,roll,note,delivery"
+        for index = 1, #(GA.DB.data.history.awards or {}) do
+            local entry = GA.DB.data.history.awards[index]
+            lines[#lines + 1] = table.concat({ csv(entry.time), csv(entry.itemLink), csv(entry.winner),
+                csv(entry.choice), csv(entry.roll), csv(entry.note), csv(entry.delivery) }, ",")
+        end
+    elseif kind == "plusones" then
+        lines[1] = "player,plusOne"
+        for _, player in ipairs(sortedKeys(GA.DB.data.plusOnes)) do
+            lines[#lines + 1] = csv(player) .. "," .. csv(GA.DB.data.plusOnes[player])
+        end
+    elseif kind == "ledger" then
+        lines[1] = "player,total,MS,OS,other,plusOne"
+        local players = GA.DB.data.itemLedger and GA.DB.data.itemLedger.players or {}
+        for _, player in ipairs(sortedKeys(players)) do
+            local stats = GA.PlusOnes and GA.PlusOnes:GetStats(player) or players[player] or {}
+            lines[#lines + 1] = table.concat({ csv(player), csv(stats.total), csv(stats.MS), csv(stats.OS),
+                csv(stats.OTHER), csv(GA.PlusOnes and GA.PlusOnes:Get(player) or 0) }, ",")
+        end
+    elseif kind == "priorities" then
+        lines[1] = "itemID,player,priority"
+        for _, item in ipairs(sortedKeys(GA.DB.data.priorities, true)) do
+            for _, player in ipairs(sortedKeys(GA.DB.data.priorities[item])) do
+                lines[#lines + 1] = table.concat({ csv(item), csv(player), csv(GA.DB.data.priorities[item][player]) }, ",")
+            end
+        end
+    else return nil, "unknown CSV export kind" end
+    return table.concat(lines, "\r\n")
+end
+
+function ImportExport:CreateBackup(label)
+    local data = GA.DB.data
+    data.importBackups = data.importBackups or {}
+    local text = self:Export()
+    local backup = { time = (time and time()) or 0, label = tostring(label or "Import"), text = text }
+    data.importBackups[#data.importBackups + 1] = backup
+    while #data.importBackups > 10 do table.remove(data.importBackups, 1) end
+    return backup
+end
+
+function ImportExport:GetBackups()
+    return GA.DB.data.importBackups or {}
+end
+
+function ImportExport:RestoreBackup(index)
+    local backups = self:GetBackups()
+    local backup = backups[tonumber(index) or #backups]
+    if not backup then return nil, "unknown backup" end
+    return self:Import(backup.text, { strict = true, replace = true, noBackup = true })
 end
 
 local function validInteger(value, minimum, maximum)
@@ -228,6 +289,7 @@ function ImportExport:Import(text, options)
     local report = self:Parse(text)
     local records = report.records
     if not records or (options and options.strict and report.rejected > 0) then report.records = nil; return report end
+    if not (options and options.noBackup) then self:CreateBackup(options and options.replace and "Vor Ersetzen" or "Vor Import") end
     local data = GA.DB.data
     if options and options.replace then
         clear(data.softRes.reservations); clear(data.softRes.hardReserved); clear(data.priorities)

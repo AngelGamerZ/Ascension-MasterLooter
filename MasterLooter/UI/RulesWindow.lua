@@ -55,8 +55,8 @@ function RulesWindow:EnsureFrame()
     if not Theme then return nil end
 
     local frame = CreateFrame("Frame", "MasterLooterRulesWindow", UIParent)
-    frame:SetWidth(790)
-    frame:SetHeight(540)
+    frame:SetWidth(950)
+    frame:SetHeight(570)
     frame:SetFrameStrata("DIALOG")
     frame:Hide()
     Theme:ApplyPanel(frame)
@@ -99,6 +99,21 @@ function RulesWindow:EnsureFrame()
     end)
     self.hardCheck = hardCheck
 
+    local autoMS = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    autoMS:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -205, -68)
+    autoMS:SetWidth(24); autoMS:SetHeight(24)
+    local autoMSLabel = Theme:CreateLabel(frame, "MS erhöht +1", 11)
+    autoMSLabel:SetPoint("LEFT", autoMS, "RIGHT", 1, 0)
+    autoMS:SetScript("OnClick", function(button) GA.PlusOnes:SetAutoRule("MS", button:GetChecked()) end)
+    self.autoMS = autoMS
+    local autoOS = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    autoOS:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -85, -68)
+    autoOS:SetWidth(24); autoOS:SetHeight(24)
+    local autoOSLabel = Theme:CreateLabel(frame, "OS erhöht +1", 11)
+    autoOSLabel:SetPoint("LEFT", autoOS, "RIGHT", 1, 0)
+    autoOS:SetScript("OnClick", function(button) GA.PlusOnes:SetAutoRule("OS", button:GetChecked()) end)
+    self.autoOS = autoOS
+
     local refreshButton = Theme:CreateButton(frame, "Gruppe neu laden", 125, 24)
     refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -108)
     refreshButton:SetScript("OnClick", function() RulesWindow:Refresh(true) end)
@@ -120,6 +135,7 @@ function RulesWindow:EnsureFrame()
         { text = "Priorität", x = 296 },
         { text = "+1", x = 402 },
         { text = "Roll-Bonus", x = 490 },
+        { text = "Erhalten G/MS/OS", x = 580 },
     }
     for index = 1, #headers do
         local label = Theme:CreateLabel(list, headers[index].text, 11, Theme.colors.gold)
@@ -143,9 +159,27 @@ function RulesWindow:EnsureFrame()
         row.plusOne:SetPoint("LEFT", row, "LEFT", 384, 0)
         row.boost = Theme:CreateEditBox(row, 72, 22)
         row.boost:SetPoint("LEFT", row, "LEFT", 472, 0)
+        row.counts = Theme:CreateLabel(row, "", 11)
+        row.counts:SetPoint("LEFT", row, "LEFT", 562, 0)
+        row.counts:SetWidth(104)
+        row.minus = Theme:CreateButton(row, "−", 26, 22)
+        row.minus:SetPoint("LEFT", row, "LEFT", 674, 0)
+        row.minus:SetScript("OnClick", function()
+            if row.playerName then GA.PlusOnes:Add(row.playerName, -1, "RULES_UI"); RulesWindow:Refresh(false) end
+        end)
+        row.plus = Theme:CreateButton(row, "+", 26, 22)
+        row.plus:SetPoint("LEFT", row, "LEFT", 704, 0)
+        row.plus:SetScript("OnClick", function()
+            if row.playerName then GA.PlusOnes:Add(row.playerName, 1, "RULES_UI"); RulesWindow:Refresh(false) end
+        end)
         row.save = Theme:CreateButton(row, "Speichern", 90, 22)
-        row.save:SetPoint("LEFT", row, "LEFT", 572, 0)
+        row.save:SetPoint("LEFT", row, "LEFT", 740, 0)
         row.save:SetScript("OnClick", function() RulesWindow:SaveRow(row) end)
+        row.resetStats = Theme:CreateButton(row, "Zähler 0", 64, 22)
+        row.resetStats:SetPoint("LEFT", row, "LEFT", 838, 0)
+        row.resetStats:SetScript("OnClick", function()
+            if row.playerName then GA.PlusOnes:ResetStats(row.playerName, "RULES_UI"); RulesWindow:Refresh(false) end
+        end)
         self.rows[index] = row
     end
 
@@ -221,7 +255,7 @@ function RulesWindow:SaveRow(row)
         if not ok then self:SetStatus(reserveError or "SoftRes konnte nicht gespeichert werden.", true); return end
     end
     GA.Priority:Set(self.currentItem, player, priority)
-    GA.PlusOnes:Set(player, plusOne)
+    GA.PlusOnes:Set(player, plusOne, "RULES_UI")
     GA.BoostedRolls:Set(player, boost)
     self:SetStatus("Werte für " .. player .. " gespeichert.")
     self:Refresh(false)
@@ -230,6 +264,9 @@ end
 function RulesWindow:Refresh(rebuildPlayers)
     if not self.frame then return end
     if rebuildPlayers or #self.players == 0 then self:CollectPlayers() end
+    local autoRules = GA.PlusOnes and GA.PlusOnes:GetAutoRules() or { MS = true, OS = false }
+    if self.autoMS then self.autoMS:SetChecked(autoRules.MS and true or false) end
+    if self.autoOS then self.autoOS:SetChecked(autoRules.OS and true or false) end
     local reservations = self.currentItem and moduleValue(GA.SoftRes, "GetReservations", self.currentItem) or nil
     if type(reservations) ~= "table" then reservations = nil end
     local reservationPlayers, reservationTotal = 0, 0
@@ -259,6 +296,8 @@ function RulesWindow:Refresh(rebuildPlayers)
             row.priority:SetText(tostring(self.currentItem and moduleValue(GA.Priority, "Get", self.currentItem, player.name) or 0))
             row.plusOne:SetText(tostring(moduleValue(GA.PlusOnes, "Get", player.name)))
             row.boost:SetText(tostring(moduleValue(GA.BoostedRolls, "Get", player.name)))
+            local stats = GA.PlusOnes.GetStats and GA.PlusOnes:GetStats(player.name) or { total = 0, MS = 0, OS = 0 }
+            row.counts:SetText(string.format("%d / %d / %d", stats.total, stats.MS, stats.OS))
             if self.currentItem then row.save:Enable() else row.save:Disable() end
             row:Show()
         else
@@ -299,6 +338,7 @@ function RulesWindow:Initialize()
     local refreshEvents = {
         "GA_SOFTRES_CHANGED", "GA_PRIORITY_CHANGED", "GA_PLUSONE_CHANGED",
         "GA_PLUSONE_RESET", "GA_BOOST_CHANGED", "GA_HARDRES_CHANGED",
+        "GA_ITEM_LEDGER_CHANGED", "GA_LEDGER_RULE_CHANGED",
     }
     for index = 1, #refreshEvents do
         GA.Events:On(refreshEvents[index], function() RulesWindow:Refresh(false) end, self)

@@ -3,7 +3,7 @@ local addonName, addon = ...
 addon = type(addon) == "table" and addon or {}
 _G.MasterLooterItemData = addon
 
-local SCHEMA = 1
+local SCHEMA = 2
 local ITEM_LINK_PATTERN = "(|c%x+|Hitem:[^|]+|h%[[^%]]+%]|h|r)"
 
 local function normalize(value)
@@ -45,7 +45,7 @@ local function resolveInstant(itemID)
 end
 
 function addon:Initialize()
-    if type(MasterLooterItemDB) ~= "table" or MasterLooterItemDB.schema ~= SCHEMA then
+    if type(MasterLooterItemDB) ~= "table" then
         MasterLooterItemDB = {
             schema = SCHEMA,
             snapshot = "runtime",
@@ -54,9 +54,23 @@ function addon:Initialize()
         }
     end
 
+    if tonumber(MasterLooterItemDB.schema) == 1 then
+        MasterLooterItemDB.schema = SCHEMA
+        MasterLooterItemDB.contexts = MasterLooterItemDB.contexts or {}
+    elseif MasterLooterItemDB.schema ~= SCHEMA then
+        MasterLooterItemDB = { schema = SCHEMA, snapshot = "runtime", items = {}, families = {}, contexts = {} }
+    end
+
     MasterLooterItemDB.items = MasterLooterItemDB.items or {}
     MasterLooterItemDB.families = MasterLooterItemDB.families or {}
+    MasterLooterItemDB.contexts = MasterLooterItemDB.contexts or {}
     self.DB = MasterLooterItemDB
+    local realm = type(GetRealmName) == "function" and GetRealmName() or "Unknown"
+    local locale = type(GetLocale) == "function" and GetLocale() or "unknown"
+    local interface = type(GetBuildInfo) == "function" and select(4, GetBuildInfo()) or 30300
+    self.contextKey = tostring(realm) .. "|" .. tostring(locale) .. "|" .. tostring(interface)
+    self.DB.contexts[self.contextKey] = { realm = realm, locale = locale, interface = interface,
+        lastSeen = time and time() or 0 }
     self:ImportAtlasLootFamilies()
     self:LearnBags()
 end
@@ -84,6 +98,8 @@ function addon:Add(itemID, name, quality, link, metadata)
     current.icon = infoIcon or instant.icon or current.icon
     current.verified = infoLink ~= nil or link ~= nil
     current.seenAt = time and time() or 0
+    current.contexts = current.contexts or {}
+    if self.contextKey then current.contexts[self.contextKey] = current.seenAt end
 
     if type(metadata) == "table" then
         for key, value in pairs(metadata) do
@@ -96,6 +112,21 @@ function addon:Add(itemID, name, quality, link, metadata)
     end
     self.DB.items[itemID] = current
     return current.name ~= nil
+end
+
+function addon:GetContext()
+    return self.contextKey and self.DB and self.DB.contexts[self.contextKey] or nil
+end
+
+function addon:PruneUnverified(maxAge)
+    maxAge = math.max(86400, tonumber(maxAge) or (180 * 86400))
+    local cutoff, removed = (time and time() or 0) - maxAge, 0
+    for itemID, entry in pairs(self.DB and self.DB.items or {}) do
+        if not entry.verified and (tonumber(entry.seenAt) or 0) < cutoff then
+            self.DB.items[itemID], removed = nil, removed + 1
+        end
+    end
+    return removed
 end
 
 function addon:LearnLink(link)

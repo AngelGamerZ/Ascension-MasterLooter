@@ -62,9 +62,11 @@ function GDKPAuctionWindow:EnsureFrame()
     self.frame = frame
 
     local itemLabel = Theme:CreateLabel(frame, "Itemlink", 11, Theme.colors.gold); itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -46)
-    local item = Theme:CreateEditBox(frame, 410, 24); item:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -64); self.itemEdit = item
+    local item = Theme:CreateEditBox(frame, 350, 24); item:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -64); self.itemEdit = item
     item:SetScript("OnReceiveDrag", function() GDKPAuctionWindow:AcceptCursorItem() end)
-    local start = Theme:CreateButton(frame, "Start", 105, 25); start:SetPoint("LEFT", item, "RIGHT", 10, 0); start:SetScript("OnClick", function() GDKPAuctionWindow:StartAuction() end); self.startButton = start
+    local start = Theme:CreateButton(frame, "Start", 75, 25); start:SetPoint("LEFT", item, "RIGHT", 8, 0); start:SetScript("OnClick", function() GDKPAuctionWindow:StartAuction() end); self.startButton = start
+    local enqueue = Theme:CreateButton(frame, "Queue", 75, 25); enqueue:SetPoint("LEFT", start, "RIGHT", 5, 0); enqueue:SetScript("OnClick", function() GDKPAuctionWindow:QueueAuction() end); self.queueButton = enqueue
+    self.queueLabel = Theme:CreateLabel(frame, "Queue: 0", 11, Theme.colors.muted); self.queueLabel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -101)
 
     local definitions = {
         { label = "Mindestgebot", x = 22, width = 100, default = "100" },
@@ -112,6 +114,20 @@ function GDKPAuctionWindow:EnsureFrame()
     return frame
 end
 
+function GDKPAuctionWindow:QueueAuction()
+    local itemLink, minimum, increment, duration = self.itemEdit:GetText(), tonumber(self.minBidEdit:GetText()), tonumber(self.incrementEdit:GetText()), tonumber(self.durationEdit:GetText())
+    local manager = GA.GDKPAuction
+    if not manager or type(manager.Enqueue) ~= "function" then self:SetResult("Auktionsqueue nicht verfügbar.", Theme.colors.red); return end
+    local ok, result, err = pcall(manager.Enqueue, manager, itemLink, minimum, increment, duration)
+    if ok and result then self.itemEdit:SetText(""); self:RefreshQueue(); self:SetResult("Item gestartet oder eingereiht.", Theme.colors.green)
+    else self:SetResult(tostring(err or result or "Einreihen fehlgeschlagen."), Theme.colors.red) end
+end
+
+function GDKPAuctionWindow:RefreshQueue()
+    local queue = GA.GDKPAuction and GA.GDKPAuction.GetQueue and GA.GDKPAuction:GetQueue() or {}
+    if self.queueLabel then self.queueLabel:SetText("Queue: " .. tostring(#queue)) end
+end
+
 function GDKPAuctionWindow:AcceptCursorItem()
     local cursorType, itemID, itemLink = GetCursorInfo()
     if cursorType ~= "item" then return end
@@ -150,6 +166,7 @@ end
 function GDKPAuctionWindow:UpdateState(state)
     if type(state) ~= "table" then return end
     self:EnsureFrame(); self.state = state
+    self:RefreshQueue()
     local itemLink = field(state, "itemLink", "link"); if itemLink then self.itemEdit:SetText(itemLink) end
     local minBid = tonumber(field(state, "minBid", "minimumBid"))
     local increment = tonumber(field(state, "increment", "bidIncrement"))
@@ -202,6 +219,7 @@ function GDKPAuctionWindow:OnInitialize()
     GA.Events:On("GA_GDKP_AUCTION_STARTED", function(...) local state = eventState("GA_GDKP_AUCTION_STARTED", ...); GDKPAuctionWindow:UpdateState(state); GDKPAuctionWindow.frame:Show() end, self)
     GA.Events:On("GA_GDKP_AUCTION_UPDATED", function(...) GDKPAuctionWindow:UpdateState(eventState("GA_GDKP_AUCTION_UPDATED", ...)) end, self)
     GA.Events:On("GA_GDKP_AUCTION_ENDED", function(...) local state, reason = eventState("GA_GDKP_AUCTION_ENDED", ...); GDKPAuctionWindow:EndState(state, reason) end, self)
+    GA.Events:On("GA_GDKP_AUCTION_QUEUE_CHANGED", function() GDKPAuctionWindow:RefreshQueue() end, self)
     return true
 end
 

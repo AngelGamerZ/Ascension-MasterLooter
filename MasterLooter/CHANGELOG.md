@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0-beta
+
+- Persistente Lootslot-Warteschlange und STRG+Rechtsklick-Übernahme aus Blizzard-, XLoot- und ElvUI-Lootfenstern
+- Sicherer Vergabeablauf für entfernte Gewinner: direkte Vergabe, bewusstes An-sich-Nehmen und erst danach bestätigte Handelswarteschlange
+- Handelsassistent mit Gruppierung je Gewinner, Taschenabgleich, Fristanzeige, Reload-Wiederherstellung und Schutz vor falschem Partner oder Stapelfehlern
+- Strichliste mit Gesamt-/MS-/OS-Zählern, separatem +1, konfigurierbarer automatischer Buchung und Audit-Historie
+- Persistente GDKP-Auktionswarteschlange, gewichtete Anteile und Zahlungsstatus
+- PackMule-Regeln für Qualität, Bindung, Disenchanter und Round-Robin-Ziele
+- Wiederherstellung eigener aktiver Roll- und Auktionssitzungen nach Reload
+- Kopierbare Kommunikationsdiagnose, begrenztes Fehlerprotokoll, CSV-/TSV-Exporte und automatische Import-Sicherungen
+- Realm-, Locale- und Client-kontextbezogener Laufzeitindex für Ascension-Items
+- Erweiterte Einstellungen für Profile, Skalierung, Fensterpositionen, Ansagen, Taschenfreigabe und PackMule
+- Automatisierte Integrations-, Negativ-, Grenzfall-, Manifest- und 3.3.5a-Kompatibilitätstests
+
 ## 0.9.17-beta
 
 - Absturz der Lootmaster-Tabelle behoben, wenn ein korrekt erfasster öffentlicher Wurf noch keinen optionalen `effectiveRoll`-Wert besitzt

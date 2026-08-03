@@ -204,6 +204,67 @@ local function resolveState(sessionID)
     return sessionID and RollSession.sessions[sessionID] or nil
 end
 
+local function copyPersistent(value, seen)
+    if type(value) ~= "table" then return value end
+    seen = seen or {}
+    if seen[value] then return nil end
+    seen[value] = true
+    local result = {}
+    for key, child in pairs(value) do
+        if type(key) ~= "function" and type(child) ~= "function" and type(child) ~= "userdata" and type(child) ~= "thread" then
+            result[copyPersistent(key, seen)] = copyPersistent(child, seen)
+        end
+    end
+    seen[value] = nil
+    return result
+end
+
+function RollSession:PersistActive()
+    local data = GA.DB and GA.DB.data
+    if not data then return false end
+    data.character = data.character or {}
+    data.character.rollSession = data.character.rollSession or {}
+    local store = data.character.rollSession
+    local state = resolveState()
+    if not state or state.status ~= "ACTIVE" or not samePlayer(state.owner, playerName()) then
+        store.active = nil
+        return true
+    end
+    local snapshot = copyPersistent(state)
+    snapshot.remainingAtSave = math.max(0, (tonumber(state.expiresAt) or GetTimeSafe()) - GetTimeSafe())
+    snapshot.savedAt = TimeSafe()
+    store.active = snapshot
+    return true
+end
+
+function RollSession:RestoreActive()
+    if self.restoredPersistent then return false end
+    self.restoredPersistent = true
+    local store = GA.DB and GA.DB.data and GA.DB.data.character and GA.DB.data.character.rollSession
+    local saved = store and store.active
+    if type(saved) ~= "table" or saved.status ~= "ACTIVE" or type(saved.itemLink) ~= "string" or
+        not samePlayer(saved.owner, playerName()) or not self:IsAuthority(playerName()) then
+        if store then store.active = nil end
+        return false
+    end
+    local elapsedWall = math.max(0, TimeSafe() - (tonumber(saved.savedAt) or TimeSafe()))
+    local remaining = (tonumber(saved.remainingAtSave) or 0) - elapsedWall
+    if remaining <= 0 or remaining > 600 then store.active = nil; return false end
+    local state = copyPersistent(saved)
+    state.savedAt, state.remainingAtSave = nil, nil
+    state.receivedAt, state.expiresAt, state.timeSource = GetTimeSafe(), GetTimeSafe() + remaining, "RESTORED"
+    state.participants, state.participantSequences, state.rollAssignments = state.participants or {},
+        state.participantSequences or {}, state.rollAssignments or {}
+    self.sessions[state.id], self.activeID = state, state.id
+    local seq = nextSequence(state)
+    state.authoritySequence = seq
+    send("START", { self.PROTOCOL, state.id, seq, state.itemLink, state.createdAt or TimeSafe(), remaining,
+        encodeList(state.choices or defaultChoices()), state.note or "", state.osRollMaximum or self.DEFAULT_OS_ROLL_MAXIMUM })
+    emit("GA_ROLL_SESSION_STARTED", state, "RESTORED")
+    self:PersistActive()
+    return state
+end
+
 function RollSession:GetState(sessionID)
     return resolveState(sessionID)
 end
@@ -231,6 +292,7 @@ function RollSession:Start(itemLink, options)
         state.createdAt, state.duration, encodeList(state.choices), state.note, state.osRollMaximum })
     if not packet then self.sessions[state.id] = nil; self.activeID = nil; return nil, err end
     emit("GA_ROLL_SESSION_STARTED", state, "LOCAL")
+    self:PersistActive()
     return state
 end
 
@@ -253,6 +315,7 @@ function RollSession:Stop(sessionID, reason)
     state.status, state.endedAt = "STOPPED", GetTimeSafe()
     if self.activeID == state.id then self.activeID = nil end
     emit("GA_ROLL_SESSION_ENDED", state, reason)
+    self:PersistActive()
     return true
 end
 
@@ -350,6 +413,7 @@ function RollSession:RecordPublicRoll(player, roll, minimum, maximum, sessionID)
     state.participantSequences[key] = participant.sequence
     state.rollAssignments[key] = participant.roll
     emit("GA_ROLL_SESSION_UPDATED", state, "ROLL", participant)
+    self:PersistActive()
     return participant
 end
 
@@ -394,6 +458,7 @@ function RollSession:Award(sessionID, winner, choice, roll, note)
     if self.activeID == state.id then self.activeID = nil end
     emit("GA_ROLL_RESULT", result, state)
     emit("GA_ROLL_SESSION_ENDED", state, "AWARDED")
+    self:PersistActive()
     return result
 end
 
@@ -490,6 +555,7 @@ local function receiveRoll(fields, sender)
     state.participantSequences[key] = seq
     state.participants[key] = participant
     emit("GA_ROLL_SESSION_UPDATED", state, choice == "PASS" and "PASS" or "ROLL", participant)
+    RollSession:PersistActive()
     -- The host response is authoritative as soon as the ROLL packet is valid.
     -- A failed whisper ACK must not make the roll disappear from the lootmaster UI;
     -- the participant retry will request the same ACK again without rerolling.
@@ -640,7 +706,14 @@ function RollSession:Initialize()
         end)
     end
     self.initialized = true
+    if GA.Events then
+        GA.Events:On("PLAYER_LOGIN", function() RollSession:RestoreActive() end, self, -100)
+    end
     return true
+end
+
+function RollSession:OnSave()
+    self:PersistActive()
 end
 
 -- Lower-case aliases make the API pleasant for both existing and new UI code.

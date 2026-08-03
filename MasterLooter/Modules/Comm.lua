@@ -24,10 +24,12 @@ Comm.MAX_SEEN_PACKETS = 512
 Comm.MAX_SEEN_PER_SENDER = 64
 Comm.FRAGMENT_TIMEOUT = 15
 Comm.DEDUPE_TIMEOUT = 90
+Comm.TRACE_LIMIT = 250
 Comm.handlers = Comm.handlers or {}
 Comm.fragments = Comm.fragments or {}
 Comm.seen = Comm.seen or {}
 Comm.counter = Comm.counter or 0
+Comm.trace = Comm.trace or {}
 
 local floor = math.floor
 local tinsert = table.insert
@@ -111,6 +113,40 @@ function Comm:RegisterHandler(messageType, callback)
     return true
 end
 
+function Comm:Trace(direction, messageType, peer, channel, detail)
+    local entry = {
+        time = (time and time()) or 0, monotonic = GetTimeSafe(), direction = tostring(direction or "?"),
+        messageType = tostring(messageType or "?"), peer = tostring(peer or ""),
+        channel = tostring(channel or ""), detail = tostring(detail or ""),
+    }
+    self.trace[#self.trace + 1] = entry
+    while #self.trace > self.TRACE_LIMIT do table.remove(self.trace, 1) end
+    emit("GA_COMM_TRACE", entry)
+    return entry
+end
+
+function Comm:GetTrace()
+    local result = {}
+    for index = 1, #self.trace do result[index] = self.trace[index] end
+    return result
+end
+
+function Comm:ClearTrace()
+    for index = #self.trace, 1, -1 do self.trace[index] = nil end
+    emit("GA_COMM_TRACE_CLEARED")
+end
+
+function Comm:ExportTrace()
+    local lines = { "time\tdirection\ttype\tpeer\tchannel\tdetail" }
+    for index = 1, #self.trace do
+        local entry = self.trace[index]
+        local function clean(value) return tostring(value or ""):gsub("[\r\n\t]", " ") end
+        lines[#lines + 1] = table.concat({ clean(entry.time), clean(entry.direction), clean(entry.messageType),
+            clean(entry.peer), clean(entry.channel), clean(entry.detail) }, "\t")
+    end
+    return table.concat(lines, "\n")
+end
+
 function Comm:UnregisterHandler(messageType, callback)
     local handlers = self.handlers[messageType]
     if not handlers then return end
@@ -144,8 +180,12 @@ function Comm:Send(messageType, fields, channel, target)
             tostring(part) .. "|" .. tostring(total) .. "|" .. chunk
         if #frame > 255 then return nil, "encoded frame exceeds 255 bytes" end
         local ok, sendError = pcall(SendAddonMessage, self.PREFIX, frame, channel, target)
-        if not ok then return nil, tostring(sendError) end
+        if not ok then
+            self:Trace("OUT_ERROR", messageType, target, channel, sendError)
+            return nil, tostring(sendError)
+        end
     end
+    self:Trace("OUT", messageType, target, channel, tostring(total) .. " part(s)")
     return packetID
 end
 
@@ -156,6 +196,7 @@ local function dispatch(sender, packetID, payload, channel)
         return
     end
     local messageType = table.remove(values, 1)
+    Comm:Trace("IN", messageType, sender, channel, packetID)
     local handlers = Comm.handlers[messageType]
     if handlers then
         for i = 1, #handlers do

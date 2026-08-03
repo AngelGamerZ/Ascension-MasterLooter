@@ -20,7 +20,7 @@ function GDKPWindow:EnsureFrame()
     if not Theme then return nil end
     local frame = CreateFrame("Frame", "MasterLooterGDKPWindow", UIParent)
     frame:SetWidth(700)
-    frame:SetHeight(500)
+    frame:SetHeight(545)
     frame:SetFrameStrata("DIALOG")
     frame:Hide()
     Theme:ApplyPanel(frame)
@@ -85,7 +85,7 @@ function GDKPWindow:EnsureFrame()
 
     local list = CreateFrame("Frame", nil, frame)
     list:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -230)
-    list:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 44)
+    list:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 82)
     Theme:ApplyInset(list)
     self.list = list
     local headers = {
@@ -131,7 +131,24 @@ function GDKPWindow:EnsureFrame()
         end
     end)
     self.nextButton = nextButton
+
+    local cutPlayer = Theme:CreateEditBox(frame, 150, 22); cutPlayer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 20); self.cutPlayerEdit = cutPlayer
+    local cutWeight = Theme:CreateEditBox(frame, 52, 22); cutWeight:SetPoint("LEFT", cutPlayer, "RIGHT", 7, 0); cutWeight:SetText("1"); self.cutWeightEdit = cutWeight
+    local setWeight = Theme:CreateButton(frame, "Cut setzen", 92, 23); setWeight:SetPoint("LEFT", cutWeight, "RIGHT", 7, 0); setWeight:SetScript("OnClick", function() GDKPWindow:SetCutWeight() end)
+    local paid = Theme:CreateButton(frame, "Bezahlt", 85, 23); paid:SetPoint("LEFT", setWeight, "RIGHT", 8, 0); paid:SetScript("OnClick", function() GDKPWindow:SetPayment("PAID") end)
+    local open = Theme:CreateButton(frame, "Offen", 75, 23); open:SetPoint("LEFT", paid, "RIGHT", 6, 0); open:SetScript("OnClick", function() GDKPWindow:SetPayment("OPEN") end)
+    local cutHelp = Theme:CreateLabel(frame, "Spieler / Cut-Gewicht / Zahlungsstatus", 10, Theme.colors.muted); cutHelp:SetPoint("BOTTOMLEFT", cutPlayer, "TOPLEFT", 0, 3)
     return frame
+end
+
+function GDKPWindow:SetCutWeight()
+    local ok, err = GA.GDKP:SetCutWeight(self.cutPlayerEdit:GetText(), tonumber(self.cutWeightEdit:GetText()))
+    self.saleResult:SetText(ok and "Cut-Gewicht gespeichert." or tostring(err)); self.saleResult:SetTextColor(unpack(ok and Theme.colors.green or Theme.colors.red)); self:Refresh()
+end
+
+function GDKPWindow:SetPayment(status)
+    local ok, err = GA.GDKP:SetPaymentStatus(self.cutPlayerEdit:GetText(), status)
+    self.saleResult:SetText(ok and ("Zahlungsstatus: " .. status) or tostring(err)); self.saleResult:SetTextColor(unpack(ok and Theme.colors.green or Theme.colors.red)); self:Refresh()
 end
 
 function GDKPWindow:StartSession()
@@ -256,6 +273,7 @@ function GDKPWindow:Initialize()
         GDKPWindow.lastFinished = session
         GDKPWindow:Refresh(session)
     end, self)
+    GA.Events:On("GA_GDKP_DISTRIBUTION_CHANGED", function(_, _, session) GDKPWindow:Refresh(session) end, self)
     self.initialized = true
     self:Refresh()
     return true

@@ -5,23 +5,30 @@ local ADDON_NAME, ns = ...
 ns = ns or {}
 
 ns.ADDON_NAME = ADDON_NAME or "MasterLooter"
-ns.VERSION = "0.9.17-beta"
+ns.VERSION = "0.10.0-beta"
 ns.PROTOCOL_VERSION = 3
 ns.DB_SCHEMA = 1
 ns.modules = ns.modules or {}
 ns.moduleOrder = ns.moduleOrder or {}
+ns.errors = ns.errors or {}
 
 -- One documented public root is useful for optional integrations and debugging.
 -- Addon files should continue to use the private table passed through `...`.
 _G.MasterLooter = ns
 
 local function reportError(context, message)
+    ns.errors[#ns.errors + 1] = { time = (time and time()) or 0, context = tostring(context), message = tostring(message) }
+    while #ns.errors > 100 do table.remove(ns.errors, 1) end
     local text = string.format("|cffff4040MasterLooter|r [%s]: %s", tostring(context), tostring(message))
     if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
         DEFAULT_CHAT_FRAME:AddMessage(text)
     elseif print then
         print(text)
     end
+end
+
+function ns:GetErrors()
+    return self.errors
 end
 
 ns.ReportError = reportError

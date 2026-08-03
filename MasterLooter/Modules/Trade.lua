@@ -1,8 +1,8 @@
--- Award delivery assistant for 3.3.5a. This module observes and verifies trades;
--- it deliberately never picks up an item, places it in trade, or accepts a trade.
+-- Award delivery assistant for 3.3.5a. Bag pickup and trade-slot placement are
+-- only performed by an explicit UI click; trade open/accept stays manual.
 local _, GA = ...
 
-local Trade = { pending = {}, nextID = 0, state = "IDLE", offered = {}, bothAccepted = false }
+local Trade = { pending = {}, nextID = 0, state = "IDLE", offered = {}, bothAccepted = false, TRADE_SECONDS = 7200 }
 GA.Trade = Trade
 
 local function timestamp()
@@ -35,12 +35,33 @@ function Trade:GetState()
 end
 
 function Trade:GetPending(player)
-    if not player then return self.pending end
     local result = {}
     for index = 1, #self.pending do
-        if sameName(self.pending[index].winner, player) then result[#result + 1] = self.pending[index] end
+        local entry = self.pending[index]
+        if entry.status ~= "DELIVERED" and entry.status ~= "CANCELLED" and (not player or sameName(entry.winner, player)) then
+            result[#result + 1] = entry
+        end
     end
     return result
+end
+
+function Trade:GetGroups()
+    local groups, order = {}, {}
+    for _, entry in ipairs(self:GetPending()) do
+        local key = string.lower(baseName(entry.winner) or entry.winner or "?")
+        local group = groups[key]
+        if not group then
+            group = { key = key, winner = entry.winner, entries = {}, quantity = 0, ready = 0, missing = 0 }
+            groups[key], order[#order + 1] = group, group
+        end
+        group.entries[#group.entries + 1] = entry
+        group.quantity = group.quantity + (entry.quantity or 1)
+        if entry.status == "READY" then group.ready = group.ready + 1 end
+        if entry.status == "MISSING" or entry.status == "EXPIRED" then group.missing = group.missing + 1 end
+        if entry.tradeExpiresAt and (not group.tradeExpiresAt or entry.tradeExpiresAt < group.tradeExpiresAt) then group.tradeExpiresAt = entry.tradeExpiresAt end
+    end
+    table.sort(order, function(a, b) return string.lower(a.winner or "") < string.lower(b.winner or "") end)
+    return order
 end
 
 function Trade:Get(id)
@@ -53,11 +74,20 @@ function Trade:QueueAward(result, source)
     if type(result) ~= "table" or type(result.itemLink) ~= "string" or type(result.winner) ~= "string" then
         return nil, "award requires itemLink and winner"
     end
+    for index = 1, #self.pending do
+        local existing = self.pending[index]
+        if result.sessionID and existing.sessionID == result.sessionID and sameName(existing.winner, result.winner) and existing.itemLink == result.itemLink then
+            return existing
+        end
+    end
+    local acquiredAt = tonumber(result.acquiredAt) or timestamp()
     local entry = {
         id = newID(), itemLink = result.itemLink, itemID = GA.Compat:GetItemID(result.itemLink),
+        sessionID = result.sessionID,
         winner = result.winner, quantity = math.max(1, math.floor(tonumber(result.quantity) or 1)),
         choice = result.choice, roll = result.roll, note = result.note,
-        status = "PENDING", source = source or "AWARD", createdAt = timestamp(), updatedAt = timestamp(),
+        status = "PENDING", source = source or "AWARD", createdAt = timestamp(), acquiredAt = acquiredAt,
+        tradeExpiresAt = acquiredAt + self.TRADE_SECONDS, updatedAt = timestamp(),
     }
     self.pending[#self.pending + 1] = entry
     GA.Events:Emit("GA_TRADE_PENDING_ADDED", entry)
@@ -78,21 +108,105 @@ function Trade:FindInBags(idOrItem)
     return GA.Compat:FindItems(item)
 end
 
+function Trade:Assess(entry)
+    if type(entry) ~= "table" then return nil, "unknown pending award" end
+    local current = timestamp()
+    local locations = GA.Compat:FindItems(entry.itemID)
+    entry.locations, entry.updatedAt = locations, current
+    if entry.tradeExpiresAt and current >= entry.tradeExpiresAt then
+        entry.status, entry.tradeability = "EXPIRED", "ESTIMATED_EXPIRED"
+    elseif #locations == 0 then
+        entry.status, entry.tradeability = "MISSING", "NOT_IN_BAGS"
+    else
+        entry.status, entry.tradeability = "READY", "UNVERIFIED"
+    end
+    GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
+    return entry, locations
+end
+
 function Trade:Prepare(id)
     local entry = self:Get(id)
     if not entry then return nil, "unknown pending award" end
     if entry.status == "DELIVERED" or entry.status == "CANCELLED" then return nil, "award is closed" end
-    local locations = GA.Compat:FindItems(entry.itemID)
-    if #locations == 0 then
-        entry.status, entry.updatedAt = "MISSING", timestamp()
-        GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
-        return nil, "item is not in the player's bags"
-    end
+    local assessed, locations = self:Assess(entry)
+    if not assessed or assessed.status ~= "READY" then return nil, assessed and (assessed.status == "EXPIRED" and "Geschätzte Handelsfrist ist abgelaufen." or "Item ist nicht in den Taschen.") or "Itemprüfung fehlgeschlagen." end
     self.prepared = entry
     entry.status, entry.locations, entry.updatedAt = "READY", locations, timestamp()
     GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
     emitState("PREPARED")
     return entry, locations
+end
+
+function Trade:PrepareGroup(winner)
+    local ready, errors, used = {}, {}, {}
+    for _, entry in ipairs(self:GetPending(winner)) do
+        local assessed, locations = self:Assess(entry)
+        local chosen
+        if assessed and assessed.status == "READY" then
+            for _, location in ipairs(locations) do
+                local key = tostring(location.bag) .. ":" .. tostring(location.slot)
+                if not used[key] then chosen, used[key] = location, true; break end
+            end
+        end
+        if chosen then
+            entry.locations, entry.status = { chosen }, "READY"
+            ready[#ready + 1] = entry
+        else
+            entry.status = assessed and assessed.status == "READY" and "MISSING" or (assessed and assessed.status or "MISSING")
+            errors[#errors + 1] = entry.status == "EXPIRED" and "Geschätzte Handelsfrist ist abgelaufen." or "Kein freier passender Taschenstack."
+            GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
+        end
+    end
+    self.preparedGroup = { winner = winner, entries = ready }
+    emitState("GROUP_PREPARED")
+    return ready, errors
+end
+
+function Trade:BeginTrade(winner)
+    if type(winner) ~= "string" or winner == "" then return nil, "Kein Gewinner ausgewählt." end
+    if type(UnitExists) ~= "function" or not UnitExists("target") or not sameName(UnitName("target"), winner) then
+        return nil, "Gewinner muss als Ziel ausgewählt sein."
+    end
+    if type(CheckInteractDistance) == "function" and not CheckInteractDistance("target", 2) then
+        return nil, "Gewinner ist nicht in Handelsreichweite."
+    end
+    if type(InitiateTrade) ~= "function" then return nil, "Handels-API ist nicht verfügbar." end
+    local ok, err = pcall(InitiateTrade, "target")
+    if not ok then return nil, tostring(err) end
+    self.state, self.partner = "OPENING", winner
+    emitState("USER_INITIATED_TRADE")
+    return true
+end
+
+-- User-clicked convenience only: places exact bag stacks in the already open
+-- trade window. It never opens, accepts or confirms the trade.
+function Trade:PlacePreparedGroup(winner)
+    if self.state ~= "OPEN" then return nil, "Handelsfenster ist nicht geöffnet." end
+    if not self.partner or not sameName(self.partner, winner) then return nil, "Falscher Handelspartner." end
+    if type(ClickTradeButton) ~= "function" then return nil, "Trade-Slot-API ist nicht verfügbar." end
+    local entries = self.preparedGroup and sameName(self.preparedGroup.winner, winner) and self.preparedGroup.entries or self:PrepareGroup(winner)
+    if type(entries) ~= "table" or #entries == 0 then return nil, "Keine handelsbereiten Items." end
+    local placed, tradeSlot = {}, 1
+    for index = 1, #entries do
+        local entry = entries[index]
+        local location = entry.locations and entry.locations[1]
+        if tradeSlot <= 6 and location then
+            if (tonumber(location.count) or 1) > (tonumber(entry.quantity) or 1) then
+                entry.status, entry.tradeability = "SPLIT_REQUIRED", "STACK_TOO_LARGE"
+            elseif location.locked then
+                entry.status = "LOCKED"
+            else
+                GA.Compat:PickupContainerItem(location.bag, location.slot)
+                ClickTradeButton(tradeSlot)
+                entry.status, entry.updatedAt = "PLACED", timestamp()
+                placed[#placed + 1], tradeSlot = entry, tradeSlot + 1
+            end
+            GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
+        end
+    end
+    self:ScanOfferedItems()
+    emitState("ITEMS_PLACED_BY_USER")
+    return placed
 end
 
 function Trade:MarkDelivered(id, reason)
@@ -248,6 +362,11 @@ function Trade:OnInitialize()
     self.store = GA.DB.data.character.trade
     self.pending, self.nextID = self.store.pending or {}, tonumber(self.store.nextID) or 0
     self.store.pending = self.pending
+    for index = 1, #self.pending do
+        local entry = self.pending[index]
+        if entry.status == "PLACED" or entry.status == "READY" or entry.status == "LOCKED" then entry.status = "PENDING" end
+        entry.tradeExpiresAt = entry.tradeExpiresAt or ((entry.acquiredAt or entry.createdAt or timestamp()) + self.TRADE_SECONDS)
+    end
     GA.Events:On("GA_AWARD_RECORDED", function(_, _, result, delivery)
         if delivery == "PENDING" then Trade:QueueAward(result, "AWARD") end
     end, self)

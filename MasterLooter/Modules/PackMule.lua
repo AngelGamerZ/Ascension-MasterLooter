@@ -40,6 +40,51 @@ function PackMule:GetTarget()
     return self.target
 end
 
+function PackMule:GetRules()
+    self.rules = self.rules or { enabled = false, minimumQuality = 2, includeBoE = true, includeBoP = false,
+        targets = {}, disenchanters = {}, roundRobinIndex = 0 }
+    return self.rules
+end
+
+function PackMule:SetRules(rules)
+    if type(rules) ~= "table" then return false, "rules table required" end
+    local current = self:GetRules()
+    if rules.enabled ~= nil then current.enabled = rules.enabled and true or false end
+    if rules.minimumQuality ~= nil then
+        local quality = tonumber(rules.minimumQuality)
+        if not quality or quality < 0 or quality > 7 then return false, "invalid minimum quality" end
+        current.minimumQuality = math.floor(quality)
+    end
+    if rules.includeBoE ~= nil then current.includeBoE = rules.includeBoE and true or false end
+    if rules.includeBoP ~= nil then current.includeBoP = rules.includeBoP and true or false end
+    if type(rules.targets) == "table" then current.targets = rules.targets end
+    if type(rules.disenchanters) == "table" then current.disenchanters = rules.disenchanters end
+    if self.store then self.store.rules = current end
+    GA.Events:Emit("GA_PACKMULE_RULES_CHANGED", current)
+    return true
+end
+
+function PackMule:ChooseTarget(forDisenchant)
+    local rules = self:GetRules()
+    local targets = forDisenchant and rules.disenchanters or rules.targets
+    if type(targets) ~= "table" or #targets == 0 then return self.target end
+    rules.roundRobinIndex = ((tonumber(rules.roundRobinIndex) or 0) % #targets) + 1
+    return baseName(targets[rules.roundRobinIndex])
+end
+
+function PackMule:EvaluateItem(itemLink, bindType, forDisenchant)
+    local rules = self:GetRules()
+    if not rules.enabled or type(itemLink) ~= "string" then return nil, "rules disabled or invalid item" end
+    local quality
+    if type(GetItemInfo) == "function" then local _, _, itemQuality = GetItemInfo(itemLink); quality = itemQuality end
+    if quality == nil then return nil, "item data unavailable" end
+    if quality < (tonumber(rules.minimumQuality) or 2) then return nil, "below minimum quality" end
+    if bindType == "BOE" and not rules.includeBoE or bindType == "BOP" and not rules.includeBoP then return nil, "binding excluded" end
+    local target = self:ChooseTarget(forDisenchant)
+    if not target then return nil, "no target configured" end
+    return target
+end
+
 function PackMule:Add(itemLink, quantity, source, note)
     if not self.target then return nil, "pack-mule target is not configured" end
     if type(itemLink) ~= "string" or not GA.Compat:GetItemID(itemLink) then
@@ -164,6 +209,8 @@ function PackMule:OnInitialize()
     self.target = self.store.target
     self.queue = self.store.queue or {}
     self.nextID = tonumber(self.store.nextID) or 0
+    self.rules = type(self.store.rules) == "table" and self.store.rules or nil
+    self.store.rules = self:GetRules()
     self.store.queue = self.queue
     GA.Events:On("BAG_UPDATE", function() PackMule:RefreshAvailability() end, self)
     GA.Events:On("GA_AWARD_RECORDED", function(_, _, result, delivery)
@@ -178,7 +225,7 @@ end
 
 function PackMule:OnSave()
     if not self.store then return end
-    self.store.target, self.store.queue, self.store.nextID = self.target, self.queue, self.nextID
+    self.store.target, self.store.queue, self.store.nextID, self.store.rules = self.target, self.queue, self.nextID, self:GetRules()
 end
 
 GA:RegisterModule("PackMule", PackMule)

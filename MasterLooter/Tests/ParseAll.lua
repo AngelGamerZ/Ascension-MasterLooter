@@ -14,6 +14,7 @@ local files = {
     "MasterLooter/Modules/ItemDataBridge.lua", "MasterLooter/Modules/VersionCheck.lua",
     "MasterLooter/Modules/Announcements.lua", "MasterLooter/Modules/ImportExport.lua",
     "MasterLooter/Modules/Commands.lua", "MasterLooter/UI/Theme.lua", "MasterLooter/UI/RollDebugWindow.lua",
+    "MasterLooter/UI/CommDebugWindow.lua",
     "MasterLooter/UI/RollWindow.lua",
     "MasterLooter/UI/MasterLooterWindow.lua", "MasterLooter/UI/HistoryWindow.lua",
     "MasterLooter/UI/SettingsWindow.lua", "MasterLooter/UI/SoftResWindow.lua",

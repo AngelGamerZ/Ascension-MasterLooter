@@ -45,7 +45,7 @@ end
 function Launcher:EnsureMenu()
     if self.menu then return self.menu end
     local menu = CreateFrame("Frame", "MasterLooterLauncherMenu", UIParent)
-    menu:SetWidth(304); menu:SetHeight(190); menu:SetFrameStrata("DIALOG"); menu:SetFrameLevel(100); menu:Hide()
+    menu:SetWidth(304); menu:SetHeight(215); menu:SetFrameStrata("DIALOG"); menu:SetFrameLevel(100); menu:Hide()
     menu:SetClampedToScreen(true)
     Theme:ApplyPanel(menu); Theme:AddTitle(menu, "MasterLooter")
     self.menu = menu
@@ -56,6 +56,7 @@ function Launcher:EnsureMenu()
         { "Raidverwaltung", { "RaidManagerWindow" } }, { "Tascheninspektor", { "BagInspectorWindow" } },
         { "Historie", { "HistoryWindow" } }, { "Versionscheck", { "VersionWindow" } },
         { "Einstellungen", { "SettingsWindow" } }, { "Import / Export", { "ImportExportWindow" } },
+        { "Kommunikationsdiagnose", { "CommDebugWindow" } },
     }
     for index, entry in ipairs(entries) do
         local button = Theme:CreateButton(menu, entry[1], 132, 23)

@@ -525,6 +525,22 @@ local exportText, exported = aliceGA.ImportExport:Export({ awards = false, gdkp 
 expect(exported >= 4, "rules export contains configured records")
 local validation = aliceGA.ImportExport:Validate(exportText)
 expect(validation.valid, "deterministic rules export validates")
+local backupCount = #aliceGA.ImportExport:GetBackups()
+local imported, importError = aliceGA.ImportExport:Import(exportText, { merge = true })
+expect(imported ~= nil, importError or "validated data can be imported")
+same(#aliceGA.ImportExport:GetBackups(), backupCount + 1, "imports create an automatic rollback backup")
+expect(aliceGA.ImportExport:RestoreBackup(1), "the newest import backup can be restored")
+local awardsCSV = aliceGA.ImportExport:ExportCSV("awards")
+expect(type(awardsCSV) == "string" and string.find(awardsCSV, "time,item", 1, true), "award history exports as CSV")
+expect(#aliceGA.Comm:GetTrace() > 0, "communication diagnostics retain bounded traffic entries")
+expect(string.find(aliceGA.Comm:ExportTrace(), "OUT", 1, true), "communication trace has a copyable export")
+
+local recoverySession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
+expect(recoverySession ~= nil, "a recovery test session starts")
+aliceGA.RollSession:PersistActive()
+same(aliceGA.DB.data.character.rollSession.active.id, recoverySession.id, "the active host session is persisted")
+expect(aliceGA.RollSession:Stop(recoverySession.id, "RECOVERY_TEST"), "the recovery test session stops")
+same(aliceGA.DB.data.character.rollSession.active, nil, "stopped sessions are removed from recovery storage")
 
 -- Optional item-data addon learns and searches actual runtime item links.
 local itemNamespace = {}
@@ -540,6 +556,8 @@ expect(itemNamespace:LearnLink(itemLink), "item-data addon learns a runtime link
 local learned = itemNamespace:Get(9000001)
 same(learned.name, "Ascension Test Item", "learned item keeps its runtime name")
 same(itemNamespace:Search("ascension test", 5)[1].itemID, 9000001, "item search returns learned custom ID")
+same(alice.env.MasterLooterItemDB.schema, 2, "item data uses the contextual schema")
+expect(itemNamespace:GetContext() ~= nil, "item data exposes its realm/locale/interface context")
 
 -- Delayed events from a completed queue item must never disable the next item's buttons.
 aliceGA.UI = aliceGA.UI or {}

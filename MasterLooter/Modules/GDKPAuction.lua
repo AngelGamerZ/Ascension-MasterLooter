@@ -2,7 +2,7 @@ local _, GA = ...
 
 local GDKPAuction = {
     active = nil, counter = 0, defaultAntiSnipe = 10, maxAntiSnipeExtension = 120,
-    remoteTimeoutGrace = 5, sessionTTL = 900,
+    remoteTimeoutGrace = 5, sessionTTL = 900, queue = {},
 }
 GA.GDKPAuction = GDKPAuction
 
@@ -27,6 +27,40 @@ local function emit(event, ...)
 end
 
 function GDKPAuction:GetState() return self.active end
+function GDKPAuction:GetQueue() return self.queue end
+
+local function persist(self)
+    if not self.store then return end
+    self.store.active, self.store.queue, self.store.counter = self.active, self.queue, self.counter
+end
+
+function GDKPAuction:Enqueue(itemLink, minimum, increment, duration)
+    if type(itemLink) ~= "string" or not GA.Compat:GetItemID(itemLink) then return nil, "Gültiger Itemlink erforderlich" end
+    minimum, increment, duration = integer(minimum or 0, 0, 2147483647),
+        integer(increment or 1, 1, 2147483647), integer(duration or 30, 5, 600)
+    if not minimum or not increment or not duration then return nil, "Ungültige Auktionsparameter" end
+    local queued = { itemLink = itemLink, minimum = minimum, increment = increment, duration = duration, queuedAt = stamp() }
+    self.queue[#self.queue + 1] = queued
+    persist(self); emit("GA_GDKP_AUCTION_QUEUE_CHANGED", self.queue)
+    if not self.active or self.active.status ~= "ACTIVE" then return self:StartNext() end
+    return queued
+end
+
+function GDKPAuction:StartNext()
+    if self.active and self.active.status == "ACTIVE" then return nil, "Es läuft bereits eine Auktion" end
+    local queued = table.remove(self.queue, 1)
+    if not queued then persist(self); return nil, "Auktionswarteschlange ist leer" end
+    local state, err = self:Start(queued.itemLink, queued.minimum, queued.increment, queued.duration)
+    if not state then table.insert(self.queue, 1, queued); persist(self); return nil, err end
+    persist(self); emit("GA_GDKP_AUCTION_QUEUE_CHANGED", self.queue)
+    return state
+end
+
+function GDKPAuction:RemoveQueued(index)
+    index = integer(index, 1, #self.queue)
+    if not index then return false, "Ungültiger Warteschlangenplatz" end
+    table.remove(self.queue, index); persist(self); emit("GA_GDKP_AUCTION_QUEUE_CHANGED", self.queue); return true
+end
 
 function GDKPAuction:Start(itemLink, minimum, increment, duration)
     if not GA.RollSession:IsAuthority(playerName()) then return nil, "Nur Lootmaster oder Gruppenleiter dürfen Auktionen starten" end
@@ -44,11 +78,13 @@ function GDKPAuction:Start(itemLink, minimum, increment, duration)
         owner = playerName(), itemLink = itemLink, minimum = minimum, increment = increment,
         duration = duration, endsAt = now() + duration, status = "ACTIVE", currentBid = 0,
         currentBidder = nil, bids = {}, sequence = 1, bidSequences = {}, bidderAmounts = {}, localBidSequence = 0 }
+    state.deadlineAt = stamp() + duration
     state.hardEndsAt = state.endsAt + self.maxAntiSnipeExtension
     self.active = state
     local packet, err = GA.Comm:Send("AUC_START", { state.id, state.sequence, itemLink, minimum, increment, duration, stamp() })
     if not packet then self.active = nil; return nil, err end
     emit("GA_GDKP_AUCTION_STARTED", state, "LOCAL")
+    persist(self)
     return state
 end
 
@@ -82,6 +118,8 @@ function GDKPAuction:Stop(reason)
         GA.GDKP:AddSale(state.itemLink, state.currentBidder, state.currentBid)
     end
     emit("GA_GDKP_AUCTION_ENDED", state, "LOCAL")
+    persist(self)
+    if #self.queue > 0 then GA.Compat:After(1, function() GDKPAuction:StartNext() end) end
     return state
 end
 
@@ -173,6 +211,19 @@ local function receiveEnd(fields, sender)
 end
 
 function GDKPAuction:OnInitialize()
+    GA.DB.data.character.gdkpAuction = GA.DB.data.character.gdkpAuction or { active = nil, queue = {}, counter = 0 }
+    self.store = GA.DB.data.character.gdkpAuction
+    self.queue = type(self.store.queue) == "table" and self.store.queue or {}
+    self.counter = tonumber(self.store.counter) or 0
+    local saved = type(self.store.active) == "table" and self.store.active or nil
+    if saved and saved.status == "ACTIVE" and base(saved.owner) == base(playerName()) then
+        local wallRemaining = (tonumber(saved.deadlineAt) or 0) - stamp()
+        if wallRemaining > 0 and wallRemaining <= 600 + self.maxAntiSnipeExtension then
+            saved.endsAt, saved.hardEndsAt = now() + wallRemaining, now() + wallRemaining + self.maxAntiSnipeExtension
+            saved.bids, saved.bidSequences, saved.bidderAmounts = saved.bids or {}, saved.bidSequences or {}, saved.bidderAmounts or {}
+            self.active = saved
+        else saved.status, saved.reason = "EXPIRED", "RELOAD_TIMEOUT" end
+    end
     GA.Comm:RegisterHandler("AUC_START", receiveStart)
     GA.Comm:RegisterHandler("AUC_BID", receiveBid)
     GA.Comm:RegisterHandler("AUC_UPDATE", receiveUpdate)
@@ -183,6 +234,7 @@ function GDKPAuction:OnInitialize()
         elapsed = elapsed + delta; if elapsed < 0.25 then return end; elapsed = 0
         local state = GDKPAuction.active
         if state and state.status == "ACTIVE" then
+            state.deadlineAt = stamp() + math.max(0, state.endsAt - now()); persist(GDKPAuction)
             if base(state.owner) == base(playerName()) and now() >= state.endsAt then GDKPAuction:Stop("TIMEOUT")
             elseif base(state.owner) ~= base(playerName()) and now() >= state.endsAt + GDKPAuction.remoteTimeoutGrace then
                 state.status, state.reason, state.endedAt = "EXPIRED", "TIMEOUT_LOCAL", now()
@@ -194,5 +246,7 @@ function GDKPAuction:OnInitialize()
     end)
     return true
 end
+
+function GDKPAuction:OnSave() persist(self) end
 
 GA:RegisterModule("GDKPAuction", GDKPAuction)

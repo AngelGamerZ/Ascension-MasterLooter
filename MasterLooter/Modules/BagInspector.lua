@@ -50,6 +50,15 @@ function BagInspector:GetSnapshot(player)
     return self.snapshots[key(player)]
 end
 
+function BagInspector:SetSharing(enabled)
+    config().bagInspectorShare = enabled and true or false
+    if not enabled then self.incoming, self.pending = {}, {} end
+    GA.Events:Emit("GA_BAGINSPECT_SHARING_CHANGED", config().bagInspectorShare)
+    return config().bagInspectorShare
+end
+
+function BagInspector:IsSharing() return config().bagInspectorShare ~= false end
+
 function BagInspector:CaptureLocal()
     local entries = {}
     for bag = 0, GA.Compat:GetBagCount() do

@@ -24,7 +24,7 @@ end
 function Commands:Help()
     GA:Print("/ml – Lootmaster-Fenster | /ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
-    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug")
+    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug")
     GA:Print("/ml loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
 
@@ -66,6 +66,10 @@ function Commands:Handle(message)
             local tracker = GA.ChatRolls
             GA:Print(tracker and tracker:GetDiagnosticText() or "Rolltracker ist nicht geladen.")
         end
+    elseif command == "commdebug" then
+        local window = GA.UI and GA.UI.CommDebugWindow
+        if window and type(window.Show) == "function" then window:Show()
+        else GA:Print("Kommunikationsdiagnose ist nicht verfügbar.") end
     else self:Help() end
 end
 

@@ -48,7 +48,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 Vom Repository-Stamm:
 
 ```powershell
-npx --yes --package fengari-node-cli fengari .\MasterLooter\Tests\TestHarness.lua
+powershell -NoProfile -ExecutionPolicy Bypass -File .\MasterLooter\Tests\Smoke.ps1
 ```
 
 Der Harness lädt zwei voneinander isolierte Addon-Clients und prüft Kommunikation, Paketfragmentierung, Deduplizierung, `START → ROLL → RESULT`, Lootregeln und GDKP.

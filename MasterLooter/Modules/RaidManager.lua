@@ -76,6 +76,26 @@ function RaidManager:Demote(player)
     DemoteAssistant(player); return true
 end
 
+function RaidManager:ConvertToRaid()
+    if GA.Compat:IsInRaid() then return false, "Bereits in einem Raid" end
+    if not GA.Compat:IsInGroup() or not self:CanManage() then return false, "Nur der Gruppenleiter kann umwandeln" end
+    if type(ConvertToRaid) ~= "function" then return false, "ConvertToRaid nicht verfügbar" end
+    ConvertToRaid(); return true
+end
+
+function RaidManager:Remove(player)
+    if not self:CanManage() then return false, "Keine Gruppen-Berechtigung" end
+    if type(UninviteUnit) ~= "function" then return false, "UninviteUnit nicht verfügbar" end
+    if base(player) == base(UnitName("player")) then return false, "Der eigene Charakter kann hier nicht entfernt werden" end
+    UninviteUnit(player); return true
+end
+
+function RaidManager:ReadyCheck()
+    if not self:CanManage() then return false, "Keine Gruppen-Berechtigung" end
+    if type(DoReadyCheck) ~= "function" then return false, "Bereitschaftscheck nicht verfügbar" end
+    DoReadyCheck(); return true
+end
+
 function RaidManager:OnInitialize()
     GA.Events:On("RAID_ROSTER_UPDATE", function() RaidManager:Refresh() end, self)
     GA.Events:On("PARTY_MEMBERS_CHANGED", function() RaidManager:Refresh() end, self)

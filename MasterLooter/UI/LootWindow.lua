@@ -3,7 +3,7 @@ local _, GA = ...
 GA.UI = GA.UI or {}
 local Theme = GA.UI.Theme
 
-local LootWindow = { page = 1, pageSize = 8 }
+local LootWindow = { page = 1, pageSize = 8, hookedButtons = {} }
 GA.UI.LootWindow = LootWindow
 
 local function snapshotFromEvent(...)
@@ -44,7 +44,11 @@ function LootWindow:EnsureFrame()
         row.item = Theme:CreateLabel(row, "", 12); row.item:SetPoint("LEFT", row, "LEFT", 59, 0); row.item:SetWidth(315)
         row.quantity = Theme:CreateLabel(row, "", 12); row.quantity:SetPoint("LEFT", row, "LEFT", 384, 0); row.quantity:SetWidth(55)
         row.state = Theme:CreateLabel(row, "", 12); row.state:SetPoint("LEFT", row, "LEFT", 449, 0); row.state:SetWidth(55)
-        row:SetScript("OnClick", function() LootWindow:Select(row.record) end)
+        row:SetScript("OnClick", function(_, button)
+            LootWindow:Select(row.record)
+            if button == "RightButton" and IsControlKeyDown and IsControlKeyDown() then LootWindow:UseSelected() end
+        end)
+        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:RegisterForDrag("LeftButton")
         row:SetScript("OnDragStart", function(self)
             if self.record and self.record.link then Theme:BeginItemDrag(self.record.link) end
@@ -102,9 +106,38 @@ end
 
 function LootWindow:UseSelected()
     if not self.selected or not self.selected.link then return end
+    local queued, err = GA.Loot:QueueSlot(self.selected, "LOOT_SELECTION")
+    if not queued then self:SetStatus(err, Theme.colors.red); return end
     local window = GA.UI.MasterLooterWindow; if not window then return end
+    window.sourceLoot = { queueID = queued.id, generation = queued.generation, slot = queued.slot, itemLink = queued.itemLink }
     window:Show(); if type(window.SetItem) == "function" then window:SetItem(self.selected.link) end
     self:SetStatus("Item in das Lootmaster-Fenster übernommen.", Theme.colors.green)
+end
+
+function LootWindow:HandleBlizzardLootClick(button, mouseButton)
+    if mouseButton ~= "RightButton" or not IsControlKeyDown or not IsControlKeyDown() then return false end
+    local slot = button and (tonumber(button.slot) or (button.GetID and button:GetID()))
+    local record = slot and GA.Loot:GetSlot(slot)
+    if not record or record.cleared or not record.link then return false end
+    self:Select(record); self:UseSelected()
+    return true
+end
+
+function LootWindow:HookBlizzardLootButtons()
+    for _, prefix in ipairs({ "LootButton", "LootFrameButton", "XLootFrameButton", "XLootButton", "ElvLootSlot" }) do
+        for index = 1, 40 do
+            local button = _G[prefix .. index]
+            if button and not self.hookedButtons[button] and button.GetScript and button.SetScript then
+                local original = button:GetScript("OnClick")
+                button:SetScript("OnClick", function(clicked, mouseButton, ...)
+                    if LootWindow:HandleBlizzardLootClick(clicked, mouseButton) then return end
+                    if original then return original(clicked, mouseButton, ...) end
+                end)
+                if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+                self.hookedButtons[button] = true
+            end
+        end
+    end
 end
 
 function LootWindow:AddToPackMule()
@@ -121,7 +154,8 @@ function LootWindow:OnInitialize()
     self:EnsureFrame()
     -- Capture every loot source in the background. Opening this management
     -- window is an explicit user action via /ml loot or the launcher menu.
-    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
+    self:HookBlizzardLootButtons()
+    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:HookBlizzardLootButtons(); LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)

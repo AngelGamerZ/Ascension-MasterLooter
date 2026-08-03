@@ -7,6 +7,7 @@ local HistoryWindow = { page = 1, pageSize = 10, mode = "AWARDS" }
 GA.UI.HistoryWindow = HistoryWindow
 
 local function historyTable(mode)
+    if mode == "LEDGER" and GA.PlusOnes and GA.PlusOnes.GetLedgerHistory then return GA.PlusOnes:GetLedgerHistory() end
     local history = GA.DB and GA.DB.data and GA.DB.data.history or nil
     if not history then return {} end
     if mode == "GDKP" then return history.gdkp or {} end
@@ -44,6 +45,10 @@ function HistoryWindow:EnsureFrame()
     gdkp:SetPoint("LEFT", awards, "RIGHT", 6, 0)
     gdkp:SetScript("OnClick", function() HistoryWindow:SetMode("GDKP") end)
     self.gdkpButton = gdkp
+    local ledger = Theme:CreateButton(frame, "Strichliste", 105, 25)
+    ledger:SetPoint("LEFT", gdkp, "RIGHT", 6, 0)
+    ledger:SetScript("OnClick", function() HistoryWindow:SetMode("LEDGER") end)
+    self.ledgerButton = ledger
     local refresh = Theme:CreateButton(frame, "Aktualisieren", 105, 25)
     refresh:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -43)
     refresh:SetScript("OnClick", function() HistoryWindow:Refresh() end)
@@ -118,7 +123,7 @@ function HistoryWindow:EnsureFrame()
 end
 
 function HistoryWindow:SetMode(mode)
-    self.mode = mode == "GDKP" and "GDKP" or "AWARDS"
+    self.mode = (mode == "GDKP" or mode == "LEDGER") and mode or "AWARDS"
     self.page = 1
     self:Refresh()
 end
@@ -140,6 +145,13 @@ function HistoryWindow:Refresh()
                 row.item:SetText(entry.name or "GDKP-Sitzung")
                 row.player:SetText(tostring(tonumber(entry.pot) or 0) .. " Gold")
                 row.detail:SetText(tostring(#(entry.sales or {})) .. " Verkäufe")
+            elseif self.mode == "LEDGER" then
+                row.date:SetText(formatDate(entry.time))
+                row.item:SetText(entry.itemLink or entry.reason or entry.action or "Änderung")
+                row.itemLink = entry.itemLink
+                row.player:SetText(entry.player or "–")
+                local amount = tonumber(entry.amount) or 0
+                row.detail:SetText((amount > 0 and "+" or "") .. tostring(amount) .. (entry.choice and " " .. entry.choice or ""))
             else
                 row.date:SetText(formatDate(entry.time))
                 row.item:SetText(entry.itemLink or "Unbekanntes Item")
@@ -159,8 +171,10 @@ function HistoryWindow:Refresh()
     self.pageLabel:SetText("Seite " .. self.page .. " / " .. self.totalPages .. "  (" .. total .. " Einträge)")
     if self.page > 1 then self.previousButton:Enable() else self.previousButton:Disable() end
     if self.page < self.totalPages then self.nextButton:Enable() else self.nextButton:Disable() end
-    if self.mode == "AWARDS" then self.awardsButton:Disable(); self.gdkpButton:Enable()
-    else self.awardsButton:Enable(); self.gdkpButton:Disable() end
+    self.awardsButton:Enable(); self.gdkpButton:Enable(); self.ledgerButton:Enable()
+    if self.mode == "AWARDS" then self.awardsButton:Disable()
+    elseif self.mode == "GDKP" then self.gdkpButton:Disable()
+    else self.ledgerButton:Disable() end
 end
 
 function HistoryWindow:Show()
@@ -184,6 +198,8 @@ function HistoryWindow:OnInitialize()
     self:EnsureFrame()
     GA.Events:On("GA_AWARD_RECORDED", function() HistoryWindow:Refresh() end, self)
     GA.Events:On("GA_GDKP_FINISHED", function() HistoryWindow:Refresh() end, self)
+    GA.Events:On("GA_ITEM_LEDGER_CHANGED", function() HistoryWindow:Refresh() end, self)
+    GA.Events:On("GA_PLUSONE_CHANGED", function() HistoryWindow:Refresh() end, self)
     return true
 end
 

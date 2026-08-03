@@ -1,27 +1,49 @@
-# Funktionsstatus
+# Funktionsstatus 0.10.0-beta
 
-MasterLooter ist eine eigenständige Neuimplementierung für Ascension/WoW 3.3.5a. Die aktuelle Beta bildet den Kernablauf ab, ist aber noch keine vollständige Nachbildung jedes Gargul-Werkzeugs.
+MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
-## In der Beta vorhanden
+## Roll- und Lootablauf
 
-- Synchronisierte Loot-Sitzungen mit automatischem Teilnehmerfenster
-- MS, OS und Passen mit öffentlichen `/roll`-Ergebnissen, Teilnahme ohne Addon und Gewinnerauswahl
-- Loot-Erfassung, direkte Masterloot-Vergabe und Award-Historie
-- Trade- und PackMule-Warteschlangen
-- SoftRes, HardRes, Prioritäten, +1 und Boosted Rolls
-- GDKP-Sitzungen und synchronisierte Einzelauktionen
-- Raidverwaltung, Tascheninspektor, Versionsprüfung sowie Import und Export
-- Laufzeitlernender Ascension-Itemindex
+- Synchronisierte MS-/OS-/Passen-Sitzungen mit öffentlichem `/roll`; Spieler ohne Addon können vollständig teilnehmen.
+- Vom Lootmaster vorgegebener OS-Bereich, wiederholte Zeitansagen und Sekundencountdown ab zehn Sekunden.
+- Kompakte Teilnehmer- und Lootmaster-Fenster mit Warteschlangenwechsel ohne gesperrte Folgesitzung.
+- Itemübernahme per Drag-and-drop sowie STRG+Rechtsklick aus Blizzard-, XLoot- und ElvUI-Lootbuttons.
+- Persistente Lootslot-Warteschlange und Wiederherstellung eigener aktiver Rolls nach einem Reload.
 
-## Noch auszubauen
+## Vergabe und Handel
 
-- Vollständige PackMule-Regelautomation mit Qualität, Bindung, Round-Robin und Disenchanter
-- Gleichzeitige GDKP-Multi-Auktionen, erweiterte Queue und Preisimport
-- TMB-, DFT-, ClassicPR- und RRobin-spezifische Importformate und Anzeigen
-- Erweiterte Handelsfrist-Überwachung und vollständige Award-/Trade-Recovery nach Reload oder Disconnect
-- Kommunikationsdiagnose, Trace-Export und ausführliche Fehleroberfläche
-- Lokalisierung neben Deutsch und flexible Layoutskalierung
-- Gepflegte, versionierte Ascension-Itemdaten nach Realm, Season und Contentphase
-- Verbindliche Ingame-QA mit mehreren echten Ascension-Clients in Raid-, Loot- und Handelsfällen
+- Direkte Masterloot-Vergabe wird erst nach `LOOT_SLOT_CLEARED` als zugestellt verbucht.
+- Ist ein Gewinner zu weit entfernt oder kein gültiger Kandidat, bleibt das Item sichtbar als Aktion offen; es wird kein erfundener Tascheneintrag erzeugt.
+- Der Lootmaster kann das Item per explizitem Klick an sich nehmen. Erst nach bestätigter Slotleerung entsteht ein Handelseintrag.
+- Handelsaufgaben sind je Gewinner gruppiert, prüfen Taschenbestand, Partner, Slots, Stapel und eine geschätzte Zwei-Stunden-Frist.
+- „Handel öffnen“, Einlegen und Bestätigen bleiben wegen der Client-Schutzregeln benutzergesteuert; das Addon nimmt keinen Handel automatisch an.
 
-Die Reihenfolge für den weiteren Ausbau ist: stabiler Loot-/Roll-Ablauf, Award/Trade-Recovery, PackMule-Regeln, externe Prioritätsimporte und anschließend der erweiterte GDKP-Komplex.
+## Regeln und Historie
+
+- SoftRes, HardRes, Prioritäten, Boosted Rolls und separates +1-Ranking.
+- Strichliste mit Gesamt-, MS-, OS- und sonstigen Vergaben sowie Audit-Historie.
+- Automatisches +1 ist standardmäßig für MS aktiv und für OS deaktiviert; beides bestimmt der Lootmaster.
+- Doppelte Zustellereignisse werden über Sitzungs- beziehungsweise Handels-IDs nicht doppelt gebucht.
+- CSV-/TSV-Export für Vergaben, Prioritäten und Strichliste sowie validierter Import mit automatischer Sicherung und Wiederherstellung.
+
+## GDKP und Verwaltung
+
+- GDKP-Sitzungen, Verkäufe, Pot, gewichtete Anteile und Zahlungsstatus `OPEN`, `PAID` und `HELD`.
+- Persistente sequentielle Auktionswarteschlange, Mindestgebot, Schrittweite, Anti-Snipe und sichere Owner-Wiederherstellung.
+- Raidübersicht, Umwandlung, Bereitschaftscheck, Befördern, Degradieren und Entfernen über explizite Schaltflächen.
+- PackMule-Regeln für Qualität, Bindung, mehrere Ziele, Disenchanter und Round-Robin; das tatsächliche Bewegen bleibt klickgebunden.
+- Taschenfreigabe und Tascheninspektor zwischen Spielern mit installiertem Addon.
+
+## Betrieb und Diagnose
+
+- Kopierbare Roll- und Kommunikationsdiagnose, begrenztes internes Fehlerprotokoll und Kommunikations-Trace.
+- Profile, UI-Skalierung, Positionsreset, Ansagekanal und PackMule-Einstellungen.
+- Optionaler Itemdaten-Begleiter lernt echte Ascension-Links und trennt Beobachtungen nach Realm, Locale und Client-Interface.
+
+## Technische Grenzen
+
+- WoW-geschützte Aktionen können und sollen nicht ohne Hardwareklick automatisiert werden.
+- Taschen anderer Spieler sind ohne MasterLooter auf deren Client nicht auslesbar; öffentliche `/roll`-Teilnahme funktioniert trotzdem ohne Addon.
+- Handelsfähigkeit und Ablaufzeit sind auf 3.3.5a nur abschätzbar. Der tatsächliche Serverzustand und die sichtbare Tasche bleiben maßgeblich.
+- Der Itemindex ist laufzeitlernend und keine Behauptung eines vollständigen, statischen Datenbank-Snapshots aller Ascension-Seasons.
+- Automatisierte Tests ersetzen keinen Mehrclient-Livetest auf dem jeweils verwendeten Ascension-Realm.

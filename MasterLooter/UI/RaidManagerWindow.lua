@@ -59,6 +59,8 @@ function RaidManagerWindow:EnsureFrame()
     local inviteButton = Theme:CreateButton(frame, "Einladen", 100, 25); inviteButton:SetPoint("LEFT", invite, "RIGHT", 8, 0); inviteButton:SetScript("OnClick", function() RaidManagerWindow:Invite() end)
     invite:SetScript("OnEnterPressed", function(self) self:ClearFocus(); RaidManagerWindow:Invite() end)
     local refresh = Theme:CreateButton(frame, "Roster laden", 110, 25); refresh:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -65); refresh:SetScript("OnClick", function() RaidManagerWindow:RequestRefresh() end)
+    local convert = Theme:CreateButton(frame, "Zu Raid", 82, 25); convert:SetPoint("RIGHT", refresh, "LEFT", -6, 0); convert:SetScript("OnClick", function() RaidManagerWindow:CallSimpleAction("ConvertToRaid") end)
+    local ready = Theme:CreateButton(frame, "Bereit?", 82, 25); ready:SetPoint("RIGHT", convert, "LEFT", -6, 0); ready:SetScript("OnClick", function() RaidManagerWindow:CallSimpleAction("ReadyCheck") end)
 
     local status = Theme:CreateLabel(frame, "Bereit.", 11, Theme.colors.muted); status:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -101); status:SetPoint("RIGHT", frame, "RIGHT", -22, 0); self.status = status
     local list = CreateFrame("Frame", nil, frame); list:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -126); list:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 112); Theme:ApplyInset(list); self.list = list
@@ -85,6 +87,7 @@ function RaidManagerWindow:EnsureFrame()
     local move = Theme:CreateButton(frame, "Verschieben", 105, 25); move:SetPoint("LEFT", group, "RIGHT", 8, 0); move:SetScript("OnClick", function() RaidManagerWindow:Move() end); move:Disable(); self.moveButton = move
     local promote = Theme:CreateButton(frame, "Befördern", 100, 25); promote:SetPoint("LEFT", move, "RIGHT", 8, 0); promote:SetScript("OnClick", function() RaidManagerWindow:Promote() end); promote:Disable(); self.promoteButton = promote
     local demote = Theme:CreateButton(frame, "Degradieren", 100, 25); demote:SetPoint("LEFT", promote, "RIGHT", 8, 0); demote:SetScript("OnClick", function() RaidManagerWindow:Demote() end); demote:Disable(); self.demoteButton = demote
+    local remove = Theme:CreateButton(frame, "Entfernen", 90, 25); remove:SetPoint("LEFT", demote, "RIGHT", 8, 0); remove:SetScript("OnClick", function() if RaidManagerWindow.selected then RaidManagerWindow:CallPlayerAction("Remove", RaidManagerWindow.selected.name) end end); remove:Disable(); self.removeButton = remove
     return frame
 end
 
@@ -95,7 +98,14 @@ end
 function RaidManagerWindow:Select(entry)
     if not entry then return end
     self.selected = entry; self.selectedLabel:SetText("Auswahl: " .. entry.name .. " (Gruppe " .. entry.group .. ")"); self.groupEdit:SetText(tostring(entry.group))
-    self.moveButton:Enable(); self.promoteButton:Enable(); self.demoteButton:Enable()
+    self.moveButton:Enable(); self.promoteButton:Enable(); self.demoteButton:Enable(); self.removeButton:Enable()
+end
+
+function RaidManagerWindow:CallSimpleAction(methodName)
+    local manager = GA.RaidManager; local method = manager and manager[methodName]
+    if type(method) ~= "function" then self:SetStatus(methodName .. " ist nicht verfügbar.", true); return end
+    local ok, result, err = pcall(method, manager)
+    if ok and result ~= false and result ~= nil then self:SetStatus("Aktion ausgeführt.") else self:SetStatus(tostring(err or result or "Aktion fehlgeschlagen."), true) end
 end
 
 function RaidManagerWindow:Render(roster)

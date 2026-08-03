@@ -14,6 +14,9 @@ function Ranking:Score(session, participant)
     participant.softReserved = softRes == 1
     participant.priority = priority
     participant.plusOne = plusOne
+    if GA.PlusOnes.GetStats then
+        participant.itemCounts = GA.PlusOnes:GetStats(player)
+    end
     participant.effectiveRoll = effectiveRoll
     return { choiceRank[participant.choice] or 0, softRes, priority, -plusOne, effectiveRoll }
 end
