@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.4-beta
+
+- STRG+Rechtsklick für Inventar- und Lootitems vollständig entfernt
+- Globale Mausabfrage, Fokusprüfung sowie Taschen- und Lootbutton-Erkennung aus dem Laufzeitcode entfernt
+- MasterLooter führt nach der Beuteaufnahme keinen Code mehr über fokussierte Blizzard-/Ascension-Itembuttons aus
+- Statische Smoke-Test-Sperre verhindert die versehentliche Wiedereinführung der globalen Eingabeintegration
+
 ## 0.12.3-beta
 
 - Verstecktes Loot-Verwaltungsfenster wird bei der Beuteaufnahme weder erzeugt noch visuell aktualisiert

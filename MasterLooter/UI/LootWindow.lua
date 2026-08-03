@@ -114,41 +114,6 @@ function LootWindow:UseSelected()
     self:SetStatus("Item in das Lootmaster-Fenster übernommen.", Theme.colors.green)
 end
 
-function LootWindow:GetButtonSlot(button)
-    if not button then return nil end
-    local explicit = tonumber(button.slot) or tonumber(button.lootSlot) or tonumber(button.slotIndex)
-    local slot = explicit or (type(button.GetID) == "function" and tonumber(button:GetID()))
-    if slot and not explicit and _G.LootFrame and tonumber(_G.LootFrame.page) and _G.LootFrame.page > 1 then
-        slot = slot + ((_G.LootFrame.page - 1) * (tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4))
-    end
-    return slot
-end
-
-function LootWindow:IsLootButton(button)
-    if not button then return false end
-    if tonumber(button.lootSlot) or tonumber(button.slotIndex) then return true end
-    local name = type(button.GetName) == "function" and tostring(button:GetName() or "") or ""
-    return string.find(name, "LootButton", 1, true) ~= nil or string.find(name, "LootFrameButton", 1, true) ~= nil or
-        string.find(name, "XLoot", 1, true) ~= nil or string.find(name, "ElvLootSlot", 1, true) ~= nil
-end
-
-function LootWindow:HandleBlizzardLootClick(button, mouseButton)
-    if mouseButton ~= "RightButton" or not IsControlKeyDown or not IsControlKeyDown() then return false end
-    local slot = self:GetButtonSlot(button)
-    local record = slot and GA.Loot:GetSlot(slot)
-    if slot and (not record or record.cleared or not record.link) and type(GetLootSlotLink) == "function" then
-        local link = GetLootSlotLink(slot)
-        if link then
-            local quantity = 1
-            if type(GetLootSlotInfo) == "function" then local _, _, count = GetLootSlotInfo(slot); quantity = tonumber(count) or 1 end
-            record = { slot = slot, link = link, itemID = GA.Compat:GetItemID(link), quantity = tonumber(quantity) or 1, capturedAt = type(GetTime) == "function" and GetTime() or 0 }
-        end
-    end
-    if not record or record.cleared or not record.link then return false end
-    self:Select(record); self:UseSelected()
-    return true
-end
-
 function LootWindow:AddToPackMule()
     if not self.selected or not self.selected.link then return end
     local target = self.targetEdit:GetText(); if target and target ~= "" then GA.PackMule:SetTarget(target) end

@@ -436,46 +436,6 @@ function MasterLooterWindow:AcceptCursorItem()
     return true
 end
 
-function MasterLooterWindow:GetContainerItem(button)
-    if not button then return nil end
-    local parent = type(button.GetParent) == "function" and button:GetParent() or nil
-    local bag = tonumber(button.bagID) or tonumber(button.bag) or
-        (parent and type(parent.GetID) == "function" and tonumber(parent:GetID()))
-    local slot = tonumber(button.slot) or (type(button.GetID) == "function" and tonumber(button:GetID()))
-    if bag == nil or not slot or not GA.Compat or type(GA.Compat.GetContainerItemLink) ~= "function" then return nil end
-    return GA.Compat:GetContainerItemLink(bag, slot), bag, slot
-end
-
-function MasterLooterWindow:OpenContainerItem(button, mouseButton)
-    if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
-    local itemLink, bag, slot = self:GetContainerItem(button)
-    if type(itemLink) ~= "string" or not string.find(itemLink, "|Hitem:", 1, true) then return false end
-    self.sourceLoot = nil
-    self.sourceInventory = { bag = bag, slot = slot, itemLink = itemLink }
-    self:Show(); self:SetItem(itemLink)
-    self:SetStatus("Item aus der Tasche übernommen. Dauer prüfen und Roll starten.", Theme.colors.green)
-    return true
-end
-
-function MasterLooterWindow:HandleGlobalModifiedClick(focus)
-    if not focus or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
-    local lootWindow = GA.UI and GA.UI.LootWindow
-    if lootWindow and type(lootWindow.IsLootButton) == "function" and lootWindow:IsLootButton(focus) and
-        type(lootWindow.HandleBlizzardLootClick) == "function" and lootWindow:HandleBlizzardLootClick(focus, "RightButton") then
-        return true
-    end
-    return self:OpenContainerItem(focus, "RightButton")
-end
-
-function MasterLooterWindow:PollGlobalInput()
-    if type(IsMouseButtonDown) ~= "function" then return end
-    local down = IsMouseButtonDown("RightButton") and true or false
-    if down and not self.rightMouseWasDown and type(GetMouseFocus) == "function" then
-        self:HandleGlobalModifiedClick(GetMouseFocus())
-    end
-    self.rightMouseWasDown = down
-end
-
 function MasterLooterWindow:SetStatus(text, color)
     self.status:SetText(text or "")
     self.status:SetTextColor(unpack(color or Theme.colors.muted))
@@ -714,4 +674,3 @@ loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then MasterLooterWindow:Initialize() end
 end)
-loader:SetScript("OnUpdate", function() MasterLooterWindow:PollGlobalInput() end)

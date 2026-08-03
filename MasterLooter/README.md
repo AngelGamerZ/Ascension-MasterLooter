@@ -46,7 +46,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - `/ml auction|raid|version|bags` – zusätzliche Werkzeuge öffnen
 - `/ml version` – Build- und Protokollversion
 
-STRG+Rechtsklick auf ein Item in einer 3.3.5a-Tasche öffnet den Lootmaster und übernimmt das Item direkt. Am Minimap-Button öffnet Umschalt+Rechtsklick ebenfalls direkt das Lootmaster-Fenster.
+Am Minimap-Button öffnet Umschalt+Rechtsklick direkt das Lootmaster-Fenster. Items werden ausschließlich über die MasterLooter-Oberfläche beziehungsweise per Drag-and-drop ausgewählt; MasterLooter beobachtet keine Taschen- oder Lootbuttons.
 
 `+1` wird grundsätzlich manuell vergeben: Im Lootmaster steht bei der Gewinnervergabe ein Zahlenfeld, das standardmäßig `0` enthält. Nur der dort ausdrücklich eingetragene Wert wird nach erfolgreicher Vergabe gebucht. Direkte Vergaben, Selbstvergaben und abgeschlossene Handelsübergaben erzeugen niemals automatisch einen Strich. Die getrennten Itemzähler `G/MS/OS` bleiben als Vergabehistorie erhalten.
 

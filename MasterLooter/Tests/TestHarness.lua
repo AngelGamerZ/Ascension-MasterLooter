@@ -630,35 +630,10 @@ same(manualText, "0", "manual +1 input resets safely after an award")
 aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus = savedRollSession, savedRefreshRows, savedSetStatus
 masterWindow.manualPlusOneEdit, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedManualEdit, savedSelected, savedSessionID, savedAwardButton
 
--- Inventory CTRL-right-click resolves the legacy bag/slot button and opens
--- the loot-master workflow with that exact item, without using the item.
-local inventoryParent = { GetID = function() return 0 end }
-local inventoryButton = {
-    GetParent = function() return inventoryParent end,
-    GetID = function() return 1 end,
-}
-local inventoryLink, inventoryBag, inventorySlot = aliceGA.UI.MasterLooterWindow:GetContainerItem(inventoryButton)
-same(inventoryLink, itemLink, "legacy container button resolves its full item link")
-same(inventoryBag, 0, "legacy container button resolves the backpack ID")
-same(inventorySlot, 1, "legacy container button resolves its slot ID")
-local originalMasterShow = aliceGA.UI.MasterLooterWindow.Show
-local originalMasterSetItem = aliceGA.UI.MasterLooterWindow.SetItem
-local originalMasterSetStatus = aliceGA.UI.MasterLooterWindow.SetStatus
-local inventoryShows, inventorySelected = 0, nil
-alice.env.IsControlKeyDown = function() return true end
-aliceGA.UI.MasterLooterWindow.Show = function() inventoryShows = inventoryShows + 1 end
-aliceGA.UI.MasterLooterWindow.SetItem = function(_, link) inventorySelected = link end
-aliceGA.UI.MasterLooterWindow.SetStatus = function() end
-expect(aliceGA.UI.MasterLooterWindow:OpenContainerItem(inventoryButton, "RightButton"),
-    "CTRL-right-click is consumed as a MasterLooter inventory action")
-same(inventoryShows, 1, "inventory action opens the loot-master window")
-same(inventorySelected, itemLink, "inventory action places the item into the loot-master window")
-aliceGA.UI.MasterLooterWindow.Show = originalMasterShow
-aliceGA.UI.MasterLooterWindow.SetItem = originalMasterSetItem
-aliceGA.UI.MasterLooterWindow.SetStatus = originalMasterSetStatus
-
-same(aliceGA.UI.MasterLooterWindow.hookedContainerButtons, nil, "individual inventory buttons and their tooltip scripts remain untouched")
-same(aliceGA.UI.MasterLooterWindow.containerClickHooked, nil, "no global container function is hooked")
+same(aliceGA.UI.MasterLooterWindow.GetContainerItem, nil, "inventory buttons are never resolved by MasterLooter")
+same(aliceGA.UI.MasterLooterWindow.OpenContainerItem, nil, "CTRL-right-click inventory integration is absent")
+same(aliceGA.UI.MasterLooterWindow.HandleGlobalModifiedClick, nil, "focused UI elements are never inspected")
+same(aliceGA.UI.MasterLooterWindow.PollGlobalInput, nil, "global mouse input is never polled")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
@@ -675,18 +650,6 @@ same(lootRefreshes, 1, "opening any loot source refreshes the captured snapshot 
 same(lootShows, 0, "crafting, disenchanting and ordinary loot never auto-open the captured-loot window")
 lootWindow:Show()
 same(lootShows, 1, "the captured-loot window remains available through an explicit user action")
-
-local inputDown, inputCaptures = false, 0
-local savedGlobalHandler = masterWindow.HandleGlobalModifiedClick
-alice.env.IsMouseButtonDown = function(buttonName) return buttonName == "RightButton" and inputDown end
-alice.env.GetMouseFocus = function() return inventoryButton end
-masterWindow.HandleGlobalModifiedClick = function() inputCaptures = inputCaptures + 1; return true end
-masterWindow.rightMouseWasDown = false
-inputDown = true; masterWindow:PollGlobalInput(); masterWindow:PollGlobalInput()
-same(inputCaptures, 1, "global input observer captures one action per right-button press")
-inputDown = false; masterWindow:PollGlobalInput(); inputDown = true; masterWindow:PollGlobalInput()
-same(inputCaptures, 2, "global input observer rearms only after the mouse button is released")
-masterWindow.HandleGlobalModifiedClick = savedGlobalHandler
 
 -- Gargul-style navigation uses one independent settings hub instead of an
 -- attached minimap popup. It remains available without loot or group state.

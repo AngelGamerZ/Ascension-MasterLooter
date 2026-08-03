@@ -145,33 +145,9 @@ GA.Loot:OnLootOpened(false)
 local afterReload = assert(GA.Loot:QueueSlot(1, "AFTER_RELOAD"))
 expect(afterReload.id ~= oldQueueID, "reused loot slot receives a fresh queue identity")
 
--- CTRL-right click is observed without replacing Blizzard click or tooltip scripts.
-local originalClicks, control = 0, true
-local clickRecord = GA.Loot:GetSlot(1)
-IsControlKeyDown = function() return control end
-local tooltipHandler = function() end
-local button = { scripts = { OnEnter = tooltipHandler }, hooks = {}, id = 1, name = "LootButton1" }
-function button:GetID() return self.id end
-function button:GetName() return self.name end
-function button:GetScript(name) return self.scripts[name] end
-function button:SetScript(name, callback) self.scripts[name] = callback end
-function button:HookScript(name, callback) self.hooks[name] = callback end
-local originalClickHandler = function() originalClicks = originalClicks + 1 end
-button.scripts.OnClick = originalClickHandler
-LootButton1 = button
 loadModule("UI/LootWindow.lua")
-local selected, used
-GA.UI.LootWindow.Select = function(_, value) selected = value end
-GA.UI.LootWindow.UseSelected = function() used = true end
-expect(GA.UI.LootWindow:IsLootButton(button), "legacy loot button is recognized without modifying it")
-GA.UI.LootWindow:HandleBlizzardLootClick(button, "RightButton")
-expect(selected == clickRecord and used, "CTRL-right click captures loot slot")
-same(button:GetScript("OnClick"), originalClickHandler, "Blizzard loot click handler is not replaced")
-same(button:GetScript("OnEnter"), tooltipHandler, "loot tooltip handler remains untouched")
-control = false; button.scripts.OnClick(button, "LeftButton")
-same(originalClicks, 1, "ordinary loot click remains unchanged")
-same(GA.UI.LootWindow:GetButtonSlot({ lootSlot = 7 }), 7, "Ascension lootSlot metadata resolves directly")
-LootFrame = { page = 2 }; LOOTFRAME_NUMBUTTONS = 4
-same(GA.UI.LootWindow:GetButtonSlot(button), 5, "paged legacy loot buttons resolve their absolute slot")
+same(GA.UI.LootWindow.GetButtonSlot, nil, "loot buttons are never resolved by MasterLooter")
+same(GA.UI.LootWindow.IsLootButton, nil, "loot buttons are never inspected by MasterLooter")
+same(GA.UI.LootWindow.HandleBlizzardLootClick, nil, "CTRL-right-click loot integration is absent")
 
 print("PASS: " .. assertions .. " loot/trade smoke assertions")
