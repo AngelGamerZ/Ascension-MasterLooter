@@ -26,6 +26,12 @@ end
 
 function SettingsWindow:GetSections() return self.SECTIONS end
 
+function SettingsWindow:ControlsReady()
+    return self.autoOpen and self.autoGive and self.sound and self.minimap and self.bagShare and
+        self.announce and self.channelEdit and self.durationEdit and self.scaleEdit and self.profileEdit and
+        self.muleTargetEdit and self.muleQualityEdit and self.status
+end
+
 function SettingsWindow:CreateCheckBox(parent, labelText, y, key)
     local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     check:SetWidth(24); check:SetHeight(24); check:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, y)
@@ -82,7 +88,7 @@ function SettingsWindow:BuildHome()
         { "Tascheninspektor", "BagInspectorWindow" }, { "Import / Export", "ImportExportWindow" }, { "Versionscheck", "VersionWindow" },
     }
     for index, tool in ipairs(tools) do
-        local column = math.mod(index - 1, 3) + 1
+        local column = ((index - 1) % 3) + 1
         local row = math.floor((index - 1) / 3) + 1
         self:CreateToolButton(section, tool[1], tool[2], column, row)
     end
@@ -152,7 +158,7 @@ function SettingsWindow:BuildData()
         { "Roll-Diagnose", "RollDebugWindow" }, { "Kommunikationsdiagnose", "CommDebugWindow" }, { "Tascheninspektor", "BagInspectorWindow" },
     }
     for index, tool in ipairs(tools) do
-        self:CreateToolButton(section, tool[1], tool[2], math.mod(index - 1, 3) + 1, math.floor((index - 1) / 3) + 1)
+        self:CreateToolButton(section, tool[1], tool[2], ((index - 1) % 3) + 1, math.floor((index - 1) / 3) + 1)
     end
     local uiTitle = Theme:CreateLabel(section, "OBERFLÄCHE", 11, Theme.colors.muted); uiTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -226)
     local scaleLabel = Theme:CreateLabel(section, "UI-Skalierung (0.70–1.50)", 12); scaleLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -258)
@@ -164,7 +170,8 @@ function SettingsWindow:BuildData()
 end
 
 function SettingsWindow:EnsureFrame()
-    if self.frame then return self.frame end
+    if self.frame and self.buildComplete and self:ControlsReady() then return self.frame end
+    if self.frame then return nil, self.buildError or "Einstellungsfenster ist unvollständig aufgebaut." end
     if not Theme then return nil end
     local frame = CreateFrame("Frame", "MasterLooterSettingsWindow", UIParent)
     frame:SetWidth(self.WIDTH); frame:SetHeight(self.HEIGHT); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
@@ -184,6 +191,8 @@ function SettingsWindow:EnsureFrame()
 
     self:BuildHome(); self:BuildGeneral(); self:BuildLoot(); self:BuildPackMule(); self:BuildData()
     local status = Theme:CreateLabel(frame, "", 11, Theme.colors.muted); status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 20); status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 20); status:SetJustifyH("RIGHT"); self.status = status
+    self.buildComplete = self:ControlsReady() and true or false
+    if not self.buildComplete then self.buildError = "Bedienelemente konnten nicht vollständig erstellt werden."; return nil, self.buildError end
     return frame
 end
 
@@ -237,7 +246,7 @@ function SettingsWindow:SaveDuration()
 end
 
 function SettingsWindow:Refresh()
-    if not self:EnsureFrame() then return end
+    if not self:EnsureFrame() or not self:ControlsReady() then return false end
     local current = profile(); current.minimap = current.minimap or {}
     self.autoOpen:SetChecked(current.autoOpenRollWindow ~= false); self.autoGive:SetChecked(current.autoGiveAwards ~= false)
     self.sound:SetChecked(current.sound ~= false); self.minimap:SetChecked(current.minimap.hide ~= true)
@@ -246,11 +255,14 @@ function SettingsWindow:Refresh()
     self.channelEdit:SetText(tostring(config.channel or "AUTO")); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
     self.scaleEdit:SetText(string.format("%.2f", tonumber(current.uiScale) or 1)); self.profileEdit:SetText(tostring(GA.DB.data.activeProfile or "Default"))
     if GA.PackMule then self.muleTargetEdit:SetText(tostring(GA.PackMule:GetTarget() or "")); self.muleQualityEdit:SetText(tostring((GA.PackMule:GetRules() or {}).minimumQuality or 2)) end
+    return true
 end
 
 function SettingsWindow:Show(section)
-    local frame = self:EnsureFrame(); if not frame then return end
-    self:Refresh(); self:ShowSection(section or profile().settingsSection or self.DEFAULT_SECTION); frame:Show()
+    local frame, err = self:EnsureFrame()
+    if not frame then if GA.Print then GA:Print("Einstellungen konnten nicht geöffnet werden: " .. tostring(err or "unbekannter Fehler")) end; return false end
+    if not self:Refresh() then return false end
+    self:ShowSection(section or profile().settingsSection or self.DEFAULT_SECTION); frame:Show(); return true
 end
 function SettingsWindow:Hide() if self.frame then self.frame:Hide() end end
 function SettingsWindow:Toggle(section) local frame = self:EnsureFrame(); if frame:IsShown() then self:Hide() else self:Show(section) end end
@@ -268,7 +280,7 @@ function SettingsWindow:RegisterInterfaceOptions()
 end
 
 function SettingsWindow:OnInitialize()
-    self:EnsureFrame(); self:RegisterInterfaceOptions(); return true
+    self:RegisterInterfaceOptions(); return true
 end
 
 GA:RegisterModule("SettingsWindow", SettingsWindow)

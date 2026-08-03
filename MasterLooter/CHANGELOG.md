@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1-beta
+
+- Absturz beim Öffnen der neuen Einstellungen auf Ascension behoben
+- Nicht verfügbare Lua-Funktion `math.mod` durch den 3.3.5a-kompatiblen Modulo-Operator ersetzt
+- Unvollständig aufgebaute Einstellungsfenster werden erkannt und nicht mehr anschließend über fehlende Bedienelemente aktualisiert
+- Vollständiger UI-Aufbau, Aktualisierung und Tabwechsel werden nun in einem eigenen 3.3.5a-nahen Smoke-Test ausgeführt
+
 ## 0.11.0-beta
 
 - Angeheftetes Minimap-Menü vollständig durch eine eigenständige, Gargul-inspirierte Einstellungsoberfläche ersetzt
