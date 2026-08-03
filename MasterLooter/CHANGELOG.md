@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.3-beta
+
+- Inventar-Tooltips nach der Taschenintegration wiederhergestellt
+- MasterLooter ersetzt keine vorhandenen Taschen-`OnClick`-Handler mehr
+- Globaler Blizzard-Containerhandler und registrierte Maustasten bleiben vollständig unangetastet
+- STRG+Rechtsklick wird ausschließlich über einen ergänzenden `HookScript` verarbeitet
+- Regressionstest stellt sicher, dass vorhandene `OnEnter`-Tooltip-Handler unverändert bleiben
+
 ## 0.11.2-beta
 
 - STRG+Rechtsklick auf Items in den 3.3.5a-Taschen öffnet das Lootmaster-Fenster und übernimmt das Item direkt

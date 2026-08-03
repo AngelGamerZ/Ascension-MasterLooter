@@ -634,6 +634,18 @@ aliceGA.UI.MasterLooterWindow.Show = originalMasterShow
 aliceGA.UI.MasterLooterWindow.SetItem = originalMasterSetItem
 aliceGA.UI.MasterLooterWindow.SetStatus = originalMasterSetStatus
 
+local tooltipHandler = function() end
+local hookedClick
+local hookButton = {
+    scripts = { OnEnter = tooltipHandler },
+    GetScript = function(self, event) return self.scripts[event] end,
+    HookScript = function(_, event, callback) if event == "OnClick" then hookedClick = callback end end,
+}
+aliceGA.UI.MasterLooterWindow.hookedContainerButtons = {}
+expect(aliceGA.UI.MasterLooterWindow:HookContainerButton(hookButton), "container click receives a non-invasive hook")
+same(hookButton:GetScript("OnEnter"), tooltipHandler, "inventory tooltip handler remains untouched")
+expect(type(hookedClick) == "function", "inventory action is added without replacing existing scripts")
+
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
 local lootWindow, lootRefreshes, lootShows = aliceGA.UI.LootWindow, 0, 0

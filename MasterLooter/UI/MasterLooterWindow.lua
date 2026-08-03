@@ -451,13 +451,10 @@ function MasterLooterWindow:OpenContainerItem(button, mouseButton)
 end
 
 function MasterLooterWindow:HookContainerButton(button)
-    if not button or self.hookedContainerButtons[button] or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return false end
-    local original = button:GetScript("OnClick")
-    button:SetScript("OnClick", function(clicked, mouseButton, ...)
-        if MasterLooterWindow:OpenContainerItem(clicked, mouseButton) then return end
-        if original then return original(clicked, mouseButton, ...) end
+    if not button or self.hookedContainerButtons[button] or type(button.HookScript) ~= "function" then return false end
+    button:HookScript("OnClick", function(clicked, mouseButton)
+        MasterLooterWindow:OpenContainerItem(clicked, mouseButton)
     end)
-    if type(button.RegisterForClicks) == "function" then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
     self.hookedContainerButtons[button] = true
     return true
 end
@@ -468,17 +465,6 @@ function MasterLooterWindow:HookContainerButtons()
         for itemIndex = 1, 72 do
             self:HookContainerButton(_G["ContainerFrame" .. frameIndex .. "Item" .. itemIndex])
         end
-    end
-
-    local current = _G.ContainerFrameItemButton_OnModifiedClick
-    if type(current) == "function" and current ~= self.containerClickWrapper then
-        local original = current
-        local wrapper = function(button, mouseButton, ...)
-            if MasterLooterWindow:OpenContainerItem(button, mouseButton) then return end
-            return original(button, mouseButton, ...)
-        end
-        self.containerClickWrapper = wrapper
-        _G.ContainerFrameItemButton_OnModifiedClick = wrapper
     end
 end
 
