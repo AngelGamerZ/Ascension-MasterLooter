@@ -2,7 +2,7 @@
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.9.16-beta
+## Version: 0.9.17-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 

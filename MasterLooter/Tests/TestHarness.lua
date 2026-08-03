@@ -567,6 +567,11 @@ loadFile(alice, "UI/MasterLooterWindow.lua")
 same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
 same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
+local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participants = {
+    driomodo = { name = "Driomodo", choice = "MS", roll = 13 },
+} })
+same(#displayedRolls, 1, "a public roll with no optional effectiveRoll reaches the loot-master table")
+same(displayedRolls[1].effectiveRoll, 13, "a missing optional effectiveRoll falls back to the public result")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")

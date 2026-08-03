@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.17-beta
+
+- Absturz der Lootmaster-Tabelle behoben, wenn ein korrekt erfasster öffentlicher Wurf noch keinen optionalen `effectiveRoll`-Wert besitzt
+- Fehlender `effectiveRoll` verwendet nun zuverlässig den tatsächlichen öffentlichen Wurf als Anzeige- und Sortierwert
+- Roll-Diagnose behält die letzte echte Rollmeldung und ihr Ergebnis, statt sie durch spätere allgemeine System- oder UI-Fehlermeldungen zu überschreiben
+- Letzte ignorierte Systemmeldung wird separat im kopierbaren Diagnosefenster angezeigt
+- Regressionstest für den gemeldeten Datensatz `Driomodo`, MS, Wurf 13, Bereich 1–100 ergänzt
+
 ## 0.9.16-beta
 
 - Rolltracker initialisiert seine lokalen Chat-Erfassungswege bereits beim Laden der Moduldatei und nicht erst über den späteren Bootstrap-Durchlauf

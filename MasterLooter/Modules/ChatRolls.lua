@@ -54,19 +54,25 @@ end
 
 function ChatRolls:OnSystemMessage(...)
     local player, roll, minimum, maximum
+    local lastMessage
     local diagnostics = self.diagnostics
     diagnostics.received = (diagnostics.received or 0) + 1
     for index = 1, select("#", ...) do
         local candidate = select(index, ...)
-        if type(candidate) == "string" then diagnostics.raw = candidate end
+        if type(candidate) == "string" then lastMessage = candidate end
         player, roll, minimum, maximum = parseSystemRoll(candidate)
         if player then break end
     end
     if not player and _G and type(_G.arg1) == "string" then
-        diagnostics.raw = _G.arg1
+        lastMessage = _G.arg1
         player, roll, minimum, maximum = parseSystemRoll(_G.arg1)
     end
-    if not player then diagnostics.status = "Systemmeldung empfangen, aber nicht als /roll erkannt."; return nil end
+    if not player then
+        diagnostics.lastIgnored = lastMessage
+        if not diagnostics.raw then diagnostics.status = "Noch keine /roll-Systemmeldung erkannt." end
+        return nil
+    end
+    diagnostics.raw = lastMessage
     diagnostics.player, diagnostics.roll = player, roll
     diagnostics.minimum, diagnostics.maximum = minimum, maximum
     local manager = GA.RollSession
@@ -111,7 +117,8 @@ function ChatRolls:GetDiagnosticText()
         "Aktive Sitzung: " .. tostring(state and state.id or "keine"),
         "Sitzungsstatus: " .. tostring(state and state.status or "keiner"),
         "Empfangene Systemereignisse: " .. tostring(diagnostics.received or 0),
-        "Letzte Meldung: " .. tostring(diagnostics.raw or "keine"),
+        "Letzte Rollmeldung: " .. tostring(diagnostics.raw or "keine"),
+        "Letzte ignorierte Systemmeldung: " .. tostring(diagnostics.lastIgnored or "keine"),
         "Spieler: " .. tostring(diagnostics.player or "keiner"),
         "Wurf: " .. tostring(diagnostics.roll or "keiner"),
         "Bereich: " .. tostring(diagnostics.minimum or "?") .. "-" .. tostring(diagnostics.maximum or "?"),

@@ -16,6 +16,7 @@ local function field(source, ...)
         local key = select(i, ...)
         if source[key] ~= nil then return source[key] end
     end
+    return nil
 end
 
 local function registerMessage(event, callback)
@@ -81,6 +82,10 @@ local function rollSignature(rolls)
         parts[index] = table.concat({ tostring(roll.player), tostring(roll.choice), tostring(roll.roll) }, "\031")
     end
     return table.concat(parts, "\030")
+end
+
+function MasterLooterWindow:BuildRollList(session)
+    return getRolls(session)
 end
 
 local function sessionUpdateArguments(...)
