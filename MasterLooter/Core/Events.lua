@@ -60,6 +60,7 @@ function Events:OffOwner(owner)
 end
 
 function Events:Emit(event, ...)
+    if ns.Trace then ns:Trace("EVENT", event, ...) end
     local list = self.listeners[event]
     if not list then return end
     -- A snapshot permits listeners to unregister safely during dispatch.
@@ -89,4 +90,3 @@ end
 frame:SetScript("OnEvent", function(_, event, ...)
     Events:Emit(event, ...)
 end)
-

@@ -175,6 +175,21 @@ local bobGA = loadAddon(bob)
 
 expect(alice.prefixes[aliceGA.Comm.PREFIX], "Alice registers the communication prefix")
 expect(bob.prefixes[bobGA.Comm.PREFIX], "Bob registers the communication prefix")
+aliceGA:Trace("TEST", "FULL_DIAGNOSTIC", "trace payload")
+local hostileTraceValue = setmetatable({}, { __index = function() error("hostile trace table") end })
+expect(aliceGA:Trace("TEST", "HOSTILE_VALUE", hostileTraceValue) == false, "diagnostic tracing never propagates formatter failures")
+aliceGA.Events:Emit("GA_DIAGNOSTIC_TEST", "event payload")
+local fullDiagnostic = aliceGA:GetFullDiagnosticText()
+expect(string.find(fullDiagnostic, "MasterLooter – Gesamtdiagnose", 1, true), "whole-addon diagnostic is copyable")
+expect(string.find(fullDiagnostic, "TEST/FULL_DIAGNOSTIC", 1, true), "whole-addon diagnostic contains explicit actions")
+expect(string.find(fullDiagnostic, "EVENT/GA_DIAGNOSTIC_TEST", 1, true), "whole-addon diagnostic contains internal events")
+expect(string.find(fullDiagnostic, "MODULE", 1, true) and string.find(fullDiagnostic, "Comm", 1, true), "whole-addon diagnostic contains module state")
+local savedDiagnosticTradePending = aliceGA.Trade.GetPending
+aliceGA.Trade.GetPending = function() error("simulated broken trade diagnostics") end
+local degradedDiagnostic = aliceGA:GetFullDiagnosticText()
+expect(string.find(degradedDiagnostic, "simulated broken trade diagnostics", 1, true), "one broken subsystem is reported inside the whole-addon diagnostic")
+expect(string.find(degradedDiagnostic, "GESAMT-TRACE", 1, true), "one broken subsystem cannot abort the remaining diagnostic")
+aliceGA.Trade.GetPending = savedDiagnosticTradePending
 
 -- Communication fragmentation and duplicate-frame suppression.
 local received, receivedPayload = 0, nil
@@ -603,7 +618,7 @@ loadFile(alice, "UI/MasterLooterWindow.lua")
 same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
 same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
-same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 3, "the manual +1 loot-master layout is active")
+same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 4, "the row-action loot-master layout is active")
 same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 275, "the OS input is separated from its label")
 same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -170, "pagination sits above rather than over the table headers")
 local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participants = {
@@ -612,28 +627,27 @@ local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participant
 same(#displayedRolls, 1, "a public roll with no optional effectiveRoll reaches the loot-master table")
 same(displayedRolls[1].effectiveRoll, 13, "a missing optional effectiveRoll falls back to the public result")
 
--- The loot-master explicitly chooses the +1 amount for an award. Zero is the
--- safe default and confirmed delivery never changes it behind the user's back.
+-- Item award and +1 are explicit, separate row actions.
 local masterWindow = aliceGA.UI.MasterLooterWindow
 local savedRollSession, savedRefreshRows, savedSetStatus = aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus
-local savedManualEdit, savedSelected, savedSessionID, savedAwardButton = masterWindow.manualPlusOneEdit, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton
-local manualText, manualAwards = "0", 0
-masterWindow.manualPlusOneEdit = { GetText = function() return manualText end, SetText = function(_, value) manualText = tostring(value) end }
-masterWindow.selected = { player = "Manualwinner", choice = "MS", roll = 88, plusOne = 0 }
+local savedRolls, savedSelected, savedSessionID, savedAwardButton = masterWindow.rolls, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton
+local manualAwards = 0
+masterWindow.rolls = { { player = "Manualwinner", choice = "MS", roll = 88, plusOne = 0 } }
+masterWindow.selected = masterWindow.rolls[1]
 masterWindow.sessionId = "manual-plus-one-session"
 masterWindow.awardButton = { Disable = function() end }
 masterWindow.RefreshRows = function() end
 masterWindow.SetStatus = function() end
 aliceGA.RollSession = { Award = function() manualAwards = manualAwards + 1; return {} end }
 masterWindow:AwardSelected()
-same(manualAwards, 1, "an award with manual +1 set to zero succeeds")
-same(aliceGA.PlusOnes:Get("Manualwinner"), 0, "zero never creates an automatic +1")
-manualText = "2"
-masterWindow:AwardSelected()
-same(aliceGA.PlusOnes:Get("Manualwinner"), 2, "the loot-master can explicitly book the entered +1 amount")
-same(manualText, "0", "manual +1 input resets safely after an award")
+same(manualAwards, 1, "click-selected winner can be awarded")
+same(aliceGA.PlusOnes:Get("Manualwinner"), 0, "item award never creates an automatic +1")
+same(masterWindow:AddPlusOne(1), 1, "row +1 button adds exactly one strike")
+same(aliceGA.PlusOnes:Get("Manualwinner"), 1, "row +1 action persists independently of the award")
+same(masterWindow.selected, masterWindow.rolls[1], "row +1 action also selects the visible winner")
+same(masterWindow.manualPlusOneEdit, nil, "obsolete numeric +1 edit field is absent")
 aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus = savedRollSession, savedRefreshRows, savedSetStatus
-masterWindow.manualPlusOneEdit, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedManualEdit, savedSelected, savedSessionID, savedAwardButton
+masterWindow.rolls, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedRolls, savedSelected, savedSessionID, savedAwardButton
 
 same(aliceGA.UI.MasterLooterWindow.GetContainerItem, nil, "inventory buttons are never resolved by MasterLooter")
 same(aliceGA.UI.MasterLooterWindow.OpenContainerItem, nil, "CTRL-right-click inventory integration is absent")

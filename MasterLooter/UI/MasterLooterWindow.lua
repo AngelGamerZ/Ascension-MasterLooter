@@ -7,7 +7,7 @@ GA.UI = GA.UI or {}
 local Theme = GA.UI.Theme
 local MasterLooterWindow = {
     page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6,
-    LAYOUT_VERSION = 3, OS_EDIT_X = 275, PAGINATION_Y = -170,
+    LAYOUT_VERSION = 4, OS_EDIT_X = 275, PAGINATION_Y = -170,
 }
 GA.UI.MasterLooterWindow = MasterLooterWindow
 
@@ -238,8 +238,8 @@ function MasterLooterWindow:EnsureFrame()
     self.tableFrame = tableFrame
 
     local headers = {
-        { text = "Spieler", x = 12 }, { text = "Wahl", x = 207 }, { text = "Wurf", x = 269 },
-        { text = "Items G/MS/OS · +1", x = 335 },
+        { text = "Spieler", x = 12 }, { text = "Wahl", x = 192 }, { text = "Wurf", x = 249 },
+        { text = "Items G/MS/OS · Striche", x = 300 },
     }
     for _, header in ipairs(headers) do
         local label = Theme:CreateLabel(tableFrame, header.text, 12, Theme.colors.gold)
@@ -276,26 +276,24 @@ function MasterLooterWindow:EnsureFrame()
         row.player = Theme:CreateLabel(row, "", 12)
         row.player:SetPoint("LEFT", row, "LEFT", 5, 0)
         row.choice = Theme:CreateLabel(row, "", 12)
-        row.choice:SetPoint("LEFT", row, "LEFT", 200, 0)
+        row.choice:SetPoint("LEFT", row, "LEFT", 185, 0)
         row.roll = Theme:CreateLabel(row, "", 12)
-        row.roll:SetPoint("LEFT", row, "LEFT", 262, 0)
+        row.roll:SetPoint("LEFT", row, "LEFT", 242, 0)
         row.items = Theme:CreateLabel(row, "", 11, Theme.colors.muted)
-        row.items:SetPoint("LEFT", row, "LEFT", 328, 0)
+        row.items:SetPoint("LEFT", row, "LEFT", 293, 0)
+        row.items:SetWidth(145)
+        row.items:SetJustifyH("LEFT")
+        row.plusOne = Theme:CreateButton(row, "+1", 38, 22)
+        row.plusOne:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+        row.plusOne:SetScript("OnClick", function() MasterLooterWindow:AddPlusOne(row.absoluteIndex) end)
         row:SetScript("OnClick", function() MasterLooterWindow:SelectRow(row.absoluteIndex) end)
         self.rows[index] = row
     end
 
     local winnerLabel = Theme:CreateLabel(frame, "Gewinner: –", 12)
     winnerLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 23, 24)
-    winnerLabel:SetWidth(255)
+    winnerLabel:SetWidth(355)
     self.winnerLabel = winnerLabel
-    local manualPlusLabel = Theme:CreateLabel(frame, "+1", 12, Theme.colors.muted)
-    manualPlusLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 286, 25)
-    local manualPlus = Theme:CreateEditBox(frame, 38, 24, true)
-    manualPlus:SetPoint("LEFT", manualPlusLabel, "RIGHT", 7, 0)
-    manualPlus:SetText("0")
-    if type(manualPlus.SetMaxLetters) == "function" then manualPlus:SetMaxLetters(2) end
-    self.manualPlusOneEdit = manualPlus
     local award = Theme:CreateButton(frame, "Item vergeben", 125, 28)
     award:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 17)
     award:SetScript("OnClick", function() MasterLooterWindow:AwardSelected() end)
@@ -497,10 +495,8 @@ end
 function MasterLooterWindow:UpdateSession(session)
     if type(session) ~= "table" then return end
     self:EnsureFrame()
-    local previousSessionID = self.sessionId
     self.session = session
     self.sessionId = field(session, "id", "sessionId", "rollId")
-    if previousSessionID ~= self.sessionId and self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
     if self.osMaximumEdit and session.osRollMaximum then
         self.osMaximumEdit:SetText(tostring(session.osRollMaximum))
     end
@@ -561,10 +557,13 @@ function MasterLooterWindow:RefreshRows()
             local counts = roll.itemCounts or {}
             row.items:SetText(string.format("%d/%d/%d · +%d", tonumber(counts.total) or 0,
                 tonumber(counts.MS) or 0, tonumber(counts.OS) or 0, tonumber(roll.plusOne) or 0))
+            if self.selected == roll and type(row.LockHighlight) == "function" then row:LockHighlight()
+            elseif type(row.UnlockHighlight) == "function" then row:UnlockHighlight() end
             row:Show()
         else
             row.absoluteIndex = nil
             row.data = nil
+            if type(row.UnlockHighlight) == "function" then row:UnlockHighlight() end
             row:Hide()
         end
     end
@@ -576,19 +575,38 @@ end
 function MasterLooterWindow:SelectRow(index)
     local selected = index and self.rolls and self.rolls[index]
     if not selected then return end
-    if self.selected ~= selected and self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
     self.selected = selected
-    self.winnerLabel:SetText("Gewinner: " .. selected.player .. " (" .. selected.choice .. ")")
-    if selected.choice == "PASS" then self.awardButton:Disable() else self.awardButton:Enable() end
+    if self.winnerLabel then self.winnerLabel:SetText("Gewinner: " .. selected.player .. " (" .. selected.choice .. ")") end
+    if self.awardButton then
+        if selected.choice == "PASS" and type(self.awardButton.Disable) == "function" then self.awardButton:Disable()
+        elseif selected.choice ~= "PASS" and type(self.awardButton.Enable) == "function" then self.awardButton:Enable() end
+    end
+    self:RefreshRows()
+    if GA.Trace then GA:Trace("UI", "WINNER_SELECTED", selected.player, selected.choice, selected.roll) end
+end
+
+function MasterLooterWindow:AddPlusOne(index)
+    local target = index and self.rolls and self.rolls[index]
+    if not target or not target.player then return nil, "Spieler ist nicht verfügbar." end
+    self:SelectRow(index)
+    if not GA.PlusOnes or type(GA.PlusOnes.Add) ~= "function" then
+        self:SetStatus("+1-System ist nicht verfügbar.", Theme.colors.red)
+        return nil, "+1-System ist nicht verfügbar."
+    end
+    local value, err = GA.PlusOnes:Add(target.player, 1, "LOOTMASTER_ROW_BUTTON:" .. tostring(self.sessionId or ""))
+    if value == nil then
+        self:SetStatus("+1 für " .. target.player .. " konnte nicht gebucht werden: " .. tostring(err or "unbekannter Fehler"), Theme.colors.red)
+        return nil, err
+    end
+    target.plusOne = value
+    self:RefreshRows()
+    self:SetStatus(target.player .. " hat jetzt +" .. tostring(value) .. ".", Theme.colors.green)
+    if GA.Trace then GA:Trace("ACTION", "PLUS_ONE_CLICK", target.player, value, self.sessionId) end
+    return value
 end
 
 function MasterLooterWindow:AwardSelected()
     if not self.selected then return end
-    local manualPlusOne = tonumber(self.manualPlusOneEdit and self.manualPlusOneEdit:GetText() or "0")
-    if not manualPlusOne or manualPlusOne ~= math.floor(manualPlusOne) or manualPlusOne < 0 or manualPlusOne > 99 then
-        self:SetStatus("Manuelles +1 muss eine ganze Zahl zwischen 0 und 99 sein.", Theme.colors.red)
-        return
-    end
     local manager = GA.RollSession
     local method = manager and (manager.Award or manager.AwardItem or manager.SelectWinner)
     if type(method) ~= "function" then
@@ -597,21 +615,9 @@ function MasterLooterWindow:AwardSelected()
     end
     local ok, result, errorMessage = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
     if ok and result ~= nil and result ~= false then
-        local message = "Vergeben an " .. self.selected.player .. ". Kein +1 gebucht."
-        local statusColor = Theme.colors.green
-        if manualPlusOne > 0 and GA.PlusOnes and type(GA.PlusOnes.Add) == "function" then
-            local value, plusError = GA.PlusOnes:Add(self.selected.player, manualPlusOne, "MANUAL_AWARD:" .. tostring(self.sessionId or ""))
-            if value == nil then
-                message = "Vergeben, aber +1 konnte nicht gebucht werden: " .. tostring(plusError or "unbekannter Fehler")
-                statusColor = Theme.colors.red
-            else
-                self.selected.plusOne = value
-                message = "Vergeben an " .. self.selected.player .. ". Manuell +" .. manualPlusOne .. " gebucht."
-            end
-        end
-        if self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
         self:RefreshRows()
-        self:SetStatus(message, statusColor)
+        self:SetStatus("Vergeben an " .. self.selected.player .. ".", Theme.colors.green)
+        if GA.Trace then GA:Trace("ACTION", "ITEM_AWARDED_BY_CLICK", self.selected.player, self.selected.choice, self.sessionId) end
         self.awardButton:Disable()
     else
         local reason = ok and errorMessage or result

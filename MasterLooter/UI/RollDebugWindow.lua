@@ -31,7 +31,8 @@ function RollDebugWindow:EnsureFrame()
     frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
-    Theme:AddTitle(frame, "MasterLooter – Roll-Diagnose")
+    local title = Theme:AddTitle(frame, "MasterLooter – Roll-Diagnose")
+    self.title = title
     Theme:MakeMovable(frame, "rollDebugWindowV1")
     Theme:RestorePosition(frame, "rollDebugWindowV1", "CENTER", 0, 20)
     Theme:RegisterForEscape(frame)
@@ -63,7 +64,7 @@ function RollDebugWindow:EnsureFrame()
 
     local refresh = Theme:CreateButton(frame, "Aktualisieren", 120, 26)
     refresh:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 20)
-    refresh:SetScript("OnClick", function() RollDebugWindow:Refresh(false) end)
+    refresh:SetScript("OnClick", function() RollDebugWindow:RefreshCurrent(false) end)
 
     local selectAll = Theme:CreateButton(frame, "Alles markieren", 130, 26)
     selectAll:SetPoint("LEFT", refresh, "RIGHT", 8, 0)
@@ -77,6 +78,7 @@ end
 
 function RollDebugWindow:Refresh(selectText)
     if not self:EnsureFrame() then return end
+    if self.title then self.title:SetText("MasterLooter – Roll-Diagnose") end
     self.edit:SetText(self:GetText())
     if selectText then
         self.edit:SetFocus()
@@ -84,9 +86,18 @@ function RollDebugWindow:Refresh(selectText)
     end
 end
 
+function RollDebugWindow:RefreshCurrent(selectText)
+    if type(self.currentProvider) == "function" then
+        local ok, text = pcall(self.currentProvider)
+        return self:ShowText(ok and text or ("Diagnose konnte nicht aktualisiert werden:\n" .. tostring(text)), self.currentTitle, selectText)
+    end
+    return self:Refresh(selectText)
+end
+
 function RollDebugWindow:Show()
     local frame = self:EnsureFrame()
     if not frame then return end
+    self.currentProvider, self.currentTitle = nil, nil
     self:Refresh(true)
     frame:Show()
 end
@@ -95,14 +106,20 @@ function RollDebugWindow:Hide()
     if self.frame then self.frame:Hide() end
 end
 
-function RollDebugWindow:ShowText(text)
+function RollDebugWindow:ShowText(text, title, selectText)
     local frame = self:EnsureFrame()
     if not frame then return false end
+    if self.title then self.title:SetText(title or "MasterLooter – Diagnose") end
     self.edit:SetText(tostring(text or ""))
-    self.edit:SetFocus()
-    self.edit:HighlightText()
+    if selectText ~= false then self.edit:SetFocus(); self.edit:HighlightText() end
     frame:Show()
     return true
+end
+
+
+function RollDebugWindow:ShowDynamic(provider, title)
+    self.currentProvider, self.currentTitle = provider, title
+    return self:RefreshCurrent(true)
 end
 
 -- This fallback lives in a long-established UI file. It keeps tooltip
@@ -125,8 +142,21 @@ if not GA.UI.TooltipDebugWindow then
                 end
                 text = table.concat(errors, "\n")
             end
-            return RollDebugWindow:ShowText(text)
+            return RollDebugWindow:ShowDynamic(function()
+                return GA.TooltipDebug and type(GA.TooltipDebug.GetText) == "function" and GA.TooltipDebug:GetText() or text
+            end, "MasterLooter – Tooltip-Diagnose")
         end,
         Hide = function() RollDebugWindow:Hide() end,
     }
 end
+
+GA.UI.AddonDebugWindow = GA.UI.AddonDebugWindow or {
+    Show = function()
+        local text = type(GA.GetFullDiagnosticText) == "function" and GA:GetFullDiagnosticText() or
+            ("MasterLooter – Gesamtdiagnose\nNicht verfügbar.\nVersion: " .. tostring(GA.VERSION))
+        return RollDebugWindow:ShowDynamic(function()
+            return type(GA.GetFullDiagnosticText) == "function" and GA:GetFullDiagnosticText() or text
+        end, "MasterLooter – Gesamtdiagnose")
+    end,
+    Hide = function() RollDebugWindow:Hide() end,
+}

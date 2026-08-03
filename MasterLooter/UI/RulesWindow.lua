@@ -99,7 +99,7 @@ function RulesWindow:EnsureFrame()
     end)
     self.hardCheck = hardCheck
 
-    local manualPlusOne = Theme:CreateLabel(frame, "+1 wird nur manuell im Lootmaster gebucht", 11, Theme.colors.muted)
+    local manualPlusOne = Theme:CreateLabel(frame, "+1 wird nur über den Zeilenbutton im Lootmaster gebucht", 11, Theme.colors.muted)
     manualPlusOne:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -73)
 
     local refreshButton = Theme:CreateButton(frame, "Gruppe neu laden", 125, 24)

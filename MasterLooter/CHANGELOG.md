@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0-beta
+
+- Spielerzeilen im Lootmaster als direkte, sichtbar markierte Gewinnerauswahl umgesetzt
+- Eigener `+1`-Button neben jeder Spielerzeile; ein Klick vergibt genau einen Strich
+- Zahlenfeld unter der Tabelle vollständig entfernt
+- Itemvergabe und Strichvergabe technisch und visuell vollständig getrennt
+- Neue kopierbare Gesamtdiagnose über `/ml debug` und Einstellungen > Daten & Diagnose
+- Zentraler Ringpuffer für Modulstart, WoW- und interne Events, Fehler sowie Benutzeraktionen
+- Bericht enthält Module, Fehler, Roll-, Loot-, Trade-, UI-, Kommunikations- und Tooltip-Zustände
+- Diagnose bleibt bei Fehlern einzelner Teilsysteme funktionsfähig; `/ml debug clear` startet einen frischen Trace
+
 ## 0.12.9-beta
 
 - Ascension-Laufzeitfehler durch fehlendes `math.mod` in der Restzeitanzeige behoben

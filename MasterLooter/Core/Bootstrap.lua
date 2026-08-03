@@ -26,15 +26,19 @@ end
 function Bootstrap:Initialize()
     if self.loaded then return end
     self.loaded = true
+    if ns.Trace then ns:Trace("BOOT", "INITIALIZE_BEGIN", ADDON_NAME) end
     ns.DB:Initialize(_G.MasterLooterDB)
     initializeModules()
+    if ns.Trace then ns:Trace("BOOT", "INITIALIZE_OK", #ns.moduleOrder) end
 end
 
 function Bootstrap:Enable()
     if self.loggedIn then return end
     self.loggedIn = true
+    if ns.Trace then ns:Trace("BOOT", "ENABLE_BEGIN") end
     self:Initialize()
     enableModules()
+    if ns.Trace then ns:Trace("BOOT", "ENABLE_OK") end
 end
 
 function Bootstrap:Disable()

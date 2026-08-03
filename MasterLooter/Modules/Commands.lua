@@ -104,6 +104,95 @@ if not (GA.modules and GA.modules.TooltipDebug) then GA:RegisterModule("TooltipD
 
 local Commands = {}
 
+local function safeCount(value)
+    local count = 0
+    for _ in pairs(type(value) == "table" and value or {}) do count = count + 1 end
+    return count
+end
+
+local function diagnosticCall(callback, fallback)
+    local ok, result = pcall(callback)
+    if ok then return result, nil end
+    return fallback, tostring(result)
+end
+
+function GA:GetFullDiagnosticText()
+    local tocVersion = type(GetAddOnMetadata) == "function" and GetAddOnMetadata("MasterLooter", "Version") or "API nicht verfügbar"
+    local lines = {
+        "MasterLooter – Gesamtdiagnose",
+        "Lua-Version: " .. tostring(self.VERSION),
+        "TOC-Version: " .. tostring(tocVersion),
+        "Protokoll: " .. tostring(self.PROTOCOL_VERSION),
+        "Realm: " .. tostring(type(GetRealmName) == "function" and GetRealmName() or "unbekannt"),
+        "Locale: " .. tostring(type(GetLocale) == "function" and GetLocale() or "unbekannt"),
+        "Zeit: " .. tostring(type(GetTime) == "function" and GetTime() or 0),
+        "",
+        "MODULE",
+    }
+    for index, module in ipairs(self.moduleOrder or {}) do
+        lines[#lines + 1] = string.format("%02d %s | initialisiert=%s, aktiviert=%s", index,
+            tostring(module.name or "?"), tostring(module.initialized and true or false), tostring(module.enabled and true or false))
+    end
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "FEHLER"
+    if #(self.errors or {}) == 0 then lines[#lines + 1] = "keine" end
+    for _, entry in ipairs(self.errors or {}) do
+        lines[#lines + 1] = table.concat({ tostring(entry.time or 0), tostring(entry.context or "?"), tostring(entry.message or ""):gsub("[\r\n\t]", " ") }, " | ")
+    end
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "ZUSTAND"
+    local rollState, rollError = diagnosticCall(function()
+        return self.RollSession and type(self.RollSession.GetState) == "function" and self.RollSession:GetState() or nil
+    end, nil)
+    lines[#lines + 1] = "Roll: " .. (rollState and table.concat({ "id=" .. tostring(rollState.id), "status=" .. tostring(rollState.status),
+        "owner=" .. tostring(rollState.owner), "participants=" .. tostring(safeCount(rollState.participants)) }, ", ") or (rollError and ("FEHLER: " .. rollError) or "keine aktive Sitzung"))
+    local lootSnapshot, lootError = diagnosticCall(function()
+        return self.Loot and type(self.Loot.GetSnapshot) == "function" and self.Loot:GetSnapshot() or nil
+    end, nil)
+    local lootQueue, lootQueueError = diagnosticCall(function() return self.Loot and self.Loot.GetQueue and self.Loot:GetQueue(true) or {} end, {})
+    lines[#lines + 1] = "Loot: " .. (lootSnapshot and ("offen=" .. tostring(lootSnapshot.open) .. ", Slots=" .. tostring(#(lootSnapshot.order or {})) ..
+        ", Queue=" .. tostring(#lootQueue) .. (lootQueueError and (", QueueFehler=" .. lootQueueError) or "")) or (lootError and ("FEHLER: " .. lootError) or "nicht verfügbar"))
+    local pending, tradeError = diagnosticCall(function() return self.Trade and type(self.Trade.GetPending) == "function" and self.Trade:GetPending() or {} end, {})
+    lines[#lines + 1] = "Handel: Status=" .. tostring(self.Trade and self.Trade.state or "nicht verfügbar") .. ", offen=" .. tostring(#pending) ..
+        (tradeError and (", FEHLER=" .. tradeError) or "")
+    lines[#lines + 1] = "Comm: Trace=" .. tostring(self.Comm and self.Comm.trace and #self.Comm.trace or 0) ..
+        ", Fragmente=" .. tostring(self.Comm and safeCount(self.Comm.fragments) or 0)
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "UI"
+    local uiNames = {}
+    for name in pairs(self.UI or {}) do uiNames[#uiNames + 1] = name end
+    table.sort(uiNames)
+    for _, name in ipairs(uiNames) do
+        local controller = self.UI[name]
+        if type(controller) == "table" then
+            local shown, uiError = diagnosticCall(function()
+                return controller.frame and type(controller.frame.IsShown) == "function" and controller.frame:IsShown() or false
+            end, false)
+            lines[#lines + 1] = tostring(name) .. " | vorhanden=ja, Frame=" .. tostring(controller.frame ~= nil) .. ", sichtbar=" .. tostring(shown and true or false) ..
+                (uiError and (", FEHLER=" .. uiError) or "")
+        end
+    end
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "KOMMUNIKATION"
+    local commText, commError = diagnosticCall(function()
+        return self.Comm and type(self.Comm.ExportTrace) == "function" and self.Comm:ExportTrace() or "nicht verfügbar"
+    end, "nicht verfügbar")
+    lines[#lines + 1] = commText .. (commError and ("\nFEHLER: " .. commError) or "")
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "TOOLTIP"
+    local tooltipText, tooltipError = diagnosticCall(function()
+        return self.TooltipDebug and type(self.TooltipDebug.GetText) == "function" and self.TooltipDebug:GetText() or "nicht verfügbar"
+    end, "nicht verfügbar")
+    lines[#lines + 1] = tooltipText .. (tooltipError and ("\nFEHLER: " .. tooltipError) or "")
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "GESAMT-TRACE"
+    for _, entry in ipairs(self.debugTrace or {}) do
+        lines[#lines + 1] = string.format("#%d [%08.3f] %s/%s | %s", tonumber(entry.sequence) or 0, tonumber(entry.at) or 0,
+            tostring(entry.category or "?"), tostring(entry.action or "?"), tostring(entry.detail or ""))
+    end
+    return table.concat(lines, "\n")
+end
+
 local function trim(value) return string.match(value or "", "^%s*(.-)%s*$") end
 local function split(message)
     local command, rest = string.match(trim(message), "^(%S+)%s*(.-)$")
@@ -128,7 +217,7 @@ function Commands:Help()
     GA:Print("/ml – Übersicht & Einstellungen | /ml master oder /lootmaster – Lootmaster-Fenster")
     GA:Print("/ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
-    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug | /ml tooltipdebug")
+    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml debug | /ml rolldebug | /ml commdebug | /ml tooltipdebug")
     GA:Print("/ml master|loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
 
@@ -174,6 +263,19 @@ function Commands:Handle(message)
         local window = GA.UI and GA.UI.CommDebugWindow
         if window and type(window.Show) == "function" then window:Show()
         else GA:Print("Kommunikationsdiagnose ist nicht verfügbar.") end
+    elseif command == "debug" then
+        if string.lower(rest or "") == "clear" then
+            if GA.ClearDebugTrace then GA:ClearDebugTrace() end
+            if GA.Comm and type(GA.Comm.ClearTrace) == "function" then GA.Comm:ClearTrace() end
+            if GA.TooltipDebug and type(GA.TooltipDebug.Clear) == "function" then GA.TooltipDebug:Clear() end
+        end
+        local window = GA.UI and GA.UI.AddonDebugWindow
+        if window and type(window.Show) == "function" then window:Show()
+        else
+            local fallback = GA.UI and GA.UI.RollDebugWindow
+            if fallback and type(fallback.ShowText) == "function" then fallback:ShowText(GA:GetFullDiagnosticText())
+            else GA:Print("Gesamtdiagnose konnte nicht geöffnet werden.") end
+        end
     elseif command == "tooltipdebug" then
         local window = GA.UI and GA.UI.TooltipDebugWindow
         local opened = false
