@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.8-beta
+
+- Rollstart, Countdown, Ende und Vergabe verwenden im Raid standardmäßig `RAID_WARNING`
+- Raidleader- und Assistentenstatus wird über mehrere 3.3.5a-kompatible APIs sowie den Raid-Rang erkannt
+- Ohne Raidwarning-Berechtigung sicherer Fallback auf `RAID`
+- In normalen Gruppen automatische Ausgabe über `PARTY`, da dort kein Raidwarning-Kanal existiert
+- Bestehende Profile werden einmalig auf die neue Raidwarning-Vorgabe umgestellt
+
 ## 0.12.7-beta
 
 - Tooltip-Diagnose vollständig in bereits etablierte TOC-Dateien integriert

@@ -3,7 +3,7 @@ local _, GA = ...
 
 local Announcements = { lastSent = -1000, minimumInterval = 0.5 }
 GA.Announcements = Announcements
-local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, countdown = true, award = true, channel = "AUTO" }
+local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, countdown = true, award = true, channel = "RAID_WARNING" }
 
 local function baseName(name)
     return type(name) == "string" and string.lower(string.match(name, "^[^-]+") or name) or ""
@@ -16,7 +16,17 @@ end
 local function canRaidWarn()
     if not GA.Compat:IsInRaid() then return false end
     if type(UnitIsRaidOfficer) == "function" and UnitIsRaidOfficer("player") then return true end
-    return type(UnitIsPartyLeader) == "function" and UnitIsPartyLeader("player") or false
+    if type(UnitIsPartyLeader) == "function" and UnitIsPartyLeader("player") then return true end
+    if type(IsRaidLeader) == "function" and IsRaidLeader() then return true end
+    if type(IsRaidOfficer) == "function" and IsRaidOfficer() then return true end
+    if type(GetNumRaidMembers) == "function" and type(GetRaidRosterInfo) == "function" and type(UnitName) == "function" then
+        local player = baseName(UnitName("player"))
+        for index = 1, GetNumRaidMembers() do
+            local name, rank = GetRaidRosterInfo(index)
+            if baseName(name) == player then return (tonumber(rank) or 0) > 0 end
+        end
+    end
+    return false
 end
 
 function Announcements:GetConfig()
@@ -24,6 +34,10 @@ function Announcements:GetConfig()
     profile.announcements = profile.announcements or {}
     for key, value in pairs(DEFAULTS) do
         if profile.announcements[key] == nil then profile.announcements[key] = value end
+    end
+    if not profile.announcements.raidWarningDefaultV1 then
+        profile.announcements.channel = "RAID_WARNING"
+        profile.announcements.raidWarningDefaultV1 = true
     end
     return profile.announcements
 end
@@ -44,7 +58,7 @@ function Announcements:ResolveChannel(requested)
     if not GA.Compat:IsInGroup() then return nil end
     requested = string.upper(requested or self:GetConfig().channel or "AUTO")
     if GA.Compat:IsInRaid() then
-        if requested == "RAID_WARNING" and canRaidWarn() then return "RAID_WARNING" end
+        if (requested == "AUTO" or requested == "RAID_WARNING") and canRaidWarn() then return "RAID_WARNING" end
         return "RAID"
     end
     return "PARTY"

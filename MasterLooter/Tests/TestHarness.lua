@@ -95,6 +95,7 @@ local function makeClient(name, savedDB)
         if index == 2 then return "Bob", 0 end
     end
     env.UnitIsPartyLeader = function(unit) return unit == "raid1" end
+    env.UnitIsRaidOfficer = function(unit) return client.name == "Alice" and unit == "player" end
     env.GetLootMethod = function() return "master", nil, 1 end
     env.UnitExists = function(unit) return unit == "target" and client.target ~= nil end
     env.UnitIsPlayer = function(unit) return unit == "target" and client.target ~= nil end
@@ -375,16 +376,20 @@ local countdownSession = aliceGA.RollSession:Start(itemLink, { duration = 60, os
 for _ = 1, 60 do advance(alice, 1) end
 same(countdownSession.status, "STOPPED", "host closes the roll session when its deadline expires")
 same(bobGA.RollSession:GetState(countdownSession.id).status, "STOPPED", "timeout closes the remote roll session")
-local intervalSeen, countdownSeen, finalSecondSeen, timeoutSeen, instructionsSeen = false, false, false, false, false
+local intervalSeen, countdownSeen, finalSecondSeen, timeoutSeen, instructionsSeen, raidWarningSeen = false, false, false, false, false, false
 for index = chatStart + 1, #alice.chatMessages do
     local message = alice.chatMessages[index].message
-    if string.find(message, "/roll 100 für MS. /roll 42 für OS.", 1, true) then instructionsSeen = true end
+    if string.find(message, "/roll 100 für MS. /roll 42 für OS.", 1, true) then
+        instructionsSeen = true
+        raidWarningSeen = alice.chatMessages[index].channel == "RAID_WARNING"
+    end
     if string.find(message, "Noch 50 Sekunden", 1, true) then intervalSeen = true end
     if string.find(message, "Noch 10 Sekunden", 1, true) then countdownSeen = true end
     if string.find(message, "Noch 1 Sekunde", 1, true) then finalSecondSeen = true end
     if string.find(message, "abgelaufen", 1, true) then timeoutSeen = true end
 end
 expect(instructionsSeen, "roll start announcement names the public MS and configured OS commands")
+expect(raidWarningSeen, "authorized raid announcements use RAID_WARNING")
 expect(intervalSeen, "a 60-second roll posts ten-second interval reminders")
 expect(countdownSeen, "group announcements begin a per-second countdown at ten")
 expect(finalSecondSeen, "group announcements include the final second")
