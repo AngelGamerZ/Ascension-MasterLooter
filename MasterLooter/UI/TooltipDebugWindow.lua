@@ -36,8 +36,8 @@ function TooltipDebugWindow:Refresh(selectText)
 end
 
 function TooltipDebugWindow:Show()
-    local frame = self:EnsureFrame(); if not frame then return end
-    self:Refresh(true); frame:Show()
+    local frame = self:EnsureFrame(); if not frame then return false end
+    self:Refresh(true); frame:Show(); return true
 end
 
 function TooltipDebugWindow:Hide() if self.frame then self.frame:Hide() end end

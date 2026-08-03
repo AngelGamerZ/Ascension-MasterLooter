@@ -74,8 +74,19 @@ function Commands:Handle(message)
         else GA:Print("Kommunikationsdiagnose ist nicht verfügbar.") end
     elseif command == "tooltipdebug" then
         local window = GA.UI and GA.UI.TooltipDebugWindow
-        if window and type(window.Show) == "function" then window:Show()
-        else GA:Print("Tooltip-Diagnose ist nicht verfügbar.") end
+        local opened = false
+        if window and type(window.Show) == "function" then
+            local ok, result = pcall(window.Show, window)
+            opened = ok and result ~= false
+            if not ok and GA.ReportError then GA.ReportError("tooltipdebug window", result) end
+        end
+        if not opened then
+            local fallback = GA.UI and GA.UI.RollDebugWindow
+            local text = GA.TooltipDebug and type(GA.TooltipDebug.GetText) == "function" and GA.TooltipDebug:GetText() or
+                "MasterLooter Tooltip-Diagnose\nDiagnosemodul oder Fenster konnte nicht geladen werden."
+            if fallback and type(fallback.ShowText) == "function" then opened = fallback:ShowText(text) end
+        end
+        if not opened then GA:Print("Tooltip-Diagnose konnte nicht geöffnet werden. /ml rolldebug verwenden.") end
     else self:Help() end
 end
 

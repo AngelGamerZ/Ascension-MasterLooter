@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.6-beta
+
+- Tooltip-Diagnose mit garantiertem Fallback über das bestehende Roll-Diagnosefenster abgesichert
+- Fehler im dedizierten Diagnosefenster werden abgefangen und im MasterLooter-Fehlerprotokoll erfasst
+- Diagnose um geladene Addons, MasterLooter-Ladefehler und globale Tooltip-Skripthandler erweitert
+- Unbedingten Vollscan aller Taschen durch `MasterLooter_ItemData` bei jedem `BAG_UPDATE` entfernt
+- ItemData lernt den vorhandenen Bestand weiterhin beim Start und neue Beute über deren Chat-Itemlinks
+
 ## 0.12.5-beta
 
 - MasterLooter-Oberfläche vollständig vom globalen Blizzard-/Ascension-`GameTooltip` getrennt

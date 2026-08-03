@@ -39,7 +39,27 @@ function TooltipDebug:TooltipState()
     if not tooltip then return "GameTooltip=nil" end
     local shown = type(tooltip.IsShown) == "function" and tooltip:IsShown() and "ja" or "nein"
     local owner = type(tooltip.GetOwner) == "function" and frameName(tooltip:GetOwner()) or "unbekannt"
-    return "sichtbar=" .. shown .. ", Besitzer=" .. owner
+    local scripts = {}
+    if type(tooltip.GetScript) == "function" then
+        for _, scriptName in ipairs({ "OnShow", "OnHide", "OnUpdate", "OnTooltipSetItem" }) do
+            local ok, handler = pcall(tooltip.GetScript, tooltip, scriptName)
+            scripts[#scripts + 1] = scriptName .. "=" .. (ok and tostring(handler) or "nicht abfragbar")
+        end
+    end
+    return "sichtbar=" .. shown .. ", Besitzer=" .. owner .. (#scripts > 0 and ", Scripts{" .. table.concat(scripts, ", ") .. "}" or "")
+end
+
+function TooltipDebug:GetLoadedAddons()
+    local result = {}
+    if type(GetNumAddOns) ~= "function" or type(GetAddOnInfo) ~= "function" then return { "Addon-API nicht verfügbar" } end
+    for index = 1, GetNumAddOns() do
+        local name, title, _, enabled, loadable, reason = GetAddOnInfo(index)
+        local loaded = type(IsAddOnLoaded) == "function" and IsAddOnLoaded(index)
+        if loaded or name == "MasterLooter" or name == "MasterLooter_ItemData" then
+            result[#result + 1] = string.format("%s | geladen=%s, aktiviert=%s, ladbar=%s, Grund=%s", tostring(name or title), tostring(loaded and true or false), tostring(enabled), tostring(loadable), tostring(reason))
+        end
+    end
+    return result
 end
 
 function TooltipDebug:OnTooltipAction(action)
@@ -75,7 +95,17 @@ function TooltipDebug:GetText()
         "Aktueller Zustand: " .. self:TooltipState(),
         "Einträge: " .. tostring(#self.entries),
         "",
+        "Geladene Addons:",
     }
+    for _, addonLine in ipairs(self:GetLoadedAddons()) do lines[#lines + 1] = "- " .. addonLine end
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = "MasterLooter-Ladefehler:"
+    if #(GA.errors or {}) == 0 then lines[#lines + 1] = "- keine" end
+    for _, errorEntry in ipairs(GA.errors or {}) do
+        lines[#lines + 1] = "- " .. tostring(errorEntry.context) .. ": " .. tostring(errorEntry.message)
+    end
+    lines[#lines + 1] = ""
+    lines[#lines + 1] = "Zeitleiste:"
     for index = 1, #self.entries do
         local entry = self.entries[index]
         lines[#lines + 1] = string.format("[%08.3f] %s | %s", tonumber(entry.at) or 0, entry.kind, entry.detail)

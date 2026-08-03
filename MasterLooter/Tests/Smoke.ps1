@@ -54,6 +54,10 @@ try {
     if ($LASTEXITCODE -eq 0) { throw "MasterLooter UI must use its private tooltip instead of GameTooltip:`n$globalTooltipUI" }
     if ($LASTEXITCODE -gt 1) { throw "Global tooltip isolation scan could not run" }
 
+    $itemDataBagEvent = rg -n 'RegisterEvent\("BAG_UPDATE"\)|event\s*==\s*"BAG_UPDATE"' MasterLooter_ItemData
+    if ($LASTEXITCODE -eq 0) { throw "ItemData must not scan all bags during live BAG_UPDATE:`n$itemDataBagEvent" }
+    if ($LASTEXITCODE -gt 1) { throw "ItemData BAG_UPDATE scan could not run" }
+
     git diff --check
     if ($LASTEXITCODE -ne 0) { throw "git diff --check found invalid changes" }
     Write-Host "PASS: smoke, manifest, 3.3.5a API and diff checks"

@@ -234,7 +234,6 @@ end
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("BAG_UPDATE")
 frame:RegisterEvent("CHAT_MSG_LOOT")
 frame:RegisterEvent("CHAT_MSG_SYSTEM")
 frame:RegisterEvent("CHAT_MSG_RAID")
@@ -248,9 +247,5 @@ frame:SetScript("OnEvent", function(_, event, arg1)
         return
     end
     if not addon.DB then return end
-    if event == "BAG_UPDATE" then
-        addon:LearnBags()
-    else
-        addon:LearnText(arg1)
-    end
+    addon:LearnText(arg1)
 end)

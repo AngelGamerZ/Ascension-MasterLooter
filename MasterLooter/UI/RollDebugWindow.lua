@@ -94,3 +94,35 @@ end
 function RollDebugWindow:Hide()
     if self.frame then self.frame:Hide() end
 end
+
+function RollDebugWindow:ShowText(text)
+    local frame = self:EnsureFrame()
+    if not frame then return false end
+    self.edit:SetText(tostring(text or ""))
+    self.edit:SetFocus()
+    self.edit:HighlightText()
+    frame:Show()
+    return true
+end
+
+-- This fallback lives in a long-established UI file. It keeps tooltip
+-- diagnostics copyable even if the dedicated window file cannot load on a
+-- customized 3.3.5a client.
+if not GA.UI.TooltipDebugWindow then
+    GA.UI.TooltipDebugWindow = {
+        Show = function()
+            local text
+            if GA.TooltipDebug and type(GA.TooltipDebug.GetText) == "function" then
+                text = GA.TooltipDebug:GetText()
+            else
+                local errors = { "MasterLooter Tooltip-Diagnose", "TooltipDebug-Modul nicht geladen.", "", "MasterLooter-Ladefehler:" }
+                for _, entry in ipairs(GA.errors or {}) do
+                    errors[#errors + 1] = tostring(entry.context) .. ": " .. tostring(entry.message)
+                end
+                text = table.concat(errors, "\n")
+            end
+            return RollDebugWindow:ShowText(text)
+        end,
+        Hide = function() RollDebugWindow:Hide() end,
+    }
+end
