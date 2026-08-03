@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0-beta
+
+- Automatische `+1`-Buchung für MS, OS, Selbstvergabe und bestätigte Handelsübergaben vollständig entfernt
+- Lootmaster erhält bei der Gewinnervergabe ein manuelles `+1`-Zahlenfeld von 0 bis 99
+- Das Feld steht bei jeder Auswahl und neuen Sitzung sicher auf `0`; ohne bewusste Eingabe entsteht kein Strich
+- Nach erfolgreicher Vergabe wird nur der ausdrücklich eingegebene Wert gebucht und das Feld wieder auf `0` gesetzt
+- Erhaltene Itemzahlen `G/MS/OS` bleiben als getrennte, reine Vergabehistorie erhalten und verändern das `+1`-Ranking nicht
+- Frühere automatische Profilregeln werden beim Laden dauerhaft deaktiviert und können über die Oberfläche nicht reaktiviert werden
+
 ## 0.11.3-beta
 
 - Inventar-Tooltips nach der Taschenintegration wiederhergestellt

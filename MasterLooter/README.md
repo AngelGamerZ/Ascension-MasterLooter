@@ -48,6 +48,8 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 
 STRG+Rechtsklick auf ein Item in einer 3.3.5a-Tasche öffnet den Lootmaster und übernimmt das Item direkt. Am Minimap-Button öffnet Umschalt+Rechtsklick ebenfalls direkt das Lootmaster-Fenster.
 
+`+1` wird grundsätzlich manuell vergeben: Im Lootmaster steht bei der Gewinnervergabe ein Zahlenfeld, das standardmäßig `0` enthält. Nur der dort ausdrücklich eingetragene Wert wird nach erfolgreicher Vergabe gebucht. Direkte Vergaben, Selbstvergaben und abgeschlossene Handelsübergaben erzeugen niemals automatisch einen Strich. Die getrennten Itemzähler `G/MS/OS` bleiben als Vergabehistorie erhalten.
+
 ## Entwicklungstest
 
 Vom Repository-Stamm:

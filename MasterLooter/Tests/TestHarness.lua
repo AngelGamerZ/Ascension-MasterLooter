@@ -598,7 +598,7 @@ loadFile(alice, "UI/MasterLooterWindow.lua")
 same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
 same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
-same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 2, "the non-overlapping loot-master layout is active")
+same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 3, "the manual +1 loot-master layout is active")
 same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 275, "the OS input is separated from its label")
 same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -170, "pagination sits above rather than over the table headers")
 local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participants = {
@@ -606,6 +606,29 @@ local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participant
 } })
 same(#displayedRolls, 1, "a public roll with no optional effectiveRoll reaches the loot-master table")
 same(displayedRolls[1].effectiveRoll, 13, "a missing optional effectiveRoll falls back to the public result")
+
+-- The loot-master explicitly chooses the +1 amount for an award. Zero is the
+-- safe default and confirmed delivery never changes it behind the user's back.
+local masterWindow = aliceGA.UI.MasterLooterWindow
+local savedRollSession, savedRefreshRows, savedSetStatus = aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus
+local savedManualEdit, savedSelected, savedSessionID, savedAwardButton = masterWindow.manualPlusOneEdit, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton
+local manualText, manualAwards = "0", 0
+masterWindow.manualPlusOneEdit = { GetText = function() return manualText end, SetText = function(_, value) manualText = tostring(value) end }
+masterWindow.selected = { player = "Manualwinner", choice = "MS", roll = 88, plusOne = 0 }
+masterWindow.sessionId = "manual-plus-one-session"
+masterWindow.awardButton = { Disable = function() end }
+masterWindow.RefreshRows = function() end
+masterWindow.SetStatus = function() end
+aliceGA.RollSession = { Award = function() manualAwards = manualAwards + 1; return {} end }
+masterWindow:AwardSelected()
+same(manualAwards, 1, "an award with manual +1 set to zero succeeds")
+same(aliceGA.PlusOnes:Get("Manualwinner"), 0, "zero never creates an automatic +1")
+manualText = "2"
+masterWindow:AwardSelected()
+same(aliceGA.PlusOnes:Get("Manualwinner"), 2, "the loot-master can explicitly book the entered +1 amount")
+same(manualText, "0", "manual +1 input resets safely after an award")
+aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus = savedRollSession, savedRefreshRows, savedSetStatus
+masterWindow.manualPlusOneEdit, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedManualEdit, savedSelected, savedSessionID, savedAwardButton
 
 -- Inventory CTRL-right-click resolves the legacy bag/slot button and opens
 -- the loot-master workflow with that exact item, without using the item.

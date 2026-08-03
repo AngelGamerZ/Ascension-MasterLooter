@@ -67,16 +67,13 @@ end
 function PlusOnes:GetLedgerHistory() return ensureStore().history end
 
 function PlusOnes:GetAutoRules()
-    local profile = GA.DB:GetProfile()
-    return { MS = profile.autoPlusOneMS ~= false, OS = profile.autoPlusOneOS == true, OTHER = profile.autoPlusOneOther == true }
+    return { MS = false, OS = false, OTHER = false }
 end
 
-function PlusOnes:SetAutoRule(choice, enabled)
+function PlusOnes:SetAutoRule(choice)
     choice = string.upper(tostring(choice or ""))
     if choice ~= "MS" and choice ~= "OS" and choice ~= "OTHER" then return false, "Unbekannte Vergabeart" end
-    GA.DB:GetProfile()["autoPlusOne" .. (choice == "OTHER" and "Other" or choice)] = enabled and true or false
-    GA.Events:Emit("GA_LEDGER_RULE_CHANGED", choice, enabled and true or false)
-    return true
+    return false, "+1 wird ausschließlich manuell im Lootmaster vergeben"
 end
 
 function PlusOnes:RecordConfirmed(result, identity, reason)
@@ -96,8 +93,6 @@ function PlusOnes:RecordConfirmed(result, identity, reason)
     store.processed[identity] = { player = playerID, time = now(), choice = choice, itemLink = result.itemLink }
     appendHistory("ITEM_AWARDED", result.winner, 1, reason or "CONFIRMED", identity, choice, result.itemLink)
 
-    local rules = self:GetAutoRules()
-    if rules[choice] then self:Add(result.winner, 1, "AUTO_" .. choice) end
     GA.Events:Emit("GA_ITEM_LEDGER_CHANGED", result.winner, self:GetStats(result.winner), identity, choice)
     return true
 end
@@ -132,6 +127,8 @@ end
 
 function PlusOnes:OnInitialize()
     ensureStore()
+    local profile = GA.DB:GetProfile()
+    profile.autoPlusOneMS, profile.autoPlusOneOS, profile.autoPlusOneOther = false, false, false
     GA.Events:On("GA_AWARD_DELIVERY_CHANGED", function(_, _, result, delivery)
         if delivery == "GIVEN" then PlusOnes:RecordConfirmed(result, result and result.sessionID, "DIRECT_LOOT") end
     end, self)

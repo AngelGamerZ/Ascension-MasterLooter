@@ -7,7 +7,7 @@ GA.UI = GA.UI or {}
 local Theme = GA.UI.Theme
 local MasterLooterWindow = {
     page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6,
-    LAYOUT_VERSION = 2, OS_EDIT_X = 275, PAGINATION_Y = -170,
+    LAYOUT_VERSION = 3, OS_EDIT_X = 275, PAGINATION_Y = -170,
 }
 GA.UI.MasterLooterWindow = MasterLooterWindow
 
@@ -287,7 +287,15 @@ function MasterLooterWindow:EnsureFrame()
 
     local winnerLabel = Theme:CreateLabel(frame, "Gewinner: –", 12)
     winnerLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 23, 24)
+    winnerLabel:SetWidth(255)
     self.winnerLabel = winnerLabel
+    local manualPlusLabel = Theme:CreateLabel(frame, "+1", 12, Theme.colors.muted)
+    manualPlusLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 286, 25)
+    local manualPlus = Theme:CreateEditBox(frame, 38, 24, true)
+    manualPlus:SetPoint("LEFT", manualPlusLabel, "RIGHT", 7, 0)
+    manualPlus:SetText("0")
+    if type(manualPlus.SetMaxLetters) == "function" then manualPlus:SetMaxLetters(2) end
+    self.manualPlusOneEdit = manualPlus
     local award = Theme:CreateButton(frame, "Item vergeben", 125, 28)
     award:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 17)
     award:SetScript("OnClick", function() MasterLooterWindow:AwardSelected() end)
@@ -552,8 +560,10 @@ end
 function MasterLooterWindow:UpdateSession(session)
     if type(session) ~= "table" then return end
     self:EnsureFrame()
+    local previousSessionID = self.sessionId
     self.session = session
     self.sessionId = field(session, "id", "sessionId", "rollId")
+    if previousSessionID ~= self.sessionId and self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
     if self.osMaximumEdit and session.osRollMaximum then
         self.osMaximumEdit:SetText(tostring(session.osRollMaximum))
     end
@@ -629,6 +639,7 @@ end
 function MasterLooterWindow:SelectRow(index)
     local selected = index and self.rolls and self.rolls[index]
     if not selected then return end
+    if self.selected ~= selected and self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
     self.selected = selected
     self.winnerLabel:SetText("Gewinner: " .. selected.player .. " (" .. selected.choice .. ")")
     if selected.choice == "PASS" then self.awardButton:Disable() else self.awardButton:Enable() end
@@ -636,6 +647,11 @@ end
 
 function MasterLooterWindow:AwardSelected()
     if not self.selected then return end
+    local manualPlusOne = tonumber(self.manualPlusOneEdit and self.manualPlusOneEdit:GetText() or "0")
+    if not manualPlusOne or manualPlusOne ~= math.floor(manualPlusOne) or manualPlusOne < 0 or manualPlusOne > 99 then
+        self:SetStatus("Manuelles +1 muss eine ganze Zahl zwischen 0 und 99 sein.", Theme.colors.red)
+        return
+    end
     local manager = GA.RollSession
     local method = manager and (manager.Award or manager.AwardItem or manager.SelectWinner)
     if type(method) ~= "function" then
@@ -644,7 +660,21 @@ function MasterLooterWindow:AwardSelected()
     end
     local ok, result, errorMessage = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
     if ok and result ~= nil and result ~= false then
-        self:SetStatus("Vergeben an " .. self.selected.player .. ".", Theme.colors.green)
+        local message = "Vergeben an " .. self.selected.player .. ". Kein +1 gebucht."
+        local statusColor = Theme.colors.green
+        if manualPlusOne > 0 and GA.PlusOnes and type(GA.PlusOnes.Add) == "function" then
+            local value, plusError = GA.PlusOnes:Add(self.selected.player, manualPlusOne, "MANUAL_AWARD:" .. tostring(self.sessionId or ""))
+            if value == nil then
+                message = "Vergeben, aber +1 konnte nicht gebucht werden: " .. tostring(plusError or "unbekannter Fehler")
+                statusColor = Theme.colors.red
+            else
+                self.selected.plusOne = value
+                message = "Vergeben an " .. self.selected.player .. ". Manuell +" .. manualPlusOne .. " gebucht."
+            end
+        end
+        if self.manualPlusOneEdit then self.manualPlusOneEdit:SetText("0") end
+        self:RefreshRows()
+        self:SetStatus(message, statusColor)
         self.awardButton:Disable()
     else
         local reason = ok and errorMessage or result

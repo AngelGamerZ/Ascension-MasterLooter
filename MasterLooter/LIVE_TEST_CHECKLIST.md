@@ -9,7 +9,7 @@ Der automatisierte Harness prüft die Lua- und Mehrclient-Logik außerhalb des S
 5. Lootmaster: prüfen, dass nur eine hostgenerierte Wurfzahl erscheint; Gewinner vergeben.
 6. Mit offenem Lootfenster direkte Vergabe prüfen. Danach einen absichtlich nicht direkt vergebbaren Fall testen und die Trade-Warteschlange kontrollieren.
 7. Trade abschließen und prüfen, dass erst die Ascension-Erfolgsmeldung den Eintrag als zugestellt markiert.
-8. SoftRes/HardRes, Priorität, +1 und Boost setzen; Rangfolge mit mindestens drei Spielern prüfen.
+8. SoftRes/HardRes, Priorität und Boost setzen; bei einer Vergabe `+1 = 0`, bei einer zweiten bewusst `+1 = 1` wählen und die Rangfolge mit mindestens drei Spielern prüfen.
 9. GDKP-Sitzung und Auktion starten; Mindestschritt, Rebid und Anti-Snipe testen; `/reload` während aktiver GDKP-Sitzung prüfen.
 10. Einen nativen Gruppenloot-Wurf auslösen und prüfen, dass ausschließlich Blizzards Bedarf-/Gier-/Entzaubern-/Passen-Oberfläche erscheint.
 11. Raidverwaltung und Tascheninspektor nur mit Testcharakteren verwenden; alle Aktionen bleiben explizite Buttonklicks.

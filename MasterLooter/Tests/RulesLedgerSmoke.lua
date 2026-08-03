@@ -46,11 +46,11 @@ local stats = GA.PlusOnes:GetStats("Alice")
 same(stats.total, 1, "confirmed award increments total")
 same(stats.MS, 1, "confirmed MS increments MS count")
 same(stats.OS, 0, "confirmed MS leaves OS count")
-same(GA.PlusOnes:Get("Alice"), 1, "MS auto +1 defaults on")
+same(GA.PlusOnes:Get("Alice"), 0, "confirmed MS never adds +1 automatically")
 
 GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", ms, "GIVEN")
 same(GA.PlusOnes:GetStats("Alice").total, 1, "duplicate session is idempotent")
-same(GA.PlusOnes:Get("Alice"), 1, "duplicate session does not add +1")
+same(GA.PlusOnes:Get("Alice"), 0, "duplicate session does not add +1")
 GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", { sessionID = "pending", winner = "Alice", choice = "MS" }, "PENDING")
 same(GA.PlusOnes:GetStats("Alice").total, 1, "unconfirmed award is not counted")
 
@@ -59,17 +59,18 @@ GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", os, "GIVEN")
 stats = GA.PlusOnes:GetStats("Alice")
 same(stats.total, 2, "OS contributes to received total")
 same(stats.OS, 1, "OS has separate count")
-same(GA.PlusOnes:Get("Alice"), 1, "OS auto +1 defaults off")
+same(GA.PlusOnes:Get("Alice"), 0, "confirmed OS never adds +1 automatically")
 
-expect(GA.PlusOnes:SetAutoRule("OS", true), "OS rule can be enabled")
+local autoRule, autoRuleReason = GA.PlusOnes:SetAutoRule("OS", true)
+expect(not autoRule and autoRuleReason, "automatic OS +1 cannot be enabled")
 GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", { sessionID = "session-3", winner = "Alice", choice = "OS", itemLink = "item:102" }, "GIVEN")
-same(GA.PlusOnes:Get("Alice"), 2, "enabled OS rule adds +1")
+same(GA.PlusOnes:Get("Alice"), 0, "OS remains manual after an attempted auto-rule change")
 
 local trade = { id = "trade-1", winner = "Bob", choice = "MS", itemLink = "item:103", status = "DELIVERED" }
 GA.Events:Emit("GA_TRADE_PENDING_UPDATED", trade)
 GA.Events:Emit("GA_TRADE_PENDING_UPDATED", trade)
 same(GA.PlusOnes:GetStats("Bob").total, 1, "confirmed trade is idempotent by trade id")
-same(GA.PlusOnes:Get("Bob"), 1, "confirmed MS trade applies +1")
+same(GA.PlusOnes:Get("Bob"), 0, "confirmed MS trade never applies +1")
 GA.Events:Emit("GA_TRADE_PENDING_UPDATED", { winner = "Mallory", choice = "MS", status = "DELIVERED" })
 same(GA.PlusOnes:GetStats("Mallory").total, 0, "trade without stable id is ignored")
 
@@ -98,6 +99,7 @@ local session = { itemLink = "item:100", participants = {
     alice = { name = "Alice", choice = "MS", roll = 50 },
     bob = { name = "Bob", choice = "MS", roll = 60 },
 } }
+same(GA.PlusOnes:Add("Alice", 2, "MANUAL_AWARD"), 2, "loot master can explicitly add +1 after an award")
 local ranked = GA.Ranking:GetSorted(session)
 same(ranked[1].name, "Bob", "lower +1 outranks higher +1")
 expect(type(session.participants.alice.itemCounts) == "table", "ranking exposes item counts to UI")

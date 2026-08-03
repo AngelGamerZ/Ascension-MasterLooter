@@ -4,6 +4,8 @@ MasterLooter is a loot and raid-management addon developed specifically for Proj
 
 It provides synchronized master-looter roll windows, public rolls for players without the addon, persistent loot and auction queues, verified direct assignment, automatic filling of verified trades, a MS/OS item ledger, SoftRes/HardRes, priorities, +1, boosted rolls, GDKP, raid management, diagnostics, bag inspection, history, and safe import/export tools.
 
+The loot master assigns +1 manually at award time. The default value is zero; awards and completed trades never increase +1 automatically.
+
 ## Installation
 
 Copy both folders into `Interface/AddOns/`:

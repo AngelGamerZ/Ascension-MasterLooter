@@ -99,20 +99,8 @@ function RulesWindow:EnsureFrame()
     end)
     self.hardCheck = hardCheck
 
-    local autoMS = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-    autoMS:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -205, -68)
-    autoMS:SetWidth(24); autoMS:SetHeight(24)
-    local autoMSLabel = Theme:CreateLabel(frame, "MS erhöht +1", 11)
-    autoMSLabel:SetPoint("LEFT", autoMS, "RIGHT", 1, 0)
-    autoMS:SetScript("OnClick", function(button) GA.PlusOnes:SetAutoRule("MS", button:GetChecked()) end)
-    self.autoMS = autoMS
-    local autoOS = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-    autoOS:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -85, -68)
-    autoOS:SetWidth(24); autoOS:SetHeight(24)
-    local autoOSLabel = Theme:CreateLabel(frame, "OS erhöht +1", 11)
-    autoOSLabel:SetPoint("LEFT", autoOS, "RIGHT", 1, 0)
-    autoOS:SetScript("OnClick", function(button) GA.PlusOnes:SetAutoRule("OS", button:GetChecked()) end)
-    self.autoOS = autoOS
+    local manualPlusOne = Theme:CreateLabel(frame, "+1 wird nur manuell im Lootmaster gebucht", 11, Theme.colors.muted)
+    manualPlusOne:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -73)
 
     local refreshButton = Theme:CreateButton(frame, "Gruppe neu laden", 125, 24)
     refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -108)
@@ -264,9 +252,6 @@ end
 function RulesWindow:Refresh(rebuildPlayers)
     if not self.frame then return end
     if rebuildPlayers or #self.players == 0 then self:CollectPlayers() end
-    local autoRules = GA.PlusOnes and GA.PlusOnes:GetAutoRules() or { MS = true, OS = false }
-    if self.autoMS then self.autoMS:SetChecked(autoRules.MS and true or false) end
-    if self.autoOS then self.autoOS:SetChecked(autoRules.OS and true or false) end
     local reservations = self.currentItem and moduleValue(GA.SoftRes, "GetReservations", self.currentItem) or nil
     if type(reservations) ~= "table" then reservations = nil end
     local reservationPlayers, reservationTotal = 0, 0

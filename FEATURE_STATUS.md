@@ -25,7 +25,7 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 
 - SoftRes, HardRes, Prioritäten, Boosted Rolls und separates +1-Ranking.
 - Strichliste mit Gesamt-, MS-, OS- und sonstigen Vergaben sowie Audit-Historie.
-- Automatisches +1 ist standardmäßig für MS aktiv und für OS deaktiviert; beides bestimmt der Lootmaster.
+- +1 wird niemals automatisch durch eine Vergabe oder einen Handel erhöht. Der Lootmaster trägt den gewünschten Wert bei der Gewinnervergabe bewusst von Hand ein; `0` erzeugt keinen Strich.
 - Doppelte Zustellereignisse werden über Sitzungs- beziehungsweise Handels-IDs nicht doppelt gebucht.
 - CSV-/TSV-Export für Vergaben, Prioritäten und Strichliste sowie validierter Import mit automatischer Sicherung und Wiederherstellung.
 
