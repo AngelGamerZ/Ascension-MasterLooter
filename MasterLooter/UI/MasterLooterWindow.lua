@@ -458,22 +458,14 @@ function MasterLooterWindow:OpenContainerItem(button, mouseButton)
     return true
 end
 
-function MasterLooterWindow:HookContainerButton(button)
-    if not button or self.hookedContainerButtons[button] or type(button.HookScript) ~= "function" then return false end
-    button:HookScript("OnClick", function(clicked, mouseButton)
-        MasterLooterWindow:OpenContainerItem(clicked, mouseButton)
-    end)
-    self.hookedContainerButtons[button] = true
-    return true
-end
-
 function MasterLooterWindow:HookContainerButtons()
-    self.hookedContainerButtons = self.hookedContainerButtons or {}
-    for frameIndex = 1, 20 do
-        for itemIndex = 1, 72 do
-            self:HookContainerButton(_G["ContainerFrame" .. frameIndex .. "Item" .. itemIndex])
-        end
-    end
+    if self.containerClickHooked then return true end
+    if type(hooksecurefunc) ~= "function" or type(_G.ContainerFrameItemButton_OnModifiedClick) ~= "function" then return false end
+    hooksecurefunc("ContainerFrameItemButton_OnModifiedClick", function(button, mouseButton)
+        MasterLooterWindow:OpenContainerItem(button, mouseButton)
+    end)
+    self.containerClickHooked = true
+    return true
 end
 
 function MasterLooterWindow:HookLootButtons()

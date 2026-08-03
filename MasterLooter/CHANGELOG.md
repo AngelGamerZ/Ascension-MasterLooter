@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.1-beta
+
+- Erneuten Ausfall von Inventar- und Loot-Tooltips durch vollständiges Entfernen aller ersetzenden Taschen-/Lootbutton-Hooks behoben
+- Inventar verwendet ausschließlich WoWs sicheren globalen `hooksecurefunc`-Nach-Hook
+- Lootfenster verwendet nur einen ergänzenden `OnMouseDown`-Beobachter; vorhandene `OnClick`-, `OnEnter`- und Maustastenregistrierungen bleiben unangetastet
+- STRG+Rechtsklick erkennt zusätzlich Ascension-Felder `lootSlot` und `slotIndex` sowie paginierte Blizzard-Lootslots
+- Direkter Live-Fallback auf `GetLootSlotLink` entfernt die Abhängigkeit vom Zeitpunkt des Hintergrund-Snapshots
+- Regressionstests schützen die originalen Klick- und Tooltip-Funktionsobjekte vor Änderungen
+
 ## 0.12.0-beta
 
 - Automatische `+1`-Buchung für MS, OS, Selbstvergabe und bestätigte Handelsübergaben vollständig entfernt

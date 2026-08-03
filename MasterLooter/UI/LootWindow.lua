@@ -114,10 +114,28 @@ function LootWindow:UseSelected()
     self:SetStatus("Item in das Lootmaster-Fenster übernommen.", Theme.colors.green)
 end
 
+function LootWindow:GetButtonSlot(button)
+    if not button then return nil end
+    local explicit = tonumber(button.slot) or tonumber(button.lootSlot) or tonumber(button.slotIndex)
+    local slot = explicit or (type(button.GetID) == "function" and tonumber(button:GetID()))
+    if slot and not explicit and _G.LootFrame and tonumber(_G.LootFrame.page) and _G.LootFrame.page > 1 then
+        slot = slot + ((_G.LootFrame.page - 1) * (tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4))
+    end
+    return slot
+end
+
 function LootWindow:HandleBlizzardLootClick(button, mouseButton)
     if mouseButton ~= "RightButton" or not IsControlKeyDown or not IsControlKeyDown() then return false end
-    local slot = button and (tonumber(button.slot) or (button.GetID and button:GetID()))
+    local slot = self:GetButtonSlot(button)
     local record = slot and GA.Loot:GetSlot(slot)
+    if slot and (not record or record.cleared or not record.link) and type(GetLootSlotLink) == "function" then
+        local link = GetLootSlotLink(slot)
+        if link then
+            local quantity = 1
+            if type(GetLootSlotInfo) == "function" then local _, _, count = GetLootSlotInfo(slot); quantity = tonumber(count) or 1 end
+            record = { slot = slot, link = link, itemID = GA.Compat:GetItemID(link), quantity = tonumber(quantity) or 1, capturedAt = type(GetTime) == "function" and GetTime() or 0 }
+        end
+    end
     if not record or record.cleared or not record.link then return false end
     self:Select(record); self:UseSelected()
     return true
@@ -127,13 +145,10 @@ function LootWindow:HookBlizzardLootButtons()
     for _, prefix in ipairs({ "LootButton", "LootFrameButton", "XLootFrameButton", "XLootButton", "ElvLootSlot" }) do
         for index = 1, 40 do
             local button = _G[prefix .. index]
-            if button and not self.hookedButtons[button] and button.GetScript and button.SetScript then
-                local original = button:GetScript("OnClick")
-                button:SetScript("OnClick", function(clicked, mouseButton, ...)
-                    if LootWindow:HandleBlizzardLootClick(clicked, mouseButton) then return end
-                    if original then return original(clicked, mouseButton, ...) end
+            if button and not self.hookedButtons[button] and type(button.HookScript) == "function" then
+                button:HookScript("OnMouseDown", function(clicked, mouseButton)
+                    LootWindow:HandleBlizzardLootClick(clicked, mouseButton)
                 end)
-                if button.RegisterForClicks then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
                 self.hookedButtons[button] = true
             end
         end

@@ -657,17 +657,14 @@ aliceGA.UI.MasterLooterWindow.Show = originalMasterShow
 aliceGA.UI.MasterLooterWindow.SetItem = originalMasterSetItem
 aliceGA.UI.MasterLooterWindow.SetStatus = originalMasterSetStatus
 
-local tooltipHandler = function() end
-local hookedClick
-local hookButton = {
-    scripts = { OnEnter = tooltipHandler },
-    GetScript = function(self, event) return self.scripts[event] end,
-    HookScript = function(_, event, callback) if event == "OnClick" then hookedClick = callback end end,
-}
-aliceGA.UI.MasterLooterWindow.hookedContainerButtons = {}
-expect(aliceGA.UI.MasterLooterWindow:HookContainerButton(hookButton), "container click receives a non-invasive hook")
-same(hookButton:GetScript("OnEnter"), tooltipHandler, "inventory tooltip handler remains untouched")
-expect(type(hookedClick) == "function", "inventory action is added without replacing existing scripts")
+local secureHookName, secureHookCallback
+alice.env.ContainerFrameItemButton_OnModifiedClick = function() end
+alice.env.hooksecurefunc = function(name, callback) secureHookName, secureHookCallback = name, callback end
+aliceGA.UI.MasterLooterWindow.containerClickHooked = nil
+expect(aliceGA.UI.MasterLooterWindow:HookContainerButtons(), "inventory uses WoW's secure global hook")
+same(secureHookName, "ContainerFrameItemButton_OnModifiedClick", "inventory hooks only the standard modified-click function")
+expect(type(secureHookCallback) == "function", "secure inventory callback is registered")
+same(aliceGA.UI.MasterLooterWindow.hookedContainerButtons, nil, "individual inventory buttons and their tooltip scripts remain untouched")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
