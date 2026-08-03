@@ -7,7 +7,7 @@ Eigenständige Loot- und Raidverwaltung für Project Ascension auf dem 3.3.5a-Cl
 1. Die Ordner `MasterLooter` und `MasterLooter_ItemData` nach `Interface/AddOns/` kopieren.
 2. Im Charakterbildschirm **Veraltete Addons laden** aktivieren, falls der verwendete Ascension-Build dies verlangt.
 3. Nur Spieler mit `MasterLooter` erhalten das Rollfenster. Spieler ohne Addon können über die im Gruppenchat angekündigten `/roll`-Befehle teilnehmen. `MasterLooter_ItemData` ist optional.
-4. Im Spiel `/ml` eingeben.
+4. Im Spiel `/ml` eingeben. Die eigenständige Übersicht und alle Einstellungen funktionieren auch außerhalb einer Gruppe oder Lootmaster-Sitzung.
 
 ## Wichtigster Ablauf
 
@@ -19,7 +19,7 @@ Der Eingabebereich prüft diesen Ablauf unmittelbar: **Roll starten** wird erst 
 
 Teilnehmer sehen MasterLooter-Rolls nach dem Gargul-Prinzip als kompakte 520×84-Pixel-Leiste im unteren Bildschirmbereich: Status und Rollbuttons oben, Itemicon, Itemlink, Notiz und Restzeit in einer schmalen farbigen Itemzeile darunter. Die Oberfläche unterstützt ein ausdrückliches **Passen**, schließt bei Ablauf automatisch und verwendet eine versionierte Standardposition oberhalb des unteren Bildschirmrands. Der Masterlooter kündigt die verbleibende Zeit regelmäßig in Gruppe oder Raid an und zählt ab zehn Sekunden jede Sekunde herunter. Normale Bedarf-/Gier-/Entzaubern-Würfe verbleiben vollständig in der Blizzard-Oberfläche.
 
-Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet sich ausschließlich manuell über `/ml loot` oder den Minimap-Menüpunkt **Loot**. Crafting, Entzaubern, Behälter und normales Aufsammeln öffnen es nicht automatisch.
+Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet sich ausschließlich manuell über `/ml loot` oder die Werkzeugübersicht. Crafting, Entzaubern, Behälter und normales Aufsammeln öffnen es nicht automatisch.
 
 ## Module
 
@@ -36,7 +36,8 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 
 ## Befehle
 
-- `/ml` – Lootmaster-Fenster öffnen
+- `/ml` – Übersicht und Einstellungen öffnen
+- `/ml master` – Lootmaster-Fenster öffnen
 - `/ml roll <Itemlink> [Sekunden]` – Roll direkt starten
 - `/ml sr <Spieler> <Item-ID>` – SoftRes setzen
 - `/ml plus <Spieler> [Wert]` – +1 ändern

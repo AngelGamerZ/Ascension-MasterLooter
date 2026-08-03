@@ -620,4 +620,32 @@ same(lootShows, 0, "crafting, disenchanting and ordinary loot never auto-open th
 lootWindow:Show()
 same(lootShows, 1, "the captured-loot window remains available through an explicit user action")
 
+-- Gargul-style navigation uses one independent settings hub instead of an
+-- attached minimap popup. It remains available without loot or group state.
+loadFile(alice, "UI/SettingsWindow.lua")
+local settingsWindow = aliceGA.UI.SettingsWindow
+same(settingsWindow.WIDTH, 800, "the standalone settings hub uses Gargul's broad window format")
+same(settingsWindow.HEIGHT, 600, "the standalone settings hub has room for persistent navigation")
+same(#settingsWindow:GetSections(), 5, "the settings hub exposes all top-level categories")
+same(settingsWindow:GetSections()[1].id, "HOME", "the settings hub opens on its overview")
+same(settingsWindow:GetSections()[3].id, "LOOT", "loot settings remain available outside the loot-master dialog")
+
+loadFile(alice, "UI/Launcher.lua")
+local launcher = aliceGA.UI.Launcher
+same(launcher:GetClickAction("LeftButton", false), "SettingsWindow", "minimap left-click opens the independent settings hub")
+same(launcher:GetClickAction("RightButton", false), "ImportExportWindow", "minimap right-click opens import and export directly")
+same(launcher:GetClickAction("MiddleButton", false), "HistoryWindow", "minimap middle-click opens history directly")
+same(launcher:GetClickAction("LeftButton", true), "SoftResWindow", "shift-left-click opens SoftRes directly")
+same(launcher:GetClickAction("RightButton", true), "ImportExportWindow", "shift-right-click remains a direct data action")
+
+local commands = aliceGA:GetModule("Commands")
+local settingsShows, masterShows = 0, 0
+aliceGA.UI.SettingsWindow.Show = function() settingsShows = settingsShows + 1 end
+aliceGA.UI.MasterLooterWindow.Show = function() masterShows = masterShows + 1 end
+commands:Handle("")
+same(settingsShows, 1, "/ml opens the independent overview")
+same(masterShows, 0, "/ml no longer forces the loot-master dialog open")
+commands:Handle("master")
+same(masterShows, 1, "/ml master still opens the loot-master workflow directly")
+
 print(string.format("PASS: %d assertions; two clients; Comm; rolls; rules; GDKP; items", assertions))

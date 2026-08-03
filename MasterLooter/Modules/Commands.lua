@@ -9,6 +9,7 @@ local function split(message)
 end
 
 local WINDOWS = {
+    master = "MasterLooterWindow", lootmaster = "MasterLooterWindow",
     loot = "LootWindow", trade = "TradeWindow", softres = "SoftResWindow",
     rules = "RulesWindow", gdkpui = "GDKPWindow", history = "HistoryWindow",
     auction = "GDKPAuctionWindow", raid = "RaidManagerWindow", version = "VersionWindow",
@@ -22,16 +23,17 @@ local function showWindow(key)
 end
 
 function Commands:Help()
-    GA:Print("/ml – Lootmaster-Fenster | /ml roll <Itemlink> [Sekunden]")
+    GA:Print("/ml – Übersicht & Einstellungen | /ml master – Lootmaster-Fenster")
+    GA:Print("/ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
     GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug")
-    GA:Print("/ml loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
+    GA:Print("/ml master|loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
 
 function Commands:Handle(message)
     local command, rest = split(message)
     if command == "" or command == "show" then
-        if GA.UI and GA.UI.MasterLooterWindow then GA.UI.MasterLooterWindow:Show() end
+        if GA.UI and GA.UI.SettingsWindow then GA.UI.SettingsWindow:Show() end
     elseif WINDOWS[command] then
         if not showWindow(command) then GA:Print("Fenster ist nicht verfügbar: " .. command) end
     elseif command == "roll" then

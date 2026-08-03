@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0-beta
+
+- Angeheftetes Minimap-Menü vollständig durch eine eigenständige, Gargul-inspirierte Einstellungsoberfläche ersetzt
+- Breites 800×600-Hauptfenster mit dauerhafter Seitennavigation für Übersicht, Allgemein, Loot & Rollen, PackMule sowie Daten & Diagnose
+- Sämtliche Werkzeuge sind über die Übersicht auch ohne Gruppe, Lootfenster oder aktive Lootmaster-Sitzung erreichbar
+- `/ml` öffnet nun die Übersicht und Einstellungen; `/ml master` öffnet gezielt die eigentliche Lootmaster-Verteilung
+- Gargul-ähnliche Minimap-Direktaktionen: Links Übersicht, Rechts Import/Export, Mitte Historie und Umschalt+Links SoftRes
+- Eintrag in WoWs Addon-Optionen ergänzt, der die vollständige MasterLooter-Oberfläche öffnet
+- Navigation und Direktaktionen durch zusätzliche Regressionstests abgesichert
+
 ## 0.10.2-beta
 
 - Gewinner können auch nach Ablauf oder manuellem Schließen der Rollzeit zuverlässig vergeben werden

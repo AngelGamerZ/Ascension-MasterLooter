@@ -13,7 +13,7 @@ Copy both folders into `Interface/AddOns/`:
 
 Players need the main addon for synchronized roll windows, but group members without it can participate through the announced public `/roll` commands. The loot master determines the OS range for each session; connected clients receive it automatically. The ItemData addon is optional.
 
-Open the addon with `/ml` or `/masterlooter`.
+Open the standalone overview and settings with `/ml` or `/masterlooter`. Use `/ml master` to open the loot-master workflow directly.
 
 ## Images
 
