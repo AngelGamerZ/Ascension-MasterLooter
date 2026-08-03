@@ -150,8 +150,9 @@ local originalClicks, control = 0, true
 local clickRecord = GA.Loot:GetSlot(1)
 IsControlKeyDown = function() return control end
 local tooltipHandler = function() end
-local button = { scripts = { OnEnter = tooltipHandler }, hooks = {}, id = 1 }
+local button = { scripts = { OnEnter = tooltipHandler }, hooks = {}, id = 1, name = "LootButton1" }
 function button:GetID() return self.id end
+function button:GetName() return self.name end
 function button:GetScript(name) return self.scripts[name] end
 function button:SetScript(name, callback) self.scripts[name] = callback end
 function button:HookScript(name, callback) self.hooks[name] = callback end
@@ -162,8 +163,8 @@ loadModule("UI/LootWindow.lua")
 local selected, used
 GA.UI.LootWindow.Select = function(_, value) selected = value end
 GA.UI.LootWindow.UseSelected = function() used = true end
-GA.UI.LootWindow:HookBlizzardLootButtons()
-button.hooks.OnMouseDown(button, "RightButton")
+expect(GA.UI.LootWindow:IsLootButton(button), "legacy loot button is recognized without modifying it")
+GA.UI.LootWindow:HandleBlizzardLootClick(button, "RightButton")
 expect(selected == clickRecord and used, "CTRL-right click captures loot slot")
 same(button:GetScript("OnClick"), originalClickHandler, "Blizzard loot click handler is not replaced")
 same(button:GetScript("OnEnter"), tooltipHandler, "loot tooltip handler remains untouched")

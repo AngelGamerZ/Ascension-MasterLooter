@@ -124,6 +124,14 @@ function LootWindow:GetButtonSlot(button)
     return slot
 end
 
+function LootWindow:IsLootButton(button)
+    if not button then return false end
+    if tonumber(button.lootSlot) or tonumber(button.slotIndex) then return true end
+    local name = type(button.GetName) == "function" and tostring(button:GetName() or "") or ""
+    return string.find(name, "LootButton", 1, true) ~= nil or string.find(name, "LootFrameButton", 1, true) ~= nil or
+        string.find(name, "XLoot", 1, true) ~= nil or string.find(name, "ElvLootSlot", 1, true) ~= nil
+end
+
 function LootWindow:HandleBlizzardLootClick(button, mouseButton)
     if mouseButton ~= "RightButton" or not IsControlKeyDown or not IsControlKeyDown() then return false end
     local slot = self:GetButtonSlot(button)
@@ -141,20 +149,6 @@ function LootWindow:HandleBlizzardLootClick(button, mouseButton)
     return true
 end
 
-function LootWindow:HookBlizzardLootButtons()
-    for _, prefix in ipairs({ "LootButton", "LootFrameButton", "XLootFrameButton", "XLootButton", "ElvLootSlot" }) do
-        for index = 1, 40 do
-            local button = _G[prefix .. index]
-            if button and not self.hookedButtons[button] and type(button.HookScript) == "function" then
-                button:HookScript("OnMouseDown", function(clicked, mouseButton)
-                    LootWindow:HandleBlizzardLootClick(clicked, mouseButton)
-                end)
-                self.hookedButtons[button] = true
-            end
-        end
-    end
-end
-
 function LootWindow:AddToPackMule()
     if not self.selected or not self.selected.link then return end
     local target = self.targetEdit:GetText(); if target and target ~= "" then GA.PackMule:SetTarget(target) end
@@ -169,8 +163,7 @@ function LootWindow:OnInitialize()
     self:EnsureFrame()
     -- Capture every loot source in the background. Opening this management
     -- window is an explicit user action via /ml loot or the launcher menu.
-    self:HookBlizzardLootButtons()
-    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:HookBlizzardLootButtons(); LootWindow:Refresh(snapshotFromEvent(...)) end, self)
+    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)

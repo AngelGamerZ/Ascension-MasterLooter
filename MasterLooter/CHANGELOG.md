@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.2-beta
+
+- Sämtliche Hooks auf Blizzard-/Ascension-Inventar- und Lootbuttons vollständig entfernt
+- Auch der globale Containerfunktions-Hook wurde entfernt, damit Itemaufnahme und Tooltip-Lebenszyklus vollständig außerhalb von MasterLooter bleiben
+- STRG+Rechtsklick wird nun unabhängig über `GetMouseFocus`, `IsMouseButtonDown` und den Flankenwechsel der rechten Maustaste erkannt
+- Keine fremden `OnClick`-, `OnEnter`-, `OnMouseDown`-, Drag-, Tooltip- oder Maustastenregistrierungen werden gelesen, ersetzt oder ergänzt
+- Loot- und Taschenitems werden erst anhand des aktuell fokussierten UI-Elements aufgelöst und anschließend an MasterLooter übergeben
+
 ## 0.12.1-beta
 
 - Erneuten Ausfall von Inventar- und Loot-Tooltips durch vollständiges Entfernen aller ersetzenden Taschen-/Lootbutton-Hooks behoben

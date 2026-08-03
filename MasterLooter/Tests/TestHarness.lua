@@ -657,14 +657,8 @@ aliceGA.UI.MasterLooterWindow.Show = originalMasterShow
 aliceGA.UI.MasterLooterWindow.SetItem = originalMasterSetItem
 aliceGA.UI.MasterLooterWindow.SetStatus = originalMasterSetStatus
 
-local secureHookName, secureHookCallback
-alice.env.ContainerFrameItemButton_OnModifiedClick = function() end
-alice.env.hooksecurefunc = function(name, callback) secureHookName, secureHookCallback = name, callback end
-aliceGA.UI.MasterLooterWindow.containerClickHooked = nil
-expect(aliceGA.UI.MasterLooterWindow:HookContainerButtons(), "inventory uses WoW's secure global hook")
-same(secureHookName, "ContainerFrameItemButton_OnModifiedClick", "inventory hooks only the standard modified-click function")
-expect(type(secureHookCallback) == "function", "secure inventory callback is registered")
 same(aliceGA.UI.MasterLooterWindow.hookedContainerButtons, nil, "individual inventory buttons and their tooltip scripts remain untouched")
+same(aliceGA.UI.MasterLooterWindow.containerClickHooked, nil, "no global container function is hooked")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
@@ -678,6 +672,18 @@ same(lootRefreshes, 1, "opening any loot source refreshes the captured snapshot 
 same(lootShows, 0, "crafting, disenchanting and ordinary loot never auto-open the captured-loot window")
 lootWindow:Show()
 same(lootShows, 1, "the captured-loot window remains available through an explicit user action")
+
+local inputDown, inputCaptures = false, 0
+local savedGlobalHandler = masterWindow.HandleGlobalModifiedClick
+alice.env.IsMouseButtonDown = function(buttonName) return buttonName == "RightButton" and inputDown end
+alice.env.GetMouseFocus = function() return inventoryButton end
+masterWindow.HandleGlobalModifiedClick = function() inputCaptures = inputCaptures + 1; return true end
+masterWindow.rightMouseWasDown = false
+inputDown = true; masterWindow:PollGlobalInput(); masterWindow:PollGlobalInput()
+same(inputCaptures, 1, "global input observer captures one action per right-button press")
+inputDown = false; masterWindow:PollGlobalInput(); inputDown = true; masterWindow:PollGlobalInput()
+same(inputCaptures, 2, "global input observer rearms only after the mouse button is released")
+masterWindow.HandleGlobalModifiedClick = savedGlobalHandler
 
 -- Gargul-style navigation uses one independent settings hub instead of an
 -- attached minimap popup. It remains available without loot or group state.

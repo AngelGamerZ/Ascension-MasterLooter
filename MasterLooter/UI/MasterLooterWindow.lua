@@ -304,7 +304,6 @@ function MasterLooterWindow:EnsureFrame()
     self.awardButton = award
 
     start:Disable()
-    self:HookLootButtons()
     self:RefreshInputState(false)
     return frame
 end
@@ -458,37 +457,23 @@ function MasterLooterWindow:OpenContainerItem(button, mouseButton)
     return true
 end
 
-function MasterLooterWindow:HookContainerButtons()
-    if self.containerClickHooked then return true end
-    if type(hooksecurefunc) ~= "function" or type(_G.ContainerFrameItemButton_OnModifiedClick) ~= "function" then return false end
-    hooksecurefunc("ContainerFrameItemButton_OnModifiedClick", function(button, mouseButton)
-        MasterLooterWindow:OpenContainerItem(button, mouseButton)
-    end)
-    self.containerClickHooked = true
-    return true
+function MasterLooterWindow:HandleGlobalModifiedClick(focus)
+    if not focus or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
+    local lootWindow = GA.UI and GA.UI.LootWindow
+    if lootWindow and type(lootWindow.IsLootButton) == "function" and lootWindow:IsLootButton(focus) and
+        type(lootWindow.HandleBlizzardLootClick) == "function" and lootWindow:HandleBlizzardLootClick(focus, "RightButton") then
+        return true
+    end
+    return self:OpenContainerItem(focus, "RightButton")
 end
 
-function MasterLooterWindow:HookLootButtons()
-    if self.lootButtonsHooked then return end
-    local count = tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4
-    local hooked = false
-    for index = 1, count do
-        local fallbackIndex = index
-        local button = _G["LootButton" .. index]
-        if button and type(button.HookScript) == "function" then
-            button:RegisterForDrag("LeftButton")
-            button:HookScript("OnDragStart", function(self)
-                local slot = tonumber(self.slot) or (type(self.GetID) == "function" and self:GetID()) or fallbackIndex
-                if not self.slot and _G.LootFrame and tonumber(_G.LootFrame.page) and _G.LootFrame.page > 1 then
-                    slot = slot + ((_G.LootFrame.page - 1) * count)
-                end
-                local link = type(GetLootSlotLink) == "function" and GetLootSlotLink(slot)
-                if link then Theme:BeginItemDrag(link) end
-            end)
-            hooked = true
-        end
+function MasterLooterWindow:PollGlobalInput()
+    if type(IsMouseButtonDown) ~= "function" then return end
+    local down = IsMouseButtonDown("RightButton") and true or false
+    if down and not self.rightMouseWasDown and type(GetMouseFocus) == "function" then
+        self:HandleGlobalModifiedClick(GetMouseFocus())
     end
-    self.lootButtonsHooked = hooked
+    self.rightMouseWasDown = down
 end
 
 function MasterLooterWindow:SetStatus(text, color)
@@ -676,7 +661,7 @@ end
 
 function MasterLooterWindow:Show()
     local frame = self:EnsureFrame()
-    if frame then self:HookContainerButtons(); frame:Show() end
+    if frame then frame:Show() end
 end
 
 function MasterLooterWindow:Hide()
@@ -693,11 +678,9 @@ function MasterLooterWindow:Initialize()
     if self.initialized then return end
     self.initialized = true
     self:EnsureFrame()
-    self:HookContainerButtons()
     registerMessage("GA_ROLL_SESSION_STARTED", function(...)
         MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_STARTED", ...))
     end)
-    registerMessage("GA_LOOT_OPENED", function() MasterLooterWindow:HookLootButtons() end)
     local update = function(...)
         local state, action, participant = sessionUpdateArguments(...)
         MasterLooterWindow:UpdateSession(state)
@@ -728,7 +711,7 @@ end
 
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
-loader:RegisterEvent("BAG_UPDATE")
 loader:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" then MasterLooterWindow:Initialize() else MasterLooterWindow:HookContainerButtons() end
+    if event == "PLAYER_LOGIN" then MasterLooterWindow:Initialize() end
 end)
+loader:SetScript("OnUpdate", function() MasterLooterWindow:PollGlobalInput() end)
