@@ -157,18 +157,55 @@ end
 function Theme:SetItemTooltip(widget, itemLink)
     widget.itemLink = itemLink
     widget:SetScript("OnEnter", function(self)
-        if not self.itemLink then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetHyperlink(self.itemLink)
-        GameTooltip:Show()
+        Theme:ShowItemTooltip(self, self.itemLink)
     end)
     widget:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
 end
 
+function Theme:GetTooltip()
+    if self.tooltip then return self.tooltip end
+    local tooltip = _G.MasterLooterTooltip
+    if not tooltip and type(CreateFrame) == "function" then
+        local ok, created = pcall(CreateFrame, "GameTooltip", "MasterLooterTooltip", UIParent, "GameTooltipTemplate")
+        if ok then tooltip = created end
+    end
+    self.tooltip = tooltip
+    return tooltip
+end
+
+function Theme:ShowItemTooltip(owner, itemLink, anchor)
+    if not owner or type(itemLink) ~= "string" or itemLink == "" then return false end
+    local tooltip = self:GetTooltip()
+    if not tooltip then return false end
+    tooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+    tooltip:SetHyperlink(itemLink)
+    tooltip:Show()
+    return true
+end
+
+function Theme:ShowTextTooltip(owner, lines, anchor)
+    if not owner then return false end
+    local tooltip = self:GetTooltip()
+    if not tooltip then return false end
+    tooltip:SetOwner(owner, anchor or "ANCHOR_LEFT")
+    if type(tooltip.ClearLines) == "function" then tooltip:ClearLines() end
+    for index = 1, #(lines or {}) do
+        local line = lines[index]
+        if type(line) == "table" then
+            tooltip:AddLine(tostring(line[1] or ""), line[2] or 1, line[3] or 1, line[4] or 1)
+        else
+            tooltip:AddLine(tostring(line), 1, 1, 1)
+        end
+    end
+    tooltip:Show()
+    return true
+end
+
 function Theme:HideOwnedTooltip(owner)
-    if not GameTooltip or type(GameTooltip.Hide) ~= "function" then return false end
-    if type(GameTooltip.GetOwner) == "function" and GameTooltip:GetOwner() ~= owner then return false end
-    GameTooltip:Hide()
+    local tooltip = self.tooltip
+    if not tooltip or type(tooltip.Hide) ~= "function" then return false end
+    if type(tooltip.GetOwner) == "function" and tooltip:GetOwner() ~= owner then return false end
+    tooltip:Hide()
     return true
 end
 

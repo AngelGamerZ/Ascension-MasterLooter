@@ -160,7 +160,7 @@ function MasterLooterWindow:EnsureFrame()
     end)
     item:SetScript("OnEnter", function(self)
         if not MasterLooterWindow.itemLink then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(MasterLooterWindow.itemLink); GameTooltip:Show()
+        Theme:ShowItemTooltip(self, MasterLooterWindow.itemLink)
     end)
     item:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self); MasterLooterWindow:RefreshInputState(false) end)
     self.itemDrop = item; self.itemIcon = itemIcon; self.itemText = itemText

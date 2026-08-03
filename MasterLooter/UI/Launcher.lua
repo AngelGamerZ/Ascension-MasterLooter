@@ -74,13 +74,14 @@ function Launcher:EnsureButton()
         Launcher:HandleClick(mouseButton, type(IsShiftKeyDown) == "function" and IsShiftKeyDown())
     end)
     button:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT"); GameTooltip:AddLine("MasterLooter", 1, 0.82, 0.2)
-        GameTooltip:AddLine("Linksklick: Übersicht & Einstellungen", 1, 1, 1)
-        GameTooltip:AddLine("Rechtsklick: Import / Export", 1, 1, 1)
-        GameTooltip:AddLine("Mittelklick: Historie", 1, 1, 1)
-        GameTooltip:AddLine("Umschalt + Linksklick: SoftRes", 1, 1, 1)
-        GameTooltip:AddLine("Umschalt + Rechtsklick: Lootmaster", 1, 1, 1)
-        GameTooltip:Show()
+        Theme:ShowTextTooltip(self, {
+            { "MasterLooter", 1, 0.82, 0.2 },
+            "Linksklick: Übersicht & Einstellungen",
+            "Rechtsklick: Import / Export",
+            "Mittelklick: Historie",
+            "Umschalt + Linksklick: SoftRes",
+            "Umschalt + Rechtsklick: Lootmaster",
+        }, "ANCHOR_LEFT")
     end)
     button:SetScript("OnLeave", function(self) if GA.UI.Theme then GA.UI.Theme:HideOwnedTooltip(self) end end)
     button:SetScript("OnDragStart", function(self) self.dragging = true; self:SetScript("OnUpdate", function() Launcher:OnDrag() end) end)

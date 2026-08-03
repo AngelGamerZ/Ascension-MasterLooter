@@ -92,9 +92,7 @@ function HistoryWindow:EnsureFrame()
         row.detail:SetWidth(62)
         row:SetScript("OnEnter", function(self)
             if not self.itemLink then return end
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink(self.itemLink)
-            GameTooltip:Show()
+            Theme:ShowItemTooltip(self, self.itemLink)
         end)
         row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row

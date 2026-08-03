@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.5-beta
+
+- MasterLooter-Oberfläche vollständig vom globalen Blizzard-/Ascension-`GameTooltip` getrennt
+- Eigener `MasterLooterTooltip` für Itemlinks, Verlauf, Handel, Lootliste, Tascheninspektor und Minimap-Hinweise
+- Kopierbare Tooltip-Diagnose unter `/ml tooltipdebug` und in Einstellungen > Daten & Diagnose ergänzt
+- Diagnose protokolliert globale Tooltip-Aktionen mit Besitzer, Zeit und Aufrufpfad sowie Loot-, Taschen-, Itemlock- und Cursorereignisse
+- Regressionstests erzwingen, dass kein MasterLooter-UI-Fenster den globalen Tooltip verwendet
+
 ## 0.12.4-beta
 
 - STRG+Rechtsklick für Inventar- und Lootitems vollständig entfernt

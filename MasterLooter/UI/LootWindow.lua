@@ -53,7 +53,7 @@ function LootWindow:EnsureFrame()
         row:SetScript("OnDragStart", function(self)
             if self.record and self.record.link then Theme:BeginItemDrag(self.record.link) end
         end)
-        row:SetScript("OnEnter", function(self) if self.record and self.record.link then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(self.record.link); GameTooltip:Show() end end)
+        row:SetScript("OnEnter", function(self) if self.record and self.record.link then Theme:ShowItemTooltip(self, self.record.link) end end)
         row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row
     end

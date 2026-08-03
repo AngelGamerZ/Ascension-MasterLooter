@@ -56,7 +56,7 @@ function BagInspectorWindow:EnsureFrame()
         row.quantity = Theme:CreateLabel(row, "", 11); row.quantity:SetPoint("LEFT", row, "LEFT", 413, 0); row.quantity:SetWidth(65)
         row.bag = Theme:CreateLabel(row, "", 11); row.bag:SetPoint("LEFT", row, "LEFT", 493, 0); row.bag:SetWidth(50)
         row.slot = Theme:CreateLabel(row, "", 11); row.slot:SetPoint("LEFT", row, "LEFT", 558, 0); row.slot:SetWidth(45)
-        row:SetScript("OnEnter", function(self) if self.entry and self.entry.link then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(self.entry.link); GameTooltip:Show() end end); row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
+        row:SetScript("OnEnter", function(self) if self.entry and self.entry.link then Theme:ShowItemTooltip(self, self.entry.link) end end); row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row
     end
     local previous = Theme:CreateButton(frame, "<", 35, 23); previous:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 28); previous:SetScript("OnClick", function() BagInspectorWindow.page = math.max(1, BagInspectorWindow.page - 1); BagInspectorWindow:Render() end); self.previous = previous

@@ -26,7 +26,7 @@ function Commands:Help()
     GA:Print("/ml – Übersicht & Einstellungen | /ml master oder /lootmaster – Lootmaster-Fenster")
     GA:Print("/ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
-    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug")
+    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug | /ml tooltipdebug")
     GA:Print("/ml master|loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
 
@@ -72,6 +72,10 @@ function Commands:Handle(message)
         local window = GA.UI and GA.UI.CommDebugWindow
         if window and type(window.Show) == "function" then window:Show()
         else GA:Print("Kommunikationsdiagnose ist nicht verfügbar.") end
+    elseif command == "tooltipdebug" then
+        local window = GA.UI and GA.UI.TooltipDebugWindow
+        if window and type(window.Show) == "function" then window:Show()
+        else GA:Print("Tooltip-Diagnose ist nicht verfügbar.") end
     else self:Help() end
 end
 

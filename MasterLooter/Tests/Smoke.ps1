@@ -10,6 +10,7 @@ $tests = @(
     "MasterLooter/Tests/TradeHandshakeSmoke.lua",
     "MasterLooter/Tests/SettingsWindowBuildSmoke.lua",
     "MasterLooter/Tests/TooltipSafetySmoke.lua",
+    "MasterLooter/Tests/TooltipDebugSmoke.lua",
     "MasterLooter/Tests/ParseAll.lua"
 )
 
@@ -48,6 +49,10 @@ try {
     $forbiddenGlobalInput = rg -n --glob '*.lua' --glob '!**/Tests/**' 'GetMouseFocus|IsMouseButtonDown|HandleGlobalModifiedClick|PollGlobalInput|HandleBlizzardLootClick' MasterLooter
     if ($LASTEXITCODE -eq 0) { throw "Forbidden global inventory/loot input integration found:`n$forbiddenGlobalInput" }
     if ($LASTEXITCODE -gt 1) { throw "Global input integration scan could not run" }
+
+    $globalTooltipUI = rg -n --glob '*.lua' --glob '!Theme.lua' 'GameTooltip[\.:]' MasterLooter/UI
+    if ($LASTEXITCODE -eq 0) { throw "MasterLooter UI must use its private tooltip instead of GameTooltip:`n$globalTooltipUI" }
+    if ($LASTEXITCODE -gt 1) { throw "Global tooltip isolation scan could not run" }
 
     git diff --check
     if ($LASTEXITCODE -ne 0) { throw "git diff --check found invalid changes" }

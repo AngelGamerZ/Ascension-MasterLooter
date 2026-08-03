@@ -155,7 +155,8 @@ function SettingsWindow:BuildData()
     local section = self:CreateSection("DATA", "Daten & Diagnose", "Import, Export, Versionsinformationen und kopierbare Diagnoseprotokolle.")
     local tools = {
         { "Import / Export", "ImportExportWindow" }, { "Historie", "HistoryWindow" }, { "Versionscheck", "VersionWindow" },
-        { "Roll-Diagnose", "RollDebugWindow" }, { "Kommunikationsdiagnose", "CommDebugWindow" }, { "Tascheninspektor", "BagInspectorWindow" },
+        { "Roll-Diagnose", "RollDebugWindow" }, { "Kommunikationsdiagnose", "CommDebugWindow" }, { "Tooltip-Diagnose", "TooltipDebugWindow" },
+        { "Tascheninspektor", "BagInspectorWindow" },
     }
     for index, tool in ipairs(tools) do
         self:CreateToolButton(section, tool[1], tool[2], ((index - 1) % 3) + 1, math.floor((index - 1) / 3) + 1)
