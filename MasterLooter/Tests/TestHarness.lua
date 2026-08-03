@@ -607,6 +607,33 @@ local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participant
 same(#displayedRolls, 1, "a public roll with no optional effectiveRoll reaches the loot-master table")
 same(displayedRolls[1].effectiveRoll, 13, "a missing optional effectiveRoll falls back to the public result")
 
+-- Inventory CTRL-right-click resolves the legacy bag/slot button and opens
+-- the loot-master workflow with that exact item, without using the item.
+local inventoryParent = { GetID = function() return 0 end }
+local inventoryButton = {
+    GetParent = function() return inventoryParent end,
+    GetID = function() return 1 end,
+}
+local inventoryLink, inventoryBag, inventorySlot = aliceGA.UI.MasterLooterWindow:GetContainerItem(inventoryButton)
+same(inventoryLink, itemLink, "legacy container button resolves its full item link")
+same(inventoryBag, 0, "legacy container button resolves the backpack ID")
+same(inventorySlot, 1, "legacy container button resolves its slot ID")
+local originalMasterShow = aliceGA.UI.MasterLooterWindow.Show
+local originalMasterSetItem = aliceGA.UI.MasterLooterWindow.SetItem
+local originalMasterSetStatus = aliceGA.UI.MasterLooterWindow.SetStatus
+local inventoryShows, inventorySelected = 0, nil
+alice.env.IsControlKeyDown = function() return true end
+aliceGA.UI.MasterLooterWindow.Show = function() inventoryShows = inventoryShows + 1 end
+aliceGA.UI.MasterLooterWindow.SetItem = function(_, link) inventorySelected = link end
+aliceGA.UI.MasterLooterWindow.SetStatus = function() end
+expect(aliceGA.UI.MasterLooterWindow:OpenContainerItem(inventoryButton, "RightButton"),
+    "CTRL-right-click is consumed as a MasterLooter inventory action")
+same(inventoryShows, 1, "inventory action opens the loot-master window")
+same(inventorySelected, itemLink, "inventory action places the item into the loot-master window")
+aliceGA.UI.MasterLooterWindow.Show = originalMasterShow
+aliceGA.UI.MasterLooterWindow.SetItem = originalMasterSetItem
+aliceGA.UI.MasterLooterWindow.SetStatus = originalMasterSetStatus
+
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
 local lootWindow, lootRefreshes, lootShows = aliceGA.UI.LootWindow, 0, 0
@@ -636,7 +663,7 @@ same(launcher:GetClickAction("LeftButton", false), "SettingsWindow", "minimap le
 same(launcher:GetClickAction("RightButton", false), "ImportExportWindow", "minimap right-click opens import and export directly")
 same(launcher:GetClickAction("MiddleButton", false), "HistoryWindow", "minimap middle-click opens history directly")
 same(launcher:GetClickAction("LeftButton", true), "SoftResWindow", "shift-left-click opens SoftRes directly")
-same(launcher:GetClickAction("RightButton", true), "ImportExportWindow", "shift-right-click remains a direct data action")
+same(launcher:GetClickAction("RightButton", true), "MasterLooterWindow", "shift-right-click opens the loot-master workflow directly")
 
 local commands = aliceGA:GetModule("Commands")
 local settingsShows, masterShows = 0, 0

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2-beta
+
+- STRG+Rechtsklick auf Items in den 3.3.5a-Taschen öffnet das Lootmaster-Fenster und übernimmt das Item direkt
+- Standard-Containerbuttons werden beim Login, bei Taschenänderungen und beim Öffnen des Lootmasters erneut erkannt
+- Globaler Blizzard-Containerhandler dient als zusätzlicher Fallback für dynamisch erstellte Taschenbuttons
+- Direkte manuelle Zugänge über `/ml master`, `/lootmaster`, `/mlmaster` und Umschalt+Rechtsklick am Minimap-Button ergänzt
+- Normale Taschen-Klicks werden unverändert an WoW beziehungsweise das jeweilige Taschen-Addon weitergereicht
+
 ## 0.11.1-beta
 
 - Absturz beim Öffnen der neuen Einstellungen auf Ascension behoben

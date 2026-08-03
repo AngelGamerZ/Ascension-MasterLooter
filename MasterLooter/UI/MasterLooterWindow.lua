@@ -429,6 +429,59 @@ function MasterLooterWindow:AcceptCursorItem()
     return true
 end
 
+function MasterLooterWindow:GetContainerItem(button)
+    if not button then return nil end
+    local parent = type(button.GetParent) == "function" and button:GetParent() or nil
+    local bag = tonumber(button.bagID) or tonumber(button.bag) or
+        (parent and type(parent.GetID) == "function" and tonumber(parent:GetID()))
+    local slot = tonumber(button.slot) or (type(button.GetID) == "function" and tonumber(button:GetID()))
+    if bag == nil or not slot or not GA.Compat or type(GA.Compat.GetContainerItemLink) ~= "function" then return nil end
+    return GA.Compat:GetContainerItemLink(bag, slot), bag, slot
+end
+
+function MasterLooterWindow:OpenContainerItem(button, mouseButton)
+    if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
+    local itemLink, bag, slot = self:GetContainerItem(button)
+    if type(itemLink) ~= "string" or not string.find(itemLink, "|Hitem:", 1, true) then return false end
+    self.sourceLoot = nil
+    self.sourceInventory = { bag = bag, slot = slot, itemLink = itemLink }
+    self:Show(); self:SetItem(itemLink)
+    self:SetStatus("Item aus der Tasche übernommen. Dauer prüfen und Roll starten.", Theme.colors.green)
+    return true
+end
+
+function MasterLooterWindow:HookContainerButton(button)
+    if not button or self.hookedContainerButtons[button] or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return false end
+    local original = button:GetScript("OnClick")
+    button:SetScript("OnClick", function(clicked, mouseButton, ...)
+        if MasterLooterWindow:OpenContainerItem(clicked, mouseButton) then return end
+        if original then return original(clicked, mouseButton, ...) end
+    end)
+    if type(button.RegisterForClicks) == "function" then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+    self.hookedContainerButtons[button] = true
+    return true
+end
+
+function MasterLooterWindow:HookContainerButtons()
+    self.hookedContainerButtons = self.hookedContainerButtons or {}
+    for frameIndex = 1, 20 do
+        for itemIndex = 1, 72 do
+            self:HookContainerButton(_G["ContainerFrame" .. frameIndex .. "Item" .. itemIndex])
+        end
+    end
+
+    local current = _G.ContainerFrameItemButton_OnModifiedClick
+    if type(current) == "function" and current ~= self.containerClickWrapper then
+        local original = current
+        local wrapper = function(button, mouseButton, ...)
+            if MasterLooterWindow:OpenContainerItem(button, mouseButton) then return end
+            return original(button, mouseButton, ...)
+        end
+        self.containerClickWrapper = wrapper
+        _G.ContainerFrameItemButton_OnModifiedClick = wrapper
+    end
+end
+
 function MasterLooterWindow:HookLootButtons()
     if self.lootButtonsHooked then return end
     local count = tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4
@@ -615,7 +668,7 @@ end
 
 function MasterLooterWindow:Show()
     local frame = self:EnsureFrame()
-    if frame then frame:Show() end
+    if frame then self:HookContainerButtons(); frame:Show() end
 end
 
 function MasterLooterWindow:Hide()
@@ -632,6 +685,7 @@ function MasterLooterWindow:Initialize()
     if self.initialized then return end
     self.initialized = true
     self:EnsureFrame()
+    self:HookContainerButtons()
     registerMessage("GA_ROLL_SESSION_STARTED", function(...)
         MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_STARTED", ...))
     end)
@@ -666,4 +720,7 @@ end
 
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
-loader:SetScript("OnEvent", function() MasterLooterWindow:Initialize() end)
+loader:RegisterEvent("BAG_UPDATE")
+loader:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_LOGIN" then MasterLooterWindow:Initialize() else MasterLooterWindow:HookContainerButtons() end
+end)

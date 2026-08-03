@@ -23,7 +23,7 @@ local function showWindow(key)
 end
 
 function Commands:Help()
-    GA:Print("/ml – Übersicht & Einstellungen | /ml master – Lootmaster-Fenster")
+    GA:Print("/ml – Übersicht & Einstellungen | /ml master oder /lootmaster – Lootmaster-Fenster")
     GA:Print("/ml roll <Itemlink> [Sekunden]")
     GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
     GA:Print("/ml gdkp start|sale|finish | /ml version | /ml rolldebug | /ml commdebug")
@@ -79,6 +79,11 @@ function Commands:OnInitialize()
     SLASH_MASTERLOOTER1 = "/ml"
     SLASH_MASTERLOOTER2 = "/masterlooter"
     SlashCmdList.MASTERLOOTER = function(message) Commands:Handle(message) end
+    SLASH_MASTERLOOTERDIRECT1 = "/lootmaster"
+    SLASH_MASTERLOOTERDIRECT2 = "/mlmaster"
+    SlashCmdList.MASTERLOOTERDIRECT = function()
+        if not showWindow("master") then GA:Print("Lootmaster-Fenster ist nicht verfügbar.") end
+    end
     return true
 end
 

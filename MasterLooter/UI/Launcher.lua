@@ -9,7 +9,7 @@ Launcher.ACTIONS = {
     RIGHTCLICK = "ImportExportWindow",
     MIDDLECLICK = "HistoryWindow",
     SHIFT_CLICK = "SoftResWindow",
-    SHIFT_RIGHTCLICK = "ImportExportWindow",
+    SHIFT_RIGHTCLICK = "MasterLooterWindow",
 }
 
 local function minimapSettings()
@@ -79,6 +79,7 @@ function Launcher:EnsureButton()
         GameTooltip:AddLine("Rechtsklick: Import / Export", 1, 1, 1)
         GameTooltip:AddLine("Mittelklick: Historie", 1, 1, 1)
         GameTooltip:AddLine("Umschalt + Linksklick: SoftRes", 1, 1, 1)
+        GameTooltip:AddLine("Umschalt + Rechtsklick: Lootmaster", 1, 1, 1)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)

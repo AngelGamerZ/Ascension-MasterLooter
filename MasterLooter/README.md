@@ -38,12 +38,15 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 
 - `/ml` – Übersicht und Einstellungen öffnen
 - `/ml master` – Lootmaster-Fenster öffnen
+- `/lootmaster` oder `/mlmaster` – Lootmaster-Fenster ohne Umweg öffnen
 - `/ml roll <Itemlink> [Sekunden]` – Roll direkt starten
 - `/ml sr <Spieler> <Item-ID>` – SoftRes setzen
 - `/ml plus <Spieler> [Wert]` – +1 ändern
 - `/ml gdkp start|sale|finish` – GDKP steuern
 - `/ml auction|raid|version|bags` – zusätzliche Werkzeuge öffnen
 - `/ml version` – Build- und Protokollversion
+
+STRG+Rechtsklick auf ein Item in einer 3.3.5a-Tasche öffnet den Lootmaster und übernimmt das Item direkt. Am Minimap-Button öffnet Umschalt+Rechtsklick ebenfalls direkt das Lootmaster-Fenster.
 
 ## Entwicklungstest
 
