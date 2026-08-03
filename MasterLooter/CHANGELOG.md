@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.2-beta
+
+- Sämtliche beobachtenden Hooks auf Methoden des globalen `GameTooltip` entfernt
+- MasterLooter nimmt im normalen Betrieb nicht mehr an der von ElvUI, MoveAnything, AdiBags und weiteren Addons veränderten Tooltip-Aufrufkette teil
+- Loot-, Taschen- und Cursordiagnose zeichnet nur noch die Ereignisargumente auf und liest den globalen Tooltip dabei nicht aus
+- Der Zustand des globalen Tooltips wird ausschließlich beim ausdrücklichen Öffnen der Diagnose passiv abgefragt
+- Diagnose um Alpha, effektives Alpha, Skalierung, Zeilenzahl und sämtliche Verankerungspunkte erweitert
+- Eigene MasterLooter-Itemanzeigen verwenden weiterhin ausschließlich den getrennten `MasterLooterTooltip`
+
 ## 0.13.1-beta
 
 - Gewinner mit handelsbereitem Item werden in Reichweite automatisch über ihre Gruppen- oder Raideinheit angehandelt

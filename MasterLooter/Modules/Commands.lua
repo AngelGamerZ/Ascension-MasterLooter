@@ -3,7 +3,7 @@ local _, GA = ...
 -- Kept in this long-established TOC file so diagnostics remain available even
 -- when a client installation accidentally retains an older manifest that does
 -- not know newer standalone files.
-local TooltipDebug = GA.TooltipDebug or { entries = {}, maximumEntries = 180, hooked = false }
+local TooltipDebug = GA.TooltipDebug or { entries = {}, maximumEntries = 180, hooked = false, passive = true }
 GA.TooltipDebug = TooltipDebug
 
 local function tooltipNow() return type(GetTime) == "function" and GetTime() or 0 end
@@ -28,6 +28,18 @@ function TooltipDebug:TooltipState()
     if not tooltip then return "GameTooltip=nil" end
     local shown = type(tooltip.IsShown) == "function" and tooltip:IsShown() and "ja" or "nein"
     local owner = type(tooltip.GetOwner) == "function" and tooltipFrameName(tooltip:GetOwner()) or "unbekannt"
+    local alpha = type(tooltip.GetAlpha) == "function" and tooltip:GetAlpha() or "?"
+    local effectiveAlpha = type(tooltip.GetEffectiveAlpha) == "function" and tooltip:GetEffectiveAlpha() or "?"
+    local scale = type(tooltip.GetScale) == "function" and tooltip:GetScale() or "?"
+    local effectiveScale = type(tooltip.GetEffectiveScale) == "function" and tooltip:GetEffectiveScale() or "?"
+    local lineCount = type(tooltip.NumLines) == "function" and tooltip:NumLines() or "?"
+    local points = {}
+    if type(tooltip.GetNumPoints) == "function" and type(tooltip.GetPoint) == "function" then
+        for index = 1, math.min(tonumber(tooltip:GetNumPoints()) or 0, 4) do
+            local point, relative, relativePoint, x, y = tooltip:GetPoint(index)
+            points[#points + 1] = table.concat({ tostring(point), tooltipFrameName(relative), tostring(relativePoint), tostring(x), tostring(y) }, ":")
+        end
+    end
     local scripts = {}
     if type(tooltip.GetScript) == "function" then
         for _, scriptName in ipairs({ "OnShow", "OnHide", "OnUpdate", "OnTooltipSetItem" }) do
@@ -35,24 +47,21 @@ function TooltipDebug:TooltipState()
             scripts[#scripts + 1] = scriptName .. "=" .. (ok and tostring(handler) or "nicht abfragbar")
         end
     end
-    return "sichtbar=" .. shown .. ", Besitzer=" .. owner .. (#scripts > 0 and ", Scripts{" .. table.concat(scripts, ", ") .. "}" or "")
+    return "sichtbar=" .. shown .. ", Besitzer=" .. owner .. ", Alpha=" .. tostring(alpha) .. "/" .. tostring(effectiveAlpha) ..
+        ", Skalierung=" .. tostring(scale) .. "/" .. tostring(effectiveScale) .. ", Zeilen=" .. tostring(lineCount) ..
+        (#points > 0 and ", Punkte{" .. table.concat(points, ", ") .. "}" or ", Punkte=keine") ..
+        (#scripts > 0 and ", Scripts{" .. table.concat(scripts, ", ") .. "}" or "")
 end
 
 function TooltipDebug:OnTooltipAction(action) self:Log("TOOLTIP_" .. tostring(action), self:TooltipState(), true) end
 
 function TooltipDebug:InstallHooks()
-    if self.hooked then return true end
-    local tooltip, secureHook = _G.GameTooltip, _G.hooksecurefunc
-    if not tooltip or type(secureHook) ~= "function" then self:Log("HOOK", "GameTooltip oder hooksecurefunc nicht verfügbar"); return false end
-    local installed = 0
-    for _, method in ipairs({ "Hide", "Show", "SetOwner", "ClearLines", "SetHyperlink", "SetBagItem", "SetLootItem" }) do
-        if type(tooltip[method]) == "function" then
-            local methodName = method
-            local ok = pcall(secureHook, tooltip, methodName, function() TooltipDebug:OnTooltipAction(methodName) end)
-            if ok then installed = installed + 1 else self:Log("HOOK_FEHLER", methodName) end
-        end
-    end
-    self.hooked = installed > 0; self:Log("HOOK", tostring(installed) .. " Tooltip-Methoden beobachtet"); return self.hooked
+    -- Ascension tooltip methods are commonly chained by several addons. Stay
+    -- completely outside that chain; inspect GameTooltip only when the user
+    -- explicitly opens the diagnostic report.
+    self.hooked, self.passive = false, true
+    self:Log("MODUS", "passiv; keine GameTooltip-Methoden gehookt")
+    return true
 end
 
 function TooltipDebug:GetLoadedAddons()
@@ -72,9 +81,12 @@ function TooltipDebug:GetText()
     local metadata = type(GetAddOnMetadata) == "function" and GetAddOnMetadata("MasterLooter", "Version") or "API nicht verfügbar"
     local lines = {
         "MasterLooter Tooltip-Diagnose", "Lua-Version: " .. tostring(GA.VERSION), "TOC-Version: " .. tostring(metadata),
-        "Diagnose-Hooks aktiv: " .. (self.hooked and "ja" or "nein"), "Aktueller Zustand: " .. self:TooltipState(),
+        "Diagnose-Modus: " .. (self.passive and "passiv; keine GameTooltip-Hooks" or "unbekannt"), "Aktueller Zustand: " .. self:TooltipState(),
         "Einträge: " .. tostring(#self.entries), "", "Geladene Addons:",
     }
+    if metadata and tostring(metadata) ~= "API nicht verfügbar" and tostring(metadata) ~= tostring(GA.VERSION) then
+        table.insert(lines, 4, "INSTALLATIONSWARNUNG: Lua- und TOC-Version unterscheiden sich; Addonordner vollständig ersetzen.")
+    end
     for _, addonLine in ipairs(self:GetLoadedAddons()) do lines[#lines + 1] = "- " .. addonLine end
     lines[#lines + 1] = ""; lines[#lines + 1] = "MasterLooter-Ladefehler:"
     if #(GA.errors or {}) == 0 then lines[#lines + 1] = "- keine" end
@@ -93,11 +105,11 @@ function TooltipDebug:OnInitialize()
     for _, event in ipairs({ "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED", "BAG_UPDATE", "ITEM_LOCK_CHANGED", "CURSOR_UPDATE" }) do
         GA.Events:On(event, function(_, eventName, ...)
             local first, second = ...
-            TooltipDebug:Log("EVENT_" .. eventName, "arg1=" .. tostring(first) .. ", arg2=" .. tostring(second) .. " | " .. TooltipDebug:TooltipState())
+            TooltipDebug:Log("EVENT_" .. eventName, "arg1=" .. tostring(first) .. ", arg2=" .. tostring(second))
         end, self, -100)
         GA.Events:RegisterGameEvent(event)
     end
-    self:Log("START", "Tooltip-Diagnose initialisiert | " .. self:TooltipState()); return true
+    self:Log("START", "Passive Tooltip-Diagnose initialisiert"); return true
 end
 
 if not (GA.modules and GA.modules.TooltipDebug) then GA:RegisterModule("TooltipDebug", TooltipDebug) end
@@ -129,6 +141,9 @@ function GA:GetFullDiagnosticText()
         "",
         "MODULE",
     }
+    if tocVersion and tostring(tocVersion) ~= "API nicht verfügbar" and tostring(tocVersion) ~= tostring(self.VERSION) then
+        table.insert(lines, 5, "INSTALLATIONSWARNUNG: Gemischte Addonversion; MasterLooter-Ordner vollständig löschen und frisch installieren.")
+    end
     for index, module in ipairs(self.moduleOrder or {}) do
         lines[#lines + 1] = string.format("%02d %s | initialisiert=%s, aktiviert=%s", index,
             tostring(module.name or "?"), tostring(module.initialized and true or false), tostring(module.enabled and true or false))
