@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.7-beta
+
+- Tooltip-Diagnose vollständig in bereits etablierte TOC-Dateien integriert
+- Keine neuen Modul- oder Fensterdateien mehr zum Laden der Diagnose erforderlich
+- `/ml tooltipdebug` verwendet garantiert das bestehende kopierbare Diagnosefenster
+- Dump zeigt Lua- und TOC-Version getrennt, um unvollständige Installationen sofort sichtbar zu machen
+
 ## 0.12.6-beta
 
 - Tooltip-Diagnose mit garantiertem Fallback über das bestehende Roll-Diagnosefenster abgesichert

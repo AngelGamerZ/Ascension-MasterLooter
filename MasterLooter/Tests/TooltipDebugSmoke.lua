@@ -19,13 +19,15 @@ end
 
 local GA = {
     VERSION = "test",
+    UI = {}, errors = {},
     Events = {
         On = function(_, event, callback) listeners[event] = callback end,
         RegisterGameEvent = function(_, event) registrations[event] = true end,
     },
     RegisterModule = function() end,
 }
-local chunk = assert(loadfile("MasterLooter/Modules/TooltipDebug.lua"))
+SlashCmdList = {}
+local chunk = assert(loadfile("MasterLooter/Modules/Commands.lua"))
 chunk("MasterLooter", GA)
 expect(GA.TooltipDebug:OnInitialize(), "tooltip diagnostics initialize")
 expect(type(hooks.Hide) == "function", "GameTooltip Hide is observed")
