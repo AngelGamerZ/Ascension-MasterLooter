@@ -663,6 +663,9 @@ same(aliceGA.UI.MasterLooterWindow.containerClickHooked, nil, "no global contain
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")
 local lootWindow, lootRefreshes, lootShows = aliceGA.UI.LootWindow, 0, 0
+lootWindow.frame = nil
+lootWindow:Refresh({ open = true, order = {}, slots = {} })
+same(lootWindow.frame, nil, "background loot capture does not construct or update a hidden UI")
 lootWindow.frame = { Show = function() lootShows = lootShows + 1 end }
 lootWindow.EnsureFrame = function(self) return self.frame end
 lootWindow.Refresh = function() lootRefreshes = lootRefreshes + 1 end

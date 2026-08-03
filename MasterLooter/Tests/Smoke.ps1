@@ -9,6 +9,7 @@ $tests = @(
     "MasterLooter/Tests/TradeAutomationSmoke.lua",
     "MasterLooter/Tests/TradeHandshakeSmoke.lua",
     "MasterLooter/Tests/SettingsWindowBuildSmoke.lua",
+    "MasterLooter/Tests/TooltipSafetySmoke.lua",
     "MasterLooter/Tests/ParseAll.lua"
 )
 

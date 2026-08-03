@@ -162,7 +162,7 @@ function MasterLooterWindow:EnsureFrame()
         if not MasterLooterWindow.itemLink then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(MasterLooterWindow.itemLink); GameTooltip:Show()
     end)
-    item:SetScript("OnLeave", function() GameTooltip:Hide(); MasterLooterWindow:RefreshInputState(false) end)
+    item:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self); MasterLooterWindow:RefreshInputState(false) end)
     self.itemDrop = item; self.itemIcon = itemIcon; self.itemText = itemText
 
     local itemHelp = Theme:CreateLabel(frame, "Ziehen · Rechtsklick entfernt", 10, Theme.colors.muted)

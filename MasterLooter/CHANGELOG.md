@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.3-beta
+
+- Verstecktes Loot-Verwaltungsfenster wird bei der Beuteaufnahme weder erzeugt noch visuell aktualisiert
+- MasterLooter blendet einen Item-Tooltip nur noch aus, wenn das betreffende eigene UI-Element aktuell dessen Besitzer ist
+- Inventar- und Loot-Tooltips von Blizzard beziehungsweise Ascension bleiben beim Entfernen eines Lootslots unangetastet
+- Neuer Regressionstest simuliert den Besitzerwechsel des globalen Tooltips während der Beuteaufnahme
+
 ## 0.12.2-beta
 
 - Sämtliche Hooks auf Blizzard-/Ascension-Inventar- und Lootbuttons vollständig entfernt

@@ -162,7 +162,14 @@ function Theme:SetItemTooltip(widget, itemLink)
         GameTooltip:SetHyperlink(self.itemLink)
         GameTooltip:Show()
     end)
-    widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    widget:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
+end
+
+function Theme:HideOwnedTooltip(owner)
+    if not GameTooltip or type(GameTooltip.Hide) ~= "function" then return false end
+    if type(GameTooltip.GetOwner) == "function" and GameTooltip:GetOwner() ~= owner then return false end
+    GameTooltip:Hide()
+    return true
 end
 
 function Theme:BeginItemDrag(itemLink)

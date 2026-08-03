@@ -54,7 +54,7 @@ function LootWindow:EnsureFrame()
             if self.record and self.record.link then Theme:BeginItemDrag(self.record.link) end
         end)
         row:SetScript("OnEnter", function(self) if self.record and self.record.link then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(self.record.link); GameTooltip:Show() end end)
-        row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row
     end
 
@@ -86,8 +86,8 @@ function LootWindow:Select(record)
 end
 
 function LootWindow:Refresh(snapshot)
-    if not self:EnsureFrame() then return end
     self.snapshot = snapshot or self.snapshot or (GA.Loot and GA.Loot:GetSnapshot()) or { order = {}, slots = {} }
+    if not self.frame or (type(self.frame.IsShown) == "function" and not self.frame:IsShown()) then return end
     local order = self.snapshot.order or {}; self.totalPages = math.max(1, math.ceil(#order / self.pageSize)); self.page = math.min(self.page, self.totalPages)
     local offset = (self.page - 1) * self.pageSize
     for index, row in ipairs(self.rows) do
@@ -160,7 +160,6 @@ function LootWindow:Show() local frame = self:EnsureFrame(); if frame then self:
 function LootWindow:Hide() if self.frame then self.frame:Hide() end end
 function LootWindow:Toggle() local frame = self:EnsureFrame(); if frame:IsShown() then self:Hide() else self:Show() end end
 function LootWindow:OnInitialize()
-    self:EnsureFrame()
     -- Capture every loot source in the background. Opening this management
     -- window is an explicit user action via /ml loot or the launcher menu.
     GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)

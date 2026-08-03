@@ -96,7 +96,7 @@ function HistoryWindow:EnsureFrame()
             GameTooltip:SetHyperlink(self.itemLink)
             GameTooltip:Show()
         end)
-        row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row
     end
 

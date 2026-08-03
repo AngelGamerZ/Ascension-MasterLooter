@@ -36,7 +36,7 @@ function TradeWindow:EnsureFrame()
         row.deadline = Theme:CreateLabel(row, "", 12); row.deadline:SetPoint("LEFT", row, "LEFT", 494, 0); row.deadline:SetWidth(95)
         row:SetScript("OnClick", function() TradeWindow:Select(row.group) end)
         row:SetScript("OnEnter", function(self) local entry = self.group and self.group.entries[1]; if entry and entry.itemLink then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(entry.itemLink); GameTooltip:Show() end end)
-        row:SetScript("OnLeave", function() GameTooltip:Hide() end); self.rows[index] = row
+        row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end); self.rows[index] = row
     end
     local previous = Theme:CreateButton(frame, "<", 35, 23); previous:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 74); self.previous = previous
     previous:SetScript("OnClick", function() TradeWindow.page = math.max(1, TradeWindow.page - 1); TradeWindow:Refresh() end)
