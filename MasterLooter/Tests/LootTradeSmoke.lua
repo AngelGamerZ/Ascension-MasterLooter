@@ -167,6 +167,27 @@ LootFrameItem_OnClick(lootButton, "RightButton")
 same(ordinaryLootClicks, 0, "handled CTRL-right-click does not loot the item")
 control = false; LootFrameItem_OnClick(lootButton, "LeftButton")
 same(ordinaryLootClicks, 1, "ordinary loot clicks keep the original handler")
+
+-- The real 3.3.5a XML path may expose the clicked mouse button only through
+-- global arg1 and dispatch a script already stored on LootButton1.
+local directOriginalClicks, registeredClicks = 0, nil
+local directLootButton = { id = 1, scripts = {} }
+function directLootButton:GetID() return self.id end
+function directLootButton:GetScript(name) return self.scripts[name] end
+function directLootButton:SetScript(name, handler) self.scripts[name] = handler end
+function directLootButton:RegisterForClicks(...) registeredClicks = { ... } end
+directLootButton.scripts.OnClick = function() directOriginalClicks = directOriginalClicks + 1 end
+LootButton1, LOOTFRAME_NUMBUTTONS = directLootButton, 1
+GA.UI.LootWindow.nativeButtonHooks = {}
+control, arg1, selected, used = true, "RightButton", nil, false
+expect(GA.UI.LootWindow:InstallLootButtonHooks(), "concrete 3.3.5a loot button wrapper installs")
+directLootButton:GetScript("OnClick")(directLootButton, nil)
+same(directOriginalClicks, 0, "arg1 CTRL-right-click does not invoke native looting")
+expect(selected and selected.slot == 1 and used, "arg1 CTRL-right-click opens the loot-master workflow while solo")
+same(registeredClicks[2], "RightButtonUp", "native loot button explicitly accepts right-button clicks")
+control, arg1 = false, "LeftButton"
+directLootButton:GetScript("OnClick")(directLootButton, nil)
+same(directOriginalClicks, 1, "ordinary direct loot-button clicks retain native behavior")
 GA.UI.LootWindow:RemoveLootClickHooks()
 GA.UI.LootWindow:OnEnable()
 expect(GA.UI.LootWindow.nativeClickHooks.LootFrameItem_OnClick ~= nil,

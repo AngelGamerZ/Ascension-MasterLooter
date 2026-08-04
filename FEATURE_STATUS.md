@@ -1,4 +1,4 @@
-# Funktionsstatus 0.13.3-beta
+# Funktionsstatus 0.13.4-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
@@ -7,7 +7,7 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 - Synchronisierte MS-/OS-/Passen-Sitzungen mit öffentlichem `/roll`; Spieler ohne Addon können vollständig teilnehmen.
 - Vom Lootmaster vorgegebener OS-Bereich, wiederholte Zeitansagen und Sekundencountdown ab zehn Sekunden.
 - Kompakte Teilnehmer- und Lootmaster-Fenster mit Warteschlangenwechsel ohne gesperrte Folgesitzung.
-- Itemübernahme per Drag-and-drop sowie STRG+Rechtsklick aus nativen Blizzard-/Ascension-Taschen und Lootslots.
+- Itemübernahme per Drag-and-drop sowie STRG+Rechtsklick aus nativen Blizzard-/Ascension-Taschen und Lootslots; das Öffnen aus dem Lootfenster funktioniert auch solo und ohne aktiven Masterloot.
 - Persistente Lootslot-Warteschlange und Wiederherstellung eigener aktiver Rolls nach einem Reload.
 
 ## Vergabe und Handel

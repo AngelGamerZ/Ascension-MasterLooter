@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.4-beta
+
+- STRG+Rechtsklick im nativen 3.3.5a-Lootfenster direkt auf `LootButton1` bis `LootButton4` abgefangen
+- Modifizierte Klicks werden nun vor dem originalen FrameXML-Handler verarbeitet, der sie sonst als Itemlink-Klick behandelt
+- Alte 3.3.5a-Übergabe der Maustaste über das globale `arg1` wird zusätzlich unterstützt
+- Konkrete Lootbuttons werden bei jedem Öffnen des Lootfensters erneut erkannt und eingebunden
+- Solo-Nutzung und normaler Lootmodus benötigen für das Öffnen des Lootmaster-Fensters keinen aktiven Masterloot
+- Originale `OnEnter`-, `OnLeave`- und Tooltip-Handler der Lootbuttons bleiben unverändert
+
 ## 0.13.3-beta
 
 - STRG+Rechtsklick für native 3.3.5a-/Ascension-Taschenitems und Lootslots wiederhergestellt

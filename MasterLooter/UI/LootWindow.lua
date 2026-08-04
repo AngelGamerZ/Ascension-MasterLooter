@@ -125,6 +125,7 @@ function LootWindow:GetButtonSlot(button)
 end
 
 function LootWindow:OpenLootItem(button, mouseButton)
+    mouseButton = mouseButton or _G.arg1
     if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
     local slot = self:GetButtonSlot(button)
     local record = slot and GA.Loot:GetSlot(slot)
@@ -142,6 +143,31 @@ function LootWindow:OpenLootItem(button, mouseButton)
     self:UseSelected()
     if GA.Trace then GA:Trace("INPUT", "CTRL_RIGHTCLICK_LOOT", slot, record.link) end
     return true
+end
+
+function LootWindow:InstallLootButtonHooks()
+    self.nativeButtonHooks = self.nativeButtonHooks or {}
+    local installed = false
+    local count = math.max(tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4, 4)
+    local function install(button)
+        if not button or self.nativeButtonHooks[button] or type(button.GetScript) ~= "function" or
+            type(button.SetScript) ~= "function" then return end
+        local original = button:GetScript("OnClick")
+        if type(original) ~= "function" then return end
+        local wrapper = function(self, mouseButton, ...)
+            if LootWindow:OpenLootItem(self, mouseButton or _G.arg1) then return true end
+            return original(self, mouseButton, ...)
+        end
+        self.nativeButtonHooks[button] = { original = original, wrapper = wrapper }
+        button:SetScript("OnClick", wrapper)
+        if type(button.RegisterForClicks) == "function" then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+        installed = true
+    end
+    for index = 1, count do
+        install(_G["LootButton" .. index])
+        install(_G["LootFrameItem" .. index])
+    end
+    return installed
 end
 
 function LootWindow:InstallLootClickHooks()
@@ -170,6 +196,11 @@ function LootWindow:RemoveLootClickHooks()
         if _G[functionName] == hook.wrapper then _G[functionName] = hook.original end
     end
     self.nativeClickHooks = {}
+    for button, hook in pairs(self.nativeButtonHooks or {}) do
+        if type(button.GetScript) == "function" and type(button.SetScript) == "function" and
+            button:GetScript("OnClick") == hook.wrapper then button:SetScript("OnClick", hook.original) end
+    end
+    self.nativeButtonHooks = {}
 end
 
 function LootWindow:AddToPackMule()
@@ -185,16 +216,22 @@ function LootWindow:Toggle() local frame = self:EnsureFrame(); if frame:IsShown(
 function LootWindow:OnInitialize()
     -- Capture every loot source in the background. Opening this management
     -- window is an explicit user action via /ml loot or the launcher menu.
-    GA.Events:On("GA_LOOT_OPENED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
+    GA.Events:On("GA_LOOT_OPENED", function(...)
+        LootWindow:InstallLootClickHooks()
+        LootWindow:InstallLootButtonHooks()
+        LootWindow:Refresh(snapshotFromEvent(...))
+    end, self)
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)
     self:InstallLootClickHooks()
+    self:InstallLootButtonHooks()
     return true
 end
 
 function LootWindow:OnEnable()
     self:InstallLootClickHooks()
+    self:InstallLootButtonHooks()
 end
 
 LootWindow.OnDisable = LootWindow.RemoveLootClickHooks
