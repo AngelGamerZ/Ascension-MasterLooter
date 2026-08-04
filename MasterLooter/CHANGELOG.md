@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.1-beta
+
+- MasterLooter-Panel unter `Interface → AddOns` beim Erstellen ausdrücklich verborgen
+- Die MasterLooter-Seite wird nur noch angezeigt, wenn in der Addon-Liste tatsächlich `MasterLooter` ausgewählt wurde
+- Andere Addon-Kategorien und deren Einstellungen werden nicht mehr vom MasterLooter-Panel überdeckt
+- Regressionstest simuliert Registrierung, initiale Unsichtbarkeit und anschließende Auswahl durch das Interface-Menü
+
 ## 0.15.0-beta
 
 - Erweiterter GDKP-Bereich mit bis zu vier parallelen Auktionen, Bieterzuständen, Anti-Snipe, Taschenwarteschlange und Reload-Wiederherstellung

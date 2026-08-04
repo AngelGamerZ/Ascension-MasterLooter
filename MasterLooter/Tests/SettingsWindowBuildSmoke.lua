@@ -40,7 +40,8 @@ UIParent = widget("UIParent")
 UISpecialFrames = {}
 unpack = unpack or table.unpack
 InterfaceOptionsFramePanelContainer = widget("InterfaceOptionsFramePanelContainer")
-function InterfaceOptions_AddCategory() end
+local registeredOptionsPanel
+function InterfaceOptions_AddCategory(panel) registeredOptionsPanel = panel end
 function CreateFrame(_, name) return widget(name) end
 
 local profile = { minimap = {}, defaultRollDuration = 30 }
@@ -83,6 +84,11 @@ expect(settings:Refresh(), "a complete settings frame refreshes safely")
 same(#settings:GetSections(), 5, "all navigation sections survive complete construction")
 expect(settings:Show("LOOT"), "settings can open a requested section")
 same(settings.activeSection, "LOOT", "requested section becomes active")
+settings:RegisterInterfaceOptions()
+expect(registeredOptionsPanel == settings.optionsPanel, "MasterLooter registers its own Interface/AddOns category")
+expect(not settings.optionsPanel:IsShown(), "Interface/AddOns panel stays hidden until MasterLooter is selected")
+settings.optionsPanel:Show()
+expect(settings.optionsPanel:IsShown(), "Interface controller can show the selected MasterLooter category")
 local childFrame = widget("ChildTool"); childFrame:Hide()
 GA.UI.RulesWindow = { frame = childFrame, Show = function(self) self.frame:Show(); return true end }
 settings.frame:Show()

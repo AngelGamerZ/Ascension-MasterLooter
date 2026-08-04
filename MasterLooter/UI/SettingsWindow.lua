@@ -306,6 +306,11 @@ function SettingsWindow:RegisterInterfaceOptions()
     local parent = InterfaceOptionsFramePanelContainer or UIParent
     local panel = CreateFrame("Frame", "MasterLooterInterfaceOptionsPanel", parent); panel.name = "MasterLooter"
     panel:SetAllPoints(parent)
+    -- Frames are visible immediately after CreateFrame on 3.3.5a.  The
+    -- Interface Options controller only shows a registered panel when its
+    -- category is selected, so keep ours hidden until that happens.  Without
+    -- this explicit hide it covers every other Interface/AddOns page.
+    panel:Hide()
     local title = Theme:CreateLabel(panel, "MasterLooter " .. tostring(GA.VERSION or ""), 14, Theme.colors.gold); title:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -16)
     local text = Theme:CreateLabel(panel, "Die vollständigen Einstellungen und Werkzeuge öffnen sich in einer eigenen, übersichtlichen Oberfläche.", 12); text:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -14)
     local open = Theme:CreateButton(panel, "MasterLooter öffnen", 190, 26); open:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -18)
