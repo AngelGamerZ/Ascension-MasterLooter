@@ -283,6 +283,7 @@ function RollSession:Start(itemLink, options)
         osRollMaximum = osRollMaximum,
         choices = sanitizeChoices(options.choices), note = tostring(options.note or ""),
         participants = {}, participantSequences = {}, rollAssignments = {}, sequence = 0,
+        lootQueueID = options.lootQueueID, lootSlot = tonumber(options.lootSlot), lootGeneration = tonumber(options.lootGeneration),
     }
     self.sessions[state.id] = state
     self.activeID = state.id
@@ -444,7 +445,8 @@ function RollSession:Award(sessionID, winner, choice, roll, note)
     local existing = state.participants[baseName(winner)]
     local result = { sessionID = state.id, winner = winner, choice = choice or (existing and existing.choice) or "",
         roll = tonumber(roll) or (existing and existing.roll) or 0, note = tostring(note or ""),
-        itemLink = state.itemLink, awardedAt = TimeSafe() }
+        itemLink = state.itemLink, awardedAt = TimeSafe(), lootQueueID = state.lootQueueID,
+        lootSlot = state.lootSlot, lootGeneration = state.lootGeneration }
     local previousSequence, previousAuthoritySequence = state.sequence, state.authoritySequence
     local seq = nextSequence(state)
     state.authoritySequence = seq

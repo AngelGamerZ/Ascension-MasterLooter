@@ -1,5 +1,5 @@
--- Award delivery assistant for 3.3.5a. Verified winners are contacted,
--- traded, filled and accepted automatically with strict content checks.
+-- Award delivery assistant for 3.3.5a. Verified winners are contacted and
+-- their items are filled automatically; final acceptance is always manual.
 local _, GA = ...
 
 local Trade = {
@@ -110,7 +110,7 @@ end
 function Trade:TryAutoInitiate(entry)
     if type(entry) ~= "table" or entry.status ~= "READY" or type(entry.winner) ~= "string" or
         sameName(entry.winner, UnitName and UnitName("player")) then return false, "not eligible" end
-    if self.state == "OPEN" or self.state == "OPENING" or self.state == "WAITING_COMPLETE" or self.state == "AUTO_ACCEPTED" then
+    if self.state == "OPEN" or self.state == "OPENING" or self.state == "WAITING_COMPLETE" then
         return false, "trade already active"
     end
     local rangeStatus, unit = self:GetWinnerRangeStatus(entry.winner)
@@ -398,9 +398,8 @@ function Trade:AutoPlacePreparedGroup(winner)
             emitState("AUTO_ITEM_PLACED")
         end
         if Trade.autoPlaced >= 6 then
-            Trade.deliveryStatus = "AUTO_PLACEMENT_COMPLETE"
+            Trade.deliveryStatus = "WAITING_MANUAL_ACCEPT"
             emitState("AUTO_PLACEMENT_COMPLETE")
-            Trade:TryAutoAccept("AUTO_PLACEMENT_COMPLETE")
             return
         end
         local hasRemaining = false
@@ -410,67 +409,11 @@ function Trade:AutoPlacePreparedGroup(winner)
         if hasRemaining and type(GA.Compat.After) == "function" then
             GA.Compat:After(0.15, step)
         else
-            Trade.deliveryStatus = Trade.autoPlaced > 0 and "AUTO_PLACEMENT_COMPLETE" or "NOTHING_PLACED"
+            Trade.deliveryStatus = Trade.autoPlaced > 0 and "WAITING_MANUAL_ACCEPT" or "NOTHING_PLACED"
             emitState("AUTO_PLACEMENT_COMPLETE")
-            if Trade.autoPlaced > 0 then Trade:TryAutoAccept("AUTO_PLACEMENT_COMPLETE") end
         end
     end
     step()
-    return true
-end
-
-function Trade:ValidateAutoAccept()
-    if self.state ~= "OPEN" or not self.partnerVerified or not self.partner then return false, "partner not verified" end
-    local expected, expectedCount = {}, 0
-    for _, entry in ipairs(self.pending or {}) do
-        if self.placedThisTrade and self.placedThisTrade[entry.id] and sameName(entry.winner, self.partner) then
-            if entry.status ~= "PLACED" then return false, "placed item not verified" end
-            local itemID, quantity = tonumber(entry.itemID), math.max(1, tonumber(entry.quantity) or 1)
-            if not itemID then return false, "placed item has no id" end
-            expected[itemID], expectedCount = (expected[itemID] or 0) + quantity, expectedCount + quantity
-        end
-    end
-    if expectedCount == 0 then return false, "no verified winner items" end
-    local offered, offeredCount = {}, 0
-    for _, item in ipairs(self:ScanOfferedItems()) do
-        local itemID, quantity = tonumber(item.itemID), math.max(1, tonumber(item.quantity) or 1)
-        if not itemID or not expected[itemID] then return false, "unexpected player item" end
-        offered[itemID], offeredCount = (offered[itemID] or 0) + quantity, offeredCount + quantity
-    end
-    if offeredCount ~= expectedCount then return false, "offered quantity mismatch" end
-    for itemID, quantity in pairs(expected) do if offered[itemID] ~= quantity then return false, "offered item mismatch" end end
-    if type(GetPlayerTradeMoney) == "function" and (tonumber(GetPlayerTradeMoney()) or 0) > 0 then return false, "player money offered" end
-    if type(GetTargetTradeMoney) == "function" and (tonumber(GetTargetTradeMoney()) or 0) > 0 then return false, "target money offered" end
-    if type(GetTradeTargetItemLink) == "function" then
-        for slot = 1, 6 do if GetTradeTargetItemLink(slot) then return false, "target item offered" end end
-    end
-    local signatureParts = { string.lower(baseName(self.partner) or self.partner) }
-    for itemID, quantity in pairs(expected) do signatureParts[#signatureParts + 1] = tostring(itemID) .. ":" .. tostring(quantity) end
-    table.sort(signatureParts)
-    return true, table.concat(signatureParts, ",")
-end
-
-function Trade:TryAutoAccept(reason)
-    local valid, signatureOrError = self:ValidateAutoAccept()
-    if not valid then
-        self.deliveryStatus = "AUTO_ACCEPT_BLOCKED:" .. tostring(signatureOrError)
-        if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT_BLOCKED", self.partner, signatureOrError, reason) end
-        emitState("AUTO_ACCEPT_BLOCKED")
-        return false, signatureOrError
-    end
-    if self.autoAcceptSignature == signatureOrError then return false, "already attempted" end
-    if type(AcceptTrade) ~= "function" then return false, "AcceptTrade unavailable" end
-    self.autoAcceptSignature = signatureOrError
-    local ok, err = pcall(AcceptTrade)
-    if not ok then
-        self.deliveryStatus = "AUTO_ACCEPT_FAILED"
-        if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT_FAILED", self.partner, err) end
-        emitState("AUTO_ACCEPT_FAILED")
-        return false, tostring(err)
-    end
-    self.autoAccepted, self.deliveryStatus = true, "AUTO_ACCEPTED"
-    if GA.Trace then GA:Trace("TRADE", "AUTO_ACCEPT", self.partner, signatureOrError, reason) end
-    emitState("AUTO_ACCEPTED")
     return true
 end
 
@@ -526,7 +469,7 @@ end
 function Trade:OnTradeShow()
     self.partner, self.partnerVerified = tradePartner()
     self.state, self.bothAccepted = "OPEN", false
-    self.placedThisTrade, self.autoPlaced, self.autoAccepted, self.autoAcceptSignature = {}, 0, false, nil
+    self.placedThisTrade, self.autoPlaced = {}, 0
     self:ScanOfferedItems()
     local pending = self.partner and self:GetPending(self.partner) or {}
     if self.partnerVerified and self.partner and #pending > 0 then
@@ -553,20 +496,14 @@ function Trade:ResetTransientPlacements()
             GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
         end
     end
-    self.placedThisTrade, self.autoPlaced, self.autoAccepted, self.autoAcceptSignature = nil, 0, false, nil
+    self.placedThisTrade, self.autoPlaced = nil, 0
 end
 
 function Trade:OnTradeAcceptUpdate(playerAccepted, targetAccepted)
     self:ScanOfferedItems()
-    if playerAccepted ~= 1 and self.autoAccepted then
-        -- WoW clears our acceptance whenever either side changes the offer.
-        -- Permit one fresh validation/acceptance for the changed trade state.
-        self.autoAccepted, self.autoAcceptSignature = false, nil
-    end
     self.bothAccepted = playerAccepted == 1 and targetAccepted == 1
-    self.state = self.bothAccepted and "WAITING_COMPLETE" or (playerAccepted == 1 and "AUTO_ACCEPTED" or "OPEN")
+    self.state = self.bothAccepted and "WAITING_COMPLETE" or "OPEN"
     emitState("ACCEPT_UPDATE")
-    if playerAccepted ~= 1 and self.state == "OPEN" then self:TryAutoAccept("ACCEPT_UPDATE") end
 end
 
 function Trade:Complete(reason)

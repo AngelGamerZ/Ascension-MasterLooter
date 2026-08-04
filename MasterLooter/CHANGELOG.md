@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.3-beta
+
+- STRG+Rechtsklick für native 3.3.5a-/Ascension-Taschenitems und Lootslots wiederhergestellt
+- Klickintegration verändert keine `OnEnter`-, `OnLeave`- oder Tooltip-Handler und verwendet keine globale Mausabfrage
+- Behandelte STRG+Rechtsklicks benutzen beziehungsweise looten das ausgewählte Item nicht versehentlich
+- Die exakte Lootslot-, Warteschlangen- und Lootgeneration-ID wird bis zum Rollergebnis erhalten
+- Bei identischen Items im selben Lootfenster vergibt `GiveMasterLoot` dadurch den tatsächlich ausgewählten Slot
+- Gewinner werden weiterhin automatisch angehandelt und vorgemerkte Items automatisch eingelegt
+- Automatische Handelsannahme vollständig entfernt; der Lootmaster muss jeden Handel selbst annehmen und abschließen
+- Build-Sperre ergänzt, die jede Verwendung von `AcceptTrade` im ausgelieferten Addon ablehnt
+
 ## 0.13.2-beta
 
 - Sämtliche beobachtenden Hooks auf Methoden des globalen `GameTooltip` entfernt

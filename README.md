@@ -2,7 +2,7 @@
 
 MasterLooter is a loot and raid-management addon developed specifically for Project Ascension on the WoW 3.3.5a client.
 
-It provides synchronized master-looter roll windows, public rolls for players without the addon, persistent loot and auction queues, verified direct assignment, automatic opening, filling and acceptance of verified winner trades, a MS/OS item ledger, SoftRes/HardRes, priorities, +1, boosted rolls, GDKP, raid management, diagnostics, bag inspection, history, and safe import/export tools.
+It provides synchronized master-looter roll windows, public rolls for players without the addon, persistent loot and auction queues, verified direct assignment, automatic opening and filling of winner trades with manual acceptance, a MS/OS item ledger, SoftRes/HardRes, priorities, +1, boosted rolls, GDKP, raid management, diagnostics, bag inspection, history, and safe import/export tools.
 
 The loot master assigns +1 manually at award time. The default value is zero; awards and completed trades never increase +1 automatically.
 
@@ -15,7 +15,7 @@ Copy both folders into `Interface/AddOns/`:
 
 Players need the main addon for synchronized roll windows, but group members without it can participate through the announced public `/roll` commands. The loot master determines the OS range for each session; connected clients receive it automatically. The ItemData addon is optional.
 
-Open the standalone overview and settings with `/ml` or `/masterlooter`. Use `/ml master`, `/lootmaster`, or `/mlmaster` to open the loot-master workflow directly. Items are selected through the MasterLooter interface or drag-and-drop; the addon does not hook global bag clicks.
+Open the standalone overview and settings with `/ml` or `/masterlooter`. Use `/ml master`, `/lootmaster`, or `/mlmaster` to open the loot-master workflow directly. Items can be selected through the MasterLooter interface, drag-and-drop, or CTRL-right-click on native bag and loot slots.
 
 ## Images
 

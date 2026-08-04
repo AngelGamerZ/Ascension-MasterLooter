@@ -46,9 +46,13 @@ try {
     if ($LASTEXITCODE -eq 0) { throw "API incompatible with 3.3.5a found:`n$forbidden" }
     if ($LASTEXITCODE -gt 1) { throw "API scan could not run" }
 
-    $forbiddenGlobalInput = rg -n --glob '*.lua' --glob '!**/Tests/**' 'GetMouseFocus|IsMouseButtonDown|HandleGlobalModifiedClick|PollGlobalInput|HandleBlizzardLootClick' MasterLooter
+    $forbiddenGlobalInput = rg -n --glob '*.lua' --glob '!**/Tests/**' 'GetMouseFocus|IsMouseButtonDown|HandleGlobalModifiedClick|PollGlobalInput' MasterLooter
     if ($LASTEXITCODE -eq 0) { throw "Forbidden global inventory/loot input integration found:`n$forbiddenGlobalInput" }
     if ($LASTEXITCODE -gt 1) { throw "Global input integration scan could not run" }
+
+    $forbiddenTradeAccept = rg -n --glob '*.lua' --glob '!**/Tests/**' 'AcceptTrade' MasterLooter
+    if ($LASTEXITCODE -eq 0) { throw "Trade acceptance must remain manual:`n$forbiddenTradeAccept" }
+    if ($LASTEXITCODE -gt 1) { throw "Trade acceptance scan could not run" }
 
     $globalTooltipUI = rg -n --glob '*.lua' --glob '!Theme.lua' 'GameTooltip[\.:]' MasterLooter/UI
     if ($LASTEXITCODE -eq 0) { throw "MasterLooter UI must use its private tooltip instead of GameTooltip:`n$globalTooltipUI" }

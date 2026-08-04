@@ -14,11 +14,22 @@ local function sameName(left, right)
 end
 local function itemID(link) return GA.Compat:GetItemID(link) end
 
+local function findResultQueue(result)
+    if not GA.Loot then return nil end
+    -- An explicit queue identity belongs to one exact loot slot. If that
+    -- record vanished, retain result.lootSlot instead of matching a duplicate
+    -- item link from another slot.
+    if result.lootQueueID then return GA.Loot:GetQueued(result.lootQueueID) end
+    return GA.Loot:FindQueued(result.itemLink, { QUEUED = true, ROLLING = true })
+end
+
 function Award:FindLootSlot(link, preferredSlot)
     if type(GetNumLootItems) ~= "function" or type(GetLootSlotLink) ~= "function" then return nil end
     preferredSlot = tonumber(preferredSlot)
-    if preferredSlot and GetLootSlotLink(preferredSlot) and itemID(GetLootSlotLink(preferredSlot)) == itemID(link) then
-        return preferredSlot, GetLootSlotLink(preferredSlot)
+    if preferredSlot then
+        local preferredLink = GetLootSlotLink(preferredSlot)
+        if preferredLink and itemID(preferredLink) == itemID(link) then return preferredSlot, preferredLink end
+        return nil
     end
     local wanted, fallback = itemID(link), nil
     for slot = 1, (GetNumLootItems() or 0) do
@@ -96,7 +107,7 @@ end
 
 function Award:Defer(result, session, reason)
     self.nextID = self.nextID + 1
-    local queued = GA.Loot and GA.Loot:FindQueued(result.itemLink, { QUEUED = true, ROLLING = true })
+    local queued = findResultQueue(result)
     if queued then
         result.lootQueueID, result.lootSlot = queued.id, queued.slot
         GA.Loot:SetQueueStatus(queued.id, "AWAITING_AWARD", reason)
@@ -171,7 +182,7 @@ function Award:OnResult(result, session)
     local profile, owner = GA.DB:GetProfile(), session and session.owner
     local localName = type(UnitName) == "function" and UnitName("player") or nil
     local isOwner = not owner or sameName(owner, localName)
-    local queued = GA.Loot and GA.Loot:FindQueued(result.itemLink, { QUEUED = true, ROLLING = true })
+    local queued = findResultQueue(result)
     if queued then result.lootQueueID, result.lootSlot = queued.id, queued.slot end
     if not isOwner then
         message = "REMOTE"

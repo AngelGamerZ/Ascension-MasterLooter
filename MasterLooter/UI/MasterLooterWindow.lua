@@ -401,6 +401,7 @@ end
 
 function MasterLooterWindow:SetItem(itemLink)
     self.itemLink = type(itemLink) == "string" and itemLink or nil
+    if not self.itemLink then self.sourceLoot, self.sourceInventory = nil, nil end
     if not self.itemText or not self.itemIcon then return end
     if not self.itemLink then
         self.itemText:SetText("Item hier ablegen")
@@ -428,10 +429,54 @@ function MasterLooterWindow:AcceptCursorItem()
         end
     end
     if not itemLink then return false end
+    self.sourceLoot = nil
+    self.sourceInventory = { itemLink = itemLink }
     self:SetItem(itemLink)
     if type(ClearCursor) == "function" then ClearCursor() end
     self:SetStatus("Item übernommen. Dauer prüfen und Roll starten.", Theme.colors.green)
     return true
+end
+
+function MasterLooterWindow:GetContainerItem(button)
+    if not button then return nil end
+    local parent = type(button.GetParent) == "function" and button:GetParent() or nil
+    local bag = tonumber(button.bagID) or tonumber(button.bag) or
+        (parent and type(parent.GetID) == "function" and tonumber(parent:GetID()))
+    local slot = tonumber(button.slot) or (type(button.GetID) == "function" and tonumber(button:GetID()))
+    if bag == nil or not slot or not GA.Compat or type(GA.Compat.GetContainerItemLink) ~= "function" then return nil end
+    return GA.Compat:GetContainerItemLink(bag, slot), bag, slot
+end
+
+function MasterLooterWindow:OpenContainerItem(button, mouseButton)
+    if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
+    local itemLink, bag, slot = self:GetContainerItem(button)
+    if type(itemLink) ~= "string" or not string.find(itemLink, "|Hitem:", 1, true) then return false end
+    self.sourceLoot = nil
+    self.sourceInventory = { bag = bag, slot = slot, itemLink = itemLink }
+    self:Show(); self:SetItem(itemLink)
+    self:SetStatus("Item aus der Tasche übernommen. Dauer prüfen und Roll starten.", Theme.colors.green)
+    if GA.Trace then GA:Trace("INPUT", "CTRL_RIGHTCLICK_BAG", bag, slot, itemLink) end
+    return true
+end
+
+function MasterLooterWindow:InstallContainerClickHook()
+    if self.containerClickWrapper then return true end
+    local original = _G.ContainerFrameItemButton_OnModifiedClick
+    if type(original) ~= "function" then return false end
+    local wrapper = function(button, mouseButton, ...)
+        if MasterLooterWindow:OpenContainerItem(button, mouseButton) then return true end
+        return original(button, mouseButton, ...)
+    end
+    self.originalContainerClick, self.containerClickWrapper = original, wrapper
+    _G.ContainerFrameItemButton_OnModifiedClick = wrapper
+    return true
+end
+
+function MasterLooterWindow:RemoveContainerClickHook()
+    if self.containerClickWrapper and _G.ContainerFrameItemButton_OnModifiedClick == self.containerClickWrapper then
+        _G.ContainerFrameItemButton_OnModifiedClick = self.originalContainerClick
+    end
+    self.originalContainerClick, self.containerClickWrapper = nil, nil
 end
 
 function MasterLooterWindow:SetStatus(text, color)
@@ -460,6 +505,9 @@ function MasterLooterWindow:StartSession()
         note = note,
         choices = { "MS", "OS", "PASS" },
         osRollMaximum = osMaximum,
+        lootQueueID = self.sourceLoot and self.sourceLoot.queueID,
+        lootSlot = self.sourceLoot and self.sourceLoot.slot,
+        lootGeneration = self.sourceLoot and self.sourceLoot.generation,
     })
     if not ok or result == nil or result == false then
         self.sessionStarting = false
@@ -470,6 +518,9 @@ function MasterLooterWindow:StartSession()
     if profile then
         profile.defaultRollDuration = duration
         profile.osRollMaximum = osMaximum
+    end
+    if self.sourceLoot and self.sourceLoot.queueID and GA.Loot and type(GA.Loot.SetQueueStatus) == "function" then
+        GA.Loot:SetQueueStatus(self.sourceLoot.queueID, "ROLLING", result.id)
     end
     self:UpdateSession(result)
     self:SetSessionActive(true)
@@ -618,6 +669,7 @@ function MasterLooterWindow:AwardSelected()
         self:RefreshRows()
         self:SetStatus("Vergeben an " .. self.selected.player .. ".", Theme.colors.green)
         if GA.Trace then GA:Trace("ACTION", "ITEM_AWARDED_BY_CLICK", self.selected.player, self.selected.choice, self.sessionId) end
+        self.sourceLoot, self.sourceInventory = nil, nil
         self.awardButton:Disable()
     else
         local reason = ok and errorMessage or result
@@ -644,6 +696,7 @@ function MasterLooterWindow:Initialize()
     if self.initialized then return end
     self.initialized = true
     self:EnsureFrame()
+    self:InstallContainerClickHook()
     registerMessage("GA_ROLL_SESSION_STARTED", function(...)
         MasterLooterWindow:UpdateSession(eventArgument("GA_ROLL_SESSION_STARTED", ...))
     end)
@@ -670,7 +723,11 @@ end
 
 
 MasterLooterWindow.OnInitialize = MasterLooterWindow.Initialize
-MasterLooterWindow.OnEnable = MasterLooterWindow.Initialize
+function MasterLooterWindow:OnEnable()
+    self:Initialize()
+    self:InstallContainerClickHook()
+end
+MasterLooterWindow.OnDisable = MasterLooterWindow.RemoveContainerClickHook
 if type(GA.RegisterModule) == "function" then
     GA:RegisterModule("MasterLooterWindow", MasterLooterWindow)
 end

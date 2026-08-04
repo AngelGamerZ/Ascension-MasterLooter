@@ -114,6 +114,64 @@ function LootWindow:UseSelected()
     self:SetStatus("Item in das Lootmaster-Fenster übernommen.", Theme.colors.green)
 end
 
+function LootWindow:GetButtonSlot(button)
+    if not button then return nil end
+    local explicit = tonumber(button.slot) or tonumber(button.lootSlot) or tonumber(button.slotIndex)
+    local slot = explicit or (type(button.GetID) == "function" and tonumber(button:GetID()))
+    if slot and not explicit and _G.LootFrame and tonumber(_G.LootFrame.page) and _G.LootFrame.page > 1 then
+        slot = slot + ((_G.LootFrame.page - 1) * (tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4))
+    end
+    return slot
+end
+
+function LootWindow:OpenLootItem(button, mouseButton)
+    if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
+    local slot = self:GetButtonSlot(button)
+    local record = slot and GA.Loot:GetSlot(slot)
+    if slot and (not record or record.cleared or not record.link) and type(GetLootSlotLink) == "function" then
+        local link = GetLootSlotLink(slot)
+        if link then
+            local quantity = 1
+            if type(GetLootSlotInfo) == "function" then local _, _, count = GetLootSlotInfo(slot); quantity = tonumber(count) or 1 end
+            record = { slot = slot, link = link, itemID = GA.Compat:GetItemID(link), quantity = quantity,
+                capturedAt = type(GetTime) == "function" and GetTime() or 0 }
+        end
+    end
+    if not record or record.cleared or not record.link then return false end
+    self:Select(record)
+    self:UseSelected()
+    if GA.Trace then GA:Trace("INPUT", "CTRL_RIGHTCLICK_LOOT", slot, record.link) end
+    return true
+end
+
+function LootWindow:InstallLootClickHooks()
+    self.nativeClickHooks = self.nativeClickHooks or {}
+    local installed = false
+    local function createWrapper(original)
+        return function(button, mouseButton, ...)
+            if LootWindow:OpenLootItem(button, mouseButton) then return true end
+            return original(button, mouseButton, ...)
+        end
+    end
+    for _, functionName in ipairs({ "LootFrameItem_OnClick", "LootButton_OnClick" }) do
+        local original = _G[functionName]
+        if type(original) == "function" and not self.nativeClickHooks[functionName] then
+            local wrapper = createWrapper(original)
+            self.nativeClickHooks[functionName] = { original = original, wrapper = wrapper }
+            _G[functionName] = wrapper
+            installed = true
+        end
+    end
+    return installed
+end
+
+function LootWindow:RemoveLootClickHooks()
+    for functionName, hook in pairs(self.nativeClickHooks or {}) do
+        if _G[functionName] == hook.wrapper then _G[functionName] = hook.original end
+    end
+    self.nativeClickHooks = {}
+end
+
 function LootWindow:AddToPackMule()
     if not self.selected or not self.selected.link then return end
     local target = self.targetEdit:GetText(); if target and target ~= "" then GA.PackMule:SetTarget(target) end
@@ -131,7 +189,14 @@ function LootWindow:OnInitialize()
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)
+    self:InstallLootClickHooks()
     return true
 end
+
+function LootWindow:OnEnable()
+    self:InstallLootClickHooks()
+end
+
+LootWindow.OnDisable = LootWindow.RemoveLootClickHooks
 
 GA:RegisterModule("LootWindow", LootWindow)

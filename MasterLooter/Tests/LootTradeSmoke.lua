@@ -145,8 +145,31 @@ local afterReload = assert(GA.Loot:QueueSlot(1, "AFTER_RELOAD"))
 expect(afterReload.id ~= oldQueueID, "reused loot slot receives a fresh queue identity")
 
 loadModule("UI/LootWindow.lua")
-same(GA.UI.LootWindow.GetButtonSlot, nil, "loot buttons are never resolved by MasterLooter")
-same(GA.UI.LootWindow.IsLootButton, nil, "loot buttons are never inspected by MasterLooter")
-same(GA.UI.LootWindow.HandleBlizzardLootClick, nil, "CTRL-right-click loot integration is absent")
+local control, selected, used, ordinaryLootClicks = true, nil, false, 0
+IsControlKeyDown = function() return control end
+local tooltipEnter, tooltipLeave = function() end, function() end
+local lootButton = { id = 1, scripts = { OnEnter = tooltipEnter, OnLeave = tooltipLeave } }
+function lootButton:GetID() return self.id end
+function lootButton:GetScript(name) return self.scripts[name] end
+GA.UI.LootWindow.Select = function(_, value) selected = value end
+GA.UI.LootWindow.UseSelected = function() used = true end
+expect(GA.UI.LootWindow:OpenLootItem(lootButton, "RightButton"), "CTRL-right-click captures the live loot slot")
+expect(selected and selected.slot == 1 and used, "captured loot opens the loot-master workflow")
+same(lootButton:GetScript("OnEnter"), tooltipEnter, "loot tooltip OnEnter remains untouched")
+same(lootButton:GetScript("OnLeave"), tooltipLeave, "loot tooltip OnLeave remains untouched")
+same(GA.UI.LootWindow:GetButtonSlot({ lootSlot = 7 }), 7, "Ascension lootSlot metadata resolves directly")
+LootFrame = { page = 2 }; LOOTFRAME_NUMBUTTONS = 4
+same(GA.UI.LootWindow:GetButtonSlot(lootButton), 5, "paged loot buttons resolve their absolute slot")
+LootFrame = { page = 1 }
+LootFrameItem_OnClick = function() ordinaryLootClicks = ordinaryLootClicks + 1 end
+expect(GA.UI.LootWindow:InstallLootClickHooks(), "native loot click wrapper installs")
+LootFrameItem_OnClick(lootButton, "RightButton")
+same(ordinaryLootClicks, 0, "handled CTRL-right-click does not loot the item")
+control = false; LootFrameItem_OnClick(lootButton, "LeftButton")
+same(ordinaryLootClicks, 1, "ordinary loot clicks keep the original handler")
+GA.UI.LootWindow:RemoveLootClickHooks()
+GA.UI.LootWindow:OnEnable()
+expect(GA.UI.LootWindow.nativeClickHooks.LootFrameItem_OnClick ~= nil,
+    "loot click wrapper is restored after re-enabling the module")
 
 print("PASS: " .. assertions .. " loot/trade smoke assertions")

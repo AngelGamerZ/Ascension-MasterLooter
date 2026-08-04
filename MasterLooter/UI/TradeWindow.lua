@@ -47,7 +47,7 @@ function TradeWindow:EnsureFrame()
     local take = Theme:CreateButton(frame, "An mich nehmen", 125, 27); take:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 15); take:SetScript("OnClick", function() TradeWindow:TakePendingAward() end); take:Disable(); self.take = take
     local prepare = Theme:CreateButton(frame, "Taschen prüfen", 115, 27); prepare:SetPoint("LEFT", take, "RIGHT", 8, 0); prepare:SetScript("OnClick", function() TradeWindow:PrepareSelected() end); prepare:Disable(); self.prepare = prepare
     local place = Theme:CreateButton(frame, "Items einlegen", 115, 27); place:SetPoint("LEFT", prepare, "RIGHT", 8, 0); place:SetScript("OnClick", function() TradeWindow:PlaceSelected() end); place:Disable(); self.place = place
-    local note = Theme:CreateLabel(frame, "Gewinner in Reichweite werden automatisch angehandelt; geprüfte Übergaben werden automatisch bestätigt.", 12, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 22); note:SetWidth(280); note:SetJustifyH("RIGHT")
+    local note = Theme:CreateLabel(frame, "Gewinner werden automatisch angehandelt und Items eingelegt; den Handel immer selbst annehmen.", 12, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 22); note:SetWidth(280); note:SetJustifyH("RIGHT")
     return frame
 end
 
@@ -83,7 +83,7 @@ end
 function TradeWindow:PlaceSelected()
     if not self.selected then return end
     local placed, err = GA.Trade:PlacePreparedGroup(self.selected.winner)
-    self.selectedLabel:SetText(placed and (tostring(#placed) .. " Items eingelegt; sichere Übergabe wird automatisch bestätigt.") or tostring(err)); self:Refresh()
+    self.selectedLabel:SetText(placed and (tostring(#placed) .. " Items eingelegt; Handel bitte manuell annehmen.") or tostring(err)); self:Refresh()
 end
 
 function TradeWindow:OpenSelectedTrade()

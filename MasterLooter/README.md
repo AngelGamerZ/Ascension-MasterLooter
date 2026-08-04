@@ -26,7 +26,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - Mehrclient-Kommunikation mit Fragmentierung, Deduplizierung und Sitzungs-Synchronisierung
 - Lootmaster- und Teilnehmerfenster
 - Loot-Erfassung, Award-Historie, PackMule- und Trade-Warteschlangen
-- Automatisches Anhandeln in Reichweite, geprüftes Einlegen und Annehmen ausstehender Gewinner-Items sowie Whisper-Erinnerung außerhalb der Reichweite
+- Automatisches Anhandeln in Reichweite und Einlegen ausstehender Gewinner-Items, manuelle Handelsannahme sowie Whisper-Erinnerung außerhalb der Reichweite
 - SoftRes, HardRes, Prioritäten, +1 und Boosted Rolls
 - GDKP-Sitzungen, Verkäufe, Pot und Cuts
 - Synchronisierte GDKP-Auktionen mit Mindestschritt, Anti-Snipe und Replay-Schutz
@@ -67,4 +67,4 @@ Der Harness lädt zwei voneinander isolierte Addon-Clients und prüft Kommunikat
 
 ## Grenzen des Clients
 
-Das Addon versucht Handelsöffnung und -annahme automatisch; verweigert der konkrete Ascension-Client eine geschützte Aktion, wird dies in `/ml debug` protokolliert und die manuelle Schaltfläche bleibt verfügbar. Masterloot kann nur vergeben werden, wenn das Lootfenster offen ist und der Gewinner ein gültiger Kandidat des Slots ist. Ein statischer Vollbestand aller Ascension-Custom-Items wird nicht behauptet: Das Begleitaddon lernt echte Links aus Taschen und Chat und kann eine vorhandene Ascension-AtlasLoot-Datenquelle zur Laufzeit übernehmen.
+Das Addon versucht die Handelsöffnung automatisch und legt vorgemerkte Items beim verifizierten Gewinner ein. Es nimmt den Handel niemals selbst an; Annahme und Abschluss bleiben beim Lootmaster. Masterloot kann nur vergeben werden, wenn das Lootfenster offen ist und der Gewinner ein gültiger Kandidat des Slots ist. Ein statischer Vollbestand aller Ascension-Custom-Items wird nicht behauptet: Das Begleitaddon lernt echte Links aus Taschen und Chat und kann eine vorhandene Ascension-AtlasLoot-Datenquelle zur Laufzeit übernehmen.

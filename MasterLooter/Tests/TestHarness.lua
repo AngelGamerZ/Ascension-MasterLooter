@@ -445,18 +445,39 @@ expect(#bobGA.BagInspector:GetPlayers() >= 2, "bag inspector exposes the current
 fire(alice, "TRADE_CLOSED")
 same(aliceGA.Trade.state, "COMPLETED", "TRADE_CLOSED does not downgrade a confirmed completion")
 
--- Masterloot remains GIVING until the exact loot slot is confirmed.
-alice.env.GetNumLootItems = function() return 1 end
-alice.env.GetLootSlotLink = function(slot) return slot == 1 and itemLink or nil end
-alice.env.GetMasterLootCandidate = function(slot, index) return slot == 1 and index == 1 and "Bob" or nil end
+-- Masterloot remains GIVING until the exact source loot slot is confirmed.
+-- Two identical links prove that the CTRL-click slot identity, not a link-only
+-- fallback, survives through the roll result.
+alice.env.GetNumLootItems = function() return 2 end
+alice.env.GetLootSlotLink = function(slot) return (slot == 1 or slot == 2) and itemLink or nil end
+alice.env.GetMasterLootCandidate = function(slot, index) return (slot == 1 or slot == 2) and index == 1 and "Bob" or nil end
 alice.env.GiveMasterLoot = function(slot, candidate) alice.lastGive = { slot = slot, candidate = candidate } end
-local confirmedSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
+local confirmedSession = aliceGA.RollSession:Start(itemLink, { duration = 30, lootSlot = 2, lootQueueID = "exact-loot-queue", lootGeneration = 17 })
+same(confirmedSession.lootSlot, 2, "roll session preserves the selected loot slot")
 local confirmedResult = aliceGA.RollSession:Award(confirmedSession.id, "Bob", "MS", 91)
 expect(confirmedResult ~= nil, "confirmed masterloot award starts")
-same(alice.lastGive.slot, 1, "masterloot uses the bound loot slot")
+same(confirmedResult.lootQueueID, "exact-loot-queue", "roll result preserves the selected loot queue identity")
+same(alice.lastGive.slot, 2, "masterloot uses the exact CTRL-clicked loot slot")
 same(aliceGA.DB.data.history.awards[#aliceGA.DB.data.history.awards].delivery, "GIVING", "masterloot starts in GIVING state")
-fire(alice, "LOOT_SLOT_CLEARED", 1)
+fire(alice, "LOOT_SLOT_CLEARED", 2)
 same(aliceGA.DB.data.history.awards[#aliceGA.DB.data.history.awards].delivery, "GIVEN", "slot clear confirms masterloot delivery")
+
+alice.env.GetLootSlotLink = function(slot) return slot == 1 and itemLink or nil end
+same(aliceGA.Award:FindLootSlot(itemLink, 2), nil,
+    "a vanished explicit loot slot never falls back to an identical item in another slot")
+alice.env.GetLootSlotLink = function(slot) return (slot == 1 or slot == 2) and itemLink or nil end
+
+local savedLoot = aliceGA.Loot
+local duplicateFallbacks = 0
+aliceGA.Loot = {
+    GetQueued = function() return nil end,
+    FindQueued = function() duplicateFallbacks = duplicateFallbacks + 1; return { id = "wrong-duplicate", slot = 1 } end,
+}
+local exactDeferred = aliceGA.Award:Defer({ itemLink = itemLink, winner = "Bob", lootQueueID = "vanished-exact", lootSlot = 2 }, nil, "test")
+same(exactDeferred.lootSlot, 2, "missing explicit queue keeps its original exact slot")
+same(duplicateFallbacks, 0, "missing explicit queue never falls back to an identical item link")
+table.remove(aliceGA.Award.deferred)
+aliceGA.Loot = savedLoot
 
 local timeoutSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
 expect(aliceGA.RollSession:Award(timeoutSession.id, "Bob", "MS", 92) ~= nil, "unconfirmed masterloot award starts")
@@ -627,6 +648,29 @@ local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participant
 same(#displayedRolls, 1, "a public roll with no optional effectiveRoll reaches the loot-master table")
 same(displayedRolls[1].effectiveRoll, 13, "a missing optional effectiveRoll falls back to the public result")
 
+-- The loot-master UI forwards the exact native loot source into the session.
+local sourceWindow = aliceGA.UI.MasterLooterWindow
+local savedInputIssue, savedInputRefresh, savedSessionUpdate, savedSessionActive, savedWindowStatus =
+    sourceWindow.GetInputIssue, sourceWindow.RefreshInputState, sourceWindow.UpdateSession, sourceWindow.SetSessionActive, sourceWindow.SetStatus
+local savedDurationEdit, savedNoteEdit, savedItemLink, savedSourceLoot, savedWindowRollSession =
+    sourceWindow.durationEdit, sourceWindow.noteEdit, sourceWindow.itemLink, sourceWindow.sourceLoot, aliceGA.RollSession
+local forwardedOptions
+sourceWindow.GetInputIssue = function() return nil, nil, 30, 99 end
+sourceWindow.RefreshInputState, sourceWindow.UpdateSession, sourceWindow.SetSessionActive, sourceWindow.SetStatus = function() end, function() end, function() end, function() end
+sourceWindow.durationEdit = { SetText = function() end }
+sourceWindow.noteEdit = { GetText = function() return "source test" end }
+sourceWindow.itemLink = itemLink
+sourceWindow.sourceLoot = { queueID = "ui-source", slot = 2, generation = 44, itemLink = itemLink }
+aliceGA.RollSession = { Start = function(_, _, options) forwardedOptions = options; return { id = "ui-source-session", status = "ACTIVE" } end }
+sourceWindow:StartSession()
+same(forwardedOptions.lootQueueID, "ui-source", "loot-master UI forwards the exact queue identity")
+same(forwardedOptions.lootSlot, 2, "loot-master UI forwards the exact native loot slot")
+same(forwardedOptions.lootGeneration, 44, "loot-master UI forwards the loot generation")
+sourceWindow.GetInputIssue, sourceWindow.RefreshInputState, sourceWindow.UpdateSession, sourceWindow.SetSessionActive, sourceWindow.SetStatus =
+    savedInputIssue, savedInputRefresh, savedSessionUpdate, savedSessionActive, savedWindowStatus
+sourceWindow.durationEdit, sourceWindow.noteEdit, sourceWindow.itemLink, sourceWindow.sourceLoot, aliceGA.RollSession =
+    savedDurationEdit, savedNoteEdit, savedItemLink, savedSourceLoot, savedWindowRollSession
+
 -- Item award and +1 are explicit, separate row actions.
 local masterWindow = aliceGA.UI.MasterLooterWindow
 local savedRollSession, savedRefreshRows, savedSetStatus = aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus
@@ -649,10 +693,47 @@ same(masterWindow.manualPlusOneEdit, nil, "obsolete numeric +1 edit field is abs
 aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus = savedRollSession, savedRefreshRows, savedSetStatus
 masterWindow.rolls, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedRolls, savedSelected, savedSessionID, savedAwardButton
 
-same(aliceGA.UI.MasterLooterWindow.GetContainerItem, nil, "inventory buttons are never resolved by MasterLooter")
-same(aliceGA.UI.MasterLooterWindow.OpenContainerItem, nil, "CTRL-right-click inventory integration is absent")
-same(aliceGA.UI.MasterLooterWindow.HandleGlobalModifiedClick, nil, "focused UI elements are never inspected")
-same(aliceGA.UI.MasterLooterWindow.PollGlobalInput, nil, "global mouse input is never polled")
+-- CTRL-right-click uses the exact bag button but never touches its tooltip
+-- handlers or polls the globally focused frame.
+local inventoryParent = { GetID = function() return 0 end }
+local tooltipEnter, tooltipLeave = function() end, function() end
+local inventoryButton = {
+    GetParent = function() return inventoryParent end, GetID = function() return 1 end,
+    scripts = { OnEnter = tooltipEnter, OnLeave = tooltipLeave },
+    GetScript = function(self, name) return self.scripts[name] end,
+}
+local inventoryLink, inventoryBag, inventorySlot = masterWindow:GetContainerItem(inventoryButton)
+same(inventoryLink, itemLink, "legacy container button resolves its full item link")
+same(inventoryBag, 0, "legacy container button resolves the backpack ID")
+same(inventorySlot, 1, "legacy container button resolves its slot ID")
+local originalMasterShow, originalMasterSetItem, originalMasterSetStatus = masterWindow.Show, masterWindow.SetItem, masterWindow.SetStatus
+local inventoryShows, inventorySelected = 0, nil
+alice.env.IsControlKeyDown = function() return true end
+masterWindow.Show = function() inventoryShows = inventoryShows + 1 end
+masterWindow.SetItem = function(_, link) inventorySelected = link end
+masterWindow.SetStatus = function() end
+expect(masterWindow:OpenContainerItem(inventoryButton, "RightButton"), "CTRL-right-click selects a bag item")
+same(inventoryShows, 1, "bag action opens the loot-master window")
+same(inventorySelected, itemLink, "bag action preserves the full item link")
+same(inventoryButton:GetScript("OnEnter"), tooltipEnter, "bag tooltip OnEnter remains untouched")
+same(inventoryButton:GetScript("OnLeave"), tooltipLeave, "bag tooltip OnLeave remains untouched")
+local ordinaryClicks = 0
+alice.env.ContainerFrameItemButton_OnModifiedClick = function() ordinaryClicks = ordinaryClicks + 1 end
+masterWindow:RemoveContainerClickHook(); expect(masterWindow:InstallContainerClickHook(), "container click wrapper installs")
+alice.env.ContainerFrameItemButton_OnModifiedClick(inventoryButton, "RightButton")
+same(ordinaryClicks, 0, "handled CTRL-right-click does not use or move the item")
+alice.env.IsControlKeyDown = function() return false end
+alice.env.ContainerFrameItemButton_OnModifiedClick(inventoryButton, "LeftButton")
+same(ordinaryClicks, 1, "ordinary modified bag clicks keep the original handler")
+masterWindow:RemoveContainerClickHook()
+local savedInitialized = masterWindow.initialized
+masterWindow.initialized = true
+masterWindow:OnEnable()
+expect(masterWindow.containerClickWrapper ~= nil, "container click wrapper is restored after re-enabling the module")
+masterWindow.initialized = savedInitialized
+masterWindow.Show, masterWindow.SetItem, masterWindow.SetStatus = originalMasterShow, originalMasterSetItem, originalMasterSetStatus
+same(masterWindow.HandleGlobalModifiedClick, nil, "focused UI elements are never inspected")
+same(masterWindow.PollGlobalInput, nil, "global mouse input is never polled")
 
 -- Loot capture stays in the background until the user explicitly opens its window.
 loadFile(alice, "UI/LootWindow.lua")

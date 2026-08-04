@@ -20,7 +20,7 @@ local GA = {
 function GA:RegisterModule(name, module) self.modules[name] = module end
 function GA.Compat:GetItemID(link) return tonumber(type(link) == "string" and string.match(link, "item:(%d+)") or link) end
 
-local bags, pickups, clicks, whispers, cursor, tradeSlots, targetTradeSlots = {}, {}, {}, {}, nil, {}, {}
+local bags, pickups, clicks, whispers, cursor, tradeSlots = {}, {}, {}, {}, nil, {}
 function GA.Compat:FindItems(item)
     local wanted, result = self:GetItemID(item), {}
     for _, location in ipairs(bags) do if self:GetItemID(location.link) == wanted then result[#result + 1] = location end end
@@ -44,12 +44,9 @@ GetTradePlayerItemLink = function(slot) return tradeSlots[slot] end
 GetTradePlayerItemInfo = function() return nil, nil, 1 end
 ClearCursor = function() cursor = nil end
 TradeFrameRecipientNameText = { GetText = function() return target end }
-local accepts, initiations, playerMoney, targetMoney = 0, {}, 0, 0
+local accepts, initiations = 0, {}
 AcceptTrade = function() accepts = accepts + 1 end
 InitiateTrade = function(unit) initiations[#initiations + 1] = unit end
-GetPlayerTradeMoney = function() return playerMoney end
-GetTargetTradeMoney = function() return targetMoney end
-GetTradeTargetItemLink = function(slot) return targetTradeSlots[slot] end
 
 assert(loadfile(root .. "/Modules/Trade.lua"))("MasterLooter", GA)
 GA.Trade:OnInitialize()
@@ -85,8 +82,8 @@ now = now + GA.Trade.REMINDER_COOLDOWN + 1
 GA.Trade:RefreshWinnerStatuses(true)
 same(#whispers, 2, "unchanged out-of-range state does not loop")
 
--- The matching trade partner causes automatic placement and safe acceptance.
-inRange, target, tradeSlots, targetTradeSlots = true, "Alice", {}, {}
+-- The matching trade partner causes automatic placement, but acceptance stays manual.
+inRange, target, tradeSlots = true, "Alice", {}
 bags = {
     { bag = 0, slot = 1, link = first.itemLink, count = 1, locked = false },
     { bag = 0, slot = 2, link = "|Hitem:1002:0:0:0|h[Test 1002]|h", count = 1, locked = false },
@@ -96,16 +93,10 @@ same(GA.Trade.partner, "Alice", "trade partner is detected")
 same(GA.Trade.autoPlaced, 2, "all matching available awards are automatically placed")
 same(#pickups, 2, "automatic placement touches each reserved bag slot once")
 same(#clicks, 2, "automatic placement uses two distinct trade slots")
-same(accepts, 1, "exact verified winner trade is accepted automatically")
-same(GA.Trade.deliveryStatus, "AUTO_ACCEPTED", "automatic acceptance is visible in state")
+same(accepts, 0, "automatic placement never accepts the trade")
+same(GA.Trade.deliveryStatus, "WAITING_MANUAL_ACCEPT", "manual acceptance is explicit in state")
 GA.Trade:OnTradeAcceptUpdate(1, 0)
-same(accepts, 1, "repeated accept events do not accept the same offer twice")
-targetTradeSlots[1] = "|Hitem:9000:0:0:0|h[Late counter item]|h"
-GA.Trade:OnTradeAcceptUpdate(0, 0)
-same(accepts, 1, "a changed unsafe offer cancels unattended re-acceptance")
-targetTradeSlots[1] = nil
-GA.Trade:OnTradeAcceptUpdate(0, 0)
-same(accepts, 2, "safe offer is revalidated and reaccepted after the change is removed")
+same(accepts, 0, "trade accept events never call AcceptTrade")
 
 -- Re-entry in the same open trade cannot duplicate already placed stacks.
 local before = #pickups
@@ -153,14 +144,13 @@ same(accepts, acceptBaseline, "wrong partner is never accepted")
 GA.Trade.pending, GA.Trade.preparedGroup, GA.Trade.placedThisTrade = {}, nil, {}
 local occupiedAward = award("o1", 4001, "Alice")
 bags = { { bag = 3, slot = 1, link = occupiedAward.itemLink, count = 1, locked = false } }
-target, pickups, clicks, targetTradeSlots = "Alice", {}, {}, {}
+target, pickups, clicks = "Alice", {}, {}
 tradeSlots = { [1] = "|Hitem:9999:0:0:0|h[Existing offer]|h" }
 acceptBaseline = accepts
 GA.Trade:OnTradeShow()
 same(clicks[1], 2, "occupied first trade slot is skipped")
 same(tradeSlots[1], "|Hitem:9999:0:0:0|h[Existing offer]|h", "existing trade item is not overwritten")
-same(accepts, acceptBaseline, "unexpected own trade item blocks automatic acceptance")
-expect(string.find(GA.Trade.deliveryStatus or "", "AUTO_ACCEPT_BLOCKED", 1, true), "blocked acceptance is exposed in state")
+same(accepts, acceptBaseline, "existing own trade items still never trigger acceptance")
 
 -- Target-only identity is insufficient for automatic item movement.
 TradeFrameRecipientNameText = nil
@@ -176,41 +166,13 @@ same(accepts, acceptBaseline, "unverified partner is never accepted")
 
 -- Cancellation restores transient placement state for a safe retry.
 TradeFrameRecipientNameText = { GetText = function() return target end }
-tradeSlots, targetTradeSlots = {}, {}
+tradeSlots = {}
 GA.Trade:OnTradeShow()
 same(unverified.status, "PLACED", "verified trade marks the item placed")
-same(accepts, acceptBaseline + 1, "verified retry is accepted automatically")
+same(accepts, acceptBaseline, "verified retry still waits for manual acceptance")
 GA.Trade:OnTradeCancelled()
 same(unverified.status, "PENDING", "cancelled trade restores pending status")
 same(GA.Trade.placedThisTrade, nil, "cancelled trade clears transient placement tracking")
-
--- Anything contributed by the winner blocks unattended acceptance. The same
--- applies to money on either side, even when the reserved item itself matches.
-local function guardedTrade(item, configure)
-    GA.Trade.pending, GA.Trade.preparedGroup, GA.Trade.placedThisTrade = {}, nil, {}
-    GA.Trade.state, GA.Trade.partner, GA.Trade.autoInitiations = "IDLE", nil, {}
-    tradeSlots, targetTradeSlots, playerMoney, targetMoney = {}, {}, 0, 0
-    local entry = award("guard-" .. item, item, "Alice")
-    bags = { { bag = 4, slot = item % 10 + 1, link = entry.itemLink, count = 1, locked = false } }
-    if configure then configure() end
-    target, inRange = "Alice", true
-    local beforeAccept = accepts
-    GA.Trade:OnTradeShow()
-    return beforeAccept
-end
-
-acceptBaseline = guardedTrade(5101, function() targetTradeSlots[1] = "|Hitem:9001:0:0:0|h[Counter item]|h" end)
-same(accepts, acceptBaseline, "winner-provided item blocks automatic acceptance")
-expect(string.find(GA.Trade.deliveryStatus or "", "target item offered", 1, true), "counter-item block reason is retained")
-
-acceptBaseline = guardedTrade(5102, function() playerMoney = 1 end)
-same(accepts, acceptBaseline, "own offered money blocks automatic acceptance")
-expect(string.find(GA.Trade.deliveryStatus or "", "player money offered", 1, true), "own-money block reason is retained")
-
-acceptBaseline = guardedTrade(5103, function() targetMoney = 1 end)
-same(accepts, acceptBaseline, "winner money blocks automatic acceptance")
-expect(string.find(GA.Trade.deliveryStatus or "", "target money offered", 1, true), "winner-money block reason is retained")
-playerMoney, targetMoney, targetTradeSlots = 0, 0, {}
 
 -- A notification is delayed until the awarded item is actually visible in the
 -- lootmaster's bags, preventing phantom delivery messages after a failed take.
