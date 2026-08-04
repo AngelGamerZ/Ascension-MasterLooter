@@ -31,9 +31,11 @@ local pickups = {}
 function GA.Compat:PickupContainerItem(bag, slot) pickups[#pickups + 1] = { bag, slot } end
 
 local now, lootLink = 1700000000, "|cff0070dd|Hitem:12345:0:0:0|h[Testbeute]|h|r"
+local whispers = {}
 time = function() return now end
 GetTime = function() return now end
 UnitName = function(unit) if unit == "player" then return "Lootmaster" elseif unit == "target" then return "Alice" end end
+SendChatMessage = function(message, channel, _, recipient) whispers[#whispers + 1] = { message, channel, recipient } end
 GetNumLootItems = function() return lootLink and 1 or 0 end
 GetLootSlotLink = function(slot) return slot == 1 and lootLink or nil end
 GetLootSlotInfo = function(slot) if slot == 1 and lootLink then return "icon", "Testbeute", 1, 4, false, false end end
@@ -47,7 +49,11 @@ local function loadModule(path) assert(loadfile(root .. "/" .. path))("MasterLoo
 loadModule("Modules/Loot.lua")
 loadModule("Modules/Trade.lua")
 loadModule("Modules/Award.lua")
-GA.Loot:OnInitialize(); GA.Trade:OnInitialize(); GA.Award:OnInitialize()
+loadModule("UI/TradeWindow.lua")
+local tradeWindowShows, tradeWindowRefreshes = 0, 0
+GA.UI.TradeWindow.Show = function() tradeWindowShows = tradeWindowShows + 1 end
+GA.UI.TradeWindow.Refresh = function() tradeWindowRefreshes = tradeWindowRefreshes + 1 end
+GA.Loot:OnInitialize(); GA.Trade:OnInitialize(); GA.Award:OnInitialize(); GA.UI.TradeWindow:OnInitialize()
 
 GA.Loot:OnLootOpened(false)
 local record = GA.Loot:GetSlot(1)
@@ -56,22 +62,28 @@ local queued = assert(GA.Loot:QueueSlot(1, "SMOKE"))
 same(assert(GA.Loot:QueueSlot(1)).id, queued.id, "same loot slot is not queued twice")
 same(#GA.Loot:GetQueue(), 1, "active loot queue contains one entry")
 
--- Winner is unavailable, therefore no fake bag/trade entry may be created.
+-- Winner is unavailable. The explicit award action automatically takes the
+-- exact item for the loot master and informs even an addonless winner, while
+-- the trade entry still waits for server confirmation.
 candidates = { "Lootmaster" }
 local result = { sessionID = "s1", itemLink = lootLink, winner = "Alice", choice = "MS", roll = 88 }
 GA.Award:OnResult(result, { owner = "Lootmaster", itemLink = lootLink })
-same(#GA.Award:GetDeferred(), 1, "out-of-range winner creates recoverable award")
+same(#GA.Award:GetDeferred(true), 1, "out-of-range winner creates recoverable award")
 same(#GA.Trade:GetPending(), 0, "trade is not queued while item remains in loot")
-same(GA.Award:GetDeferred()[1].status, "TAKE_SELF_REQUIRED", "explicit self-take is required")
-
--- The explicit button action gives the item to the loot master; slot clear then
--- advances it to the persisted trade queue.
-local attempt = assert(GA.Award:TakeForTrade(GA.Award:GetDeferred()[1].id))
-same(attempt.mode, "SELF_TRADE", "self-take attempt is distinguished")
+same(GA.Award:GetDeferred(true)[1].status, "TAKING_SELF", "fallback self-take starts automatically")
 same(#gives, 1, "self-take invokes GiveMasterLoot once")
+same(#whispers, 1, "fallback immediately whispers an addonless winner")
+same(whispers[1][2], "WHISPER", "fallback notice is a private message")
+same(whispers[1][3], "Alice", "fallback notice targets the winner")
+expect(string.find(whispers[1][1], "Direktvergabe war nicht möglich", 1, true), "fallback notice explains why trade is needed")
+same(tradeWindowShows, 0, "award fallback never opens the optional trade assistant")
+expect(tradeWindowRefreshes > 0, "award fallback still refreshes an already open trade assistant")
+
+-- Slot clear advances the automatic pickup to the persisted trade queue.
 GA.Award:Confirm(1)
 same(#GA.Trade:GetPending(), 1, "confirmed self-take creates trade entry")
 same(GA.Award:GetDeferred(true)[1].status, "TRADE_PENDING", "deferred award advances after slot clear")
+same(GA.DB.data.history.awards[#GA.DB.data.history.awards].delivery, "PENDING", "confirmed fallback history advances to pending trade")
 
 -- Bag assessment and winner grouping.
 bagItems = { { bag = 0, slot = 3, link = lootLink, count = 1, locked = false } }
@@ -80,6 +92,7 @@ same(#ready, 1, "winner group prepares all available items")
 local groups = GA.Trade:GetGroups()
 same(#groups, 1, "pending trade entries are grouped by winner")
 same(groups[1].winner, "Alice", "group preserves winner")
+same(#whispers, 1, "bag confirmation does not duplicate the early fallback whisper")
 
 -- The manual fallback requires an open matching trade and only invokes
 -- pickup/click from this explicit placement method.

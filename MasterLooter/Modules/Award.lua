@@ -199,7 +199,18 @@ function Award:OnResult(result, session)
             local inOpenLoot = GA.Loot and GA.Loot.open and GA.Loot:FindSlot(result.itemLink)
             if inOpenLoot then
                 message = "ACTION_REQUIRED"
-                self:Defer(result, session, err)
+                local deferred = self:Defer(result, session, err)
+                -- Awarding is already an explicit user action. If the winner
+                -- is not a valid loot candidate (usually range), immediately
+                -- take the exact slot for the loot master and continue through
+                -- the confirmed trade fallback without opening another window.
+                attempt = self:TakeForTrade(deferred.id)
+                if attempt then
+                    message = "TAKING_SELF"
+                    if GA.Trade and type(GA.Trade.NotifyAwardFallback) == "function" then
+                        GA.Trade:NotifyAwardFallback(result)
+                    end
+                end
             elseif sameName(result.winner, localName) and GA.Compat and type(GA.Compat.FindItems) == "function" and
                 #(GA.Compat:FindItems(result.itemLink) or {}) > 0 then
                 -- Inventory items can be rolled after they were looted. The
@@ -214,7 +225,7 @@ function Award:OnResult(result, session)
     end
     local record = self:Record(result, session, message)
     if attempt then attempt.history = record end
-    if message == "ACTION_REQUIRED" then
+    if message == "ACTION_REQUIRED" or message == "TAKING_SELF" then
         local deferred = self.deferred[#self.deferred]
         if deferred then deferred.history = record end
     end

@@ -6,8 +6,9 @@ GA.UI = GA.UI or {}
 
 local Theme = GA.UI.Theme
 local MasterLooterWindow = {
-    page = 1, WIDTH = 540, HEIGHT = 470, VISIBLE_ROWS = 6,
-    LAYOUT_VERSION = 4, OS_EDIT_X = 275, PAGINATION_Y = -170,
+    page = 1, WIDTH = 520, HEIGHT = 450, VISIBLE_ROWS = 6,
+    LAYOUT_VERSION = 5, OS_EDIT_X = 282, PAGINATION_Y = -171,
+    TABLE_TOP = -205, ROW_HEIGHT = 25,
 }
 GA.UI.MasterLooterWindow = MasterLooterWindow
 
@@ -139,8 +140,8 @@ function MasterLooterWindow:EnsureFrame()
     local itemLabel = Theme:CreateLabel(frame, "ITEM", 11, Theme.colors.muted)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -54)
     local item = CreateFrame("Button", nil, frame)
-    item:SetWidth(230); item:SetHeight(36)
-    item:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -45)
+    item:SetWidth(214); item:SetHeight(34)
+    item:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -44)
     item:EnableMouse(true); item:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     Theme:ApplyInset(item)
     local itemIcon = item:CreateTexture(nil, "ARTWORK")
@@ -193,14 +194,14 @@ function MasterLooterWindow:EnsureFrame()
     duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
 
-    local osLabel = Theme:CreateLabel(frame, "OS", 11, Theme.colors.muted)
-    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 245, -142)
+    local osLabel = Theme:CreateLabel(frame, "OS /ROLL", 11, Theme.colors.muted)
+    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 220, -142)
     local osMaximum = Theme:CreateEditBox(frame, 42, 24, true)
     osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", self.OS_EDIT_X, -136)
     if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
     osMaximum:SetText(tostring(math.max(2, math.min(99, math.floor(tonumber(profile and profile.osRollMaximum) or 99)))))
     self.osMaximumEdit = osMaximum
-    local osHint = Theme:CreateLabel(frame, "/roll 2–99 · MS /roll 100", 10, Theme.colors.muted)
+    local osHint = Theme:CreateLabel(frame, "· MS /roll 100", 10, Theme.colors.muted)
     osHint:SetPoint("LEFT", osMaximum, "RIGHT", 8, 0)
     osMaximum:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
     osMaximum:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
@@ -208,17 +209,17 @@ function MasterLooterWindow:EnsureFrame()
 
     local noteLabel = Theme:CreateLabel(frame, "NOTE", 11, Theme.colors.muted)
     noteLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -109)
-    local note = Theme:CreateEditBox(frame, 448, 24)
+    local note = Theme:CreateEditBox(frame, 428, 24)
     note:SetPoint("TOPLEFT", frame, "TOPLEFT", 70, -103)
     if type(note.SetMaxLetters) == "function" then note:SetMaxLetters(160) end
     self.noteEdit = note
 
-    local start = Theme:CreateButton(frame, "Roll starten", 115, 28)
-    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 307, -49)
+    local start = Theme:CreateButton(frame, "Roll starten", 108, 28)
+    start:SetPoint("TOPLEFT", frame, "TOPLEFT", 292, -47)
     start:SetScript("OnClick", function() MasterLooterWindow:StartSession() end)
     self.startButton = start
     if start.GetFontString and start:GetFontString() then start:GetFontString():SetTextColor(unpack(Theme.colors.gold)) end
-    local stop = Theme:CreateButton(frame, "Stoppen", 90, 28)
+    local stop = Theme:CreateButton(frame, "Stoppen", 88, 28)
     stop:SetPoint("LEFT", start, "RIGHT", 8, 0)
     stop:SetScript("OnClick", function() MasterLooterWindow:StopSession() end)
     stop:Disable()
@@ -228,18 +229,20 @@ function MasterLooterWindow:EnsureFrame()
     local status = Theme:CreateLabel(frame, "Lege zuerst ein Item auf die Ablagefläche.", 12, Theme.colors.muted)
     status:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -174)
     status:SetPoint("RIGHT", frame, "RIGHT", -120, 0)
+    status:SetHeight(27)
     status:SetJustifyH("LEFT")
+    status:SetJustifyV("TOP")
     self.status = status
 
     local tableFrame = CreateFrame("Frame", nil, frame)
-    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -194)
-    tableFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 61)
+    tableFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, self.TABLE_TOP)
+    tableFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, 57)
     Theme:ApplyInset(tableFrame)
     self.tableFrame = tableFrame
 
     local headers = {
-        { text = "Spieler", x = 12 }, { text = "Wahl", x = 192 }, { text = "Wurf", x = 249 },
-        { text = "Items G/MS/OS · Striche", x = 300 },
+        { text = "Spieler", x = 12 }, { text = "Wahl", x = 188 }, { text = "Wurf", x = 241 },
+        { text = "Bilanz G/MS/OS", x = 288 }, { text = "+1", x = 438 },
     }
     for _, header in ipairs(headers) do
         local label = Theme:CreateLabel(tableFrame, header.text, 12, Theme.colors.gold)
@@ -269,28 +272,40 @@ function MasterLooterWindow:EnsureFrame()
     self.rows = {}
     for index = 1, ROWS do
         local row = CreateFrame("Button", nil, tableFrame)
-        row:SetHeight(29)
-        row:SetPoint("TOPLEFT", tableFrame, "TOPLEFT", 8, -29 - ((index - 1) * 29))
-        row:SetPoint("TOPRIGHT", tableFrame, "TOPRIGHT", -8, -29 - ((index - 1) * 29))
+        row:SetHeight(self.ROW_HEIGHT)
+        row:SetPoint("TOPLEFT", tableFrame, "TOPLEFT", 8, -28 - ((index - 1) * self.ROW_HEIGHT))
+        row:SetPoint("TOPRIGHT", tableFrame, "TOPRIGHT", -8, -28 - ((index - 1) * self.ROW_HEIGHT))
+        row:RegisterForClicks("LeftButtonUp")
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-        row.player = Theme:CreateLabel(row, "", 12)
+        row.player = Theme:CreateLabel(row, "", 11)
         row.player:SetPoint("LEFT", row, "LEFT", 5, 0)
-        row.choice = Theme:CreateLabel(row, "", 12)
-        row.choice:SetPoint("LEFT", row, "LEFT", 185, 0)
-        row.roll = Theme:CreateLabel(row, "", 12)
-        row.roll:SetPoint("LEFT", row, "LEFT", 242, 0)
+        row.player:SetWidth(166)
+        row.choice = Theme:CreateLabel(row, "", 11)
+        row.choice:SetPoint("LEFT", row, "LEFT", 181, 0)
+        row.choice:SetWidth(46)
+        row.roll = Theme:CreateLabel(row, "", 11)
+        row.roll:SetPoint("LEFT", row, "LEFT", 234, 0)
+        row.roll:SetWidth(50)
         row.items = Theme:CreateLabel(row, "", 11, Theme.colors.muted)
-        row.items:SetPoint("LEFT", row, "LEFT", 293, 0)
-        row.items:SetWidth(145)
+        row.items:SetPoint("LEFT", row, "LEFT", 281, 0)
+        row.items:SetWidth(137)
         row.items:SetJustifyH("LEFT")
-        row.plusOne = Theme:CreateButton(row, "+1", 38, 22)
+        row.plusOne = Theme:CreateButton(row, "+1", 36, 21)
         row.plusOne:SetPoint("RIGHT", row, "RIGHT", -2, 0)
         row.plusOne:SetScript("OnClick", function() MasterLooterWindow:AddPlusOne(row.absoluteIndex) end)
+        row.plusOne:SetScript("OnEnter", function(self)
+            Theme:ShowTextTooltip(self, { "+1 manuell buchen", "Verändert nicht den ausgewählten Gewinner." }, "ANCHOR_RIGHT")
+        end)
+        row.plusOne:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         row:SetScript("OnClick", function() MasterLooterWindow:SelectRow(row.absoluteIndex) end)
+        row:SetScript("OnEnter", function(self)
+            Theme:ShowTextTooltip(self, { "Gewinner auswählen", "Klicken, um diesen Spieler für die Vergabe zu markieren." }, "ANCHOR_LEFT")
+        end)
+        row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
         self.rows[index] = row
     end
 
-    local winnerLabel = Theme:CreateLabel(frame, "Gewinner: –", 12)
+    local winnerLabel = Theme:CreateLabel(frame, "Gewinner: – bitte Spieler anklicken", 12)
     winnerLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 23, 24)
     winnerLabel:SetWidth(355)
     self.winnerLabel = winnerLabel
@@ -546,8 +561,11 @@ end
 function MasterLooterWindow:UpdateSession(session)
     if type(session) ~= "table" then return end
     self:EnsureFrame()
+    local previousSessionId = self.sessionId
+    local nextSessionId = field(session, "id", "sessionId", "rollId")
+    local selectedPlayer = previousSessionId == nextSessionId and self.selected and self.selected.player or nil
     self.session = session
-    self.sessionId = field(session, "id", "sessionId", "rollId")
+    self.sessionId = nextSessionId
     if self.osMaximumEdit and session.osRollMaximum then
         self.osMaximumEdit:SetText(tostring(session.osRollMaximum))
     end
@@ -558,13 +576,7 @@ function MasterLooterWindow:UpdateSession(session)
     self.rollSignature = rollSignature(self.rolls)
     self.selected = nil
     self.page = math.min(self.page or 1, math.max(1, math.ceil(#self.rolls / ROWS)))
-    self:RefreshRows()
-    for index, roll in ipairs(self.rolls) do
-        if roll.choice ~= "PASS" then
-            self:SelectRow(index)
-            break
-        end
-    end
+    self:RestoreSelection(selectedPlayer)
 end
 
 
@@ -579,12 +591,10 @@ function MasterLooterWindow:OnUpdate(elapsed)
     local rolls = getRolls(state)
     local signature = rollSignature(rolls)
     if signature == self.rollSignature then return end
+    local selectedPlayer = self.selected and self.selected.player
     self.session, self.rolls, self.rollSignature = state, rolls, signature
     self.selected = nil
-    self:RefreshRows()
-    for index, roll in ipairs(rolls) do
-        if roll.choice ~= "PASS" then self:SelectRow(index); break end
-    end
+    self:RestoreSelection(selectedPlayer)
 end
 
 function MasterLooterWindow:RefreshRows()
@@ -608,8 +618,13 @@ function MasterLooterWindow:RefreshRows()
             local counts = roll.itemCounts or {}
             row.items:SetText(string.format("%d/%d/%d · +%d", tonumber(counts.total) or 0,
                 tonumber(counts.MS) or 0, tonumber(counts.OS) or 0, tonumber(roll.plusOne) or 0))
-            if self.selected == roll and type(row.LockHighlight) == "function" then row:LockHighlight()
-            elseif type(row.UnlockHighlight) == "function" then row:UnlockHighlight() end
+            if self.selected == roll then
+                if type(row.LockHighlight) == "function" then row:LockHighlight() end
+                row.player:SetTextColor(unpack(Theme.colors.gold))
+            else
+                if type(row.UnlockHighlight) == "function" then row:UnlockHighlight() end
+                row.player:SetTextColor(unpack(Theme.colors.text))
+            end
             row:Show()
         else
             row.absoluteIndex = nil
@@ -621,6 +636,28 @@ function MasterLooterWindow:RefreshRows()
     self.pageLabel:SetText(self.page .. "/" .. self.totalPages)
     if self.page > 1 then self.previousButton:Enable() else self.previousButton:Disable() end
     if self.page < self.totalPages then self.nextButton:Enable() else self.nextButton:Disable() end
+end
+
+function MasterLooterWindow:ClearSelection()
+    self.selected = nil
+    if self.winnerLabel then self.winnerLabel:SetText("Gewinner: – bitte Spieler anklicken") end
+    if self.awardButton and type(self.awardButton.Disable) == "function" then self.awardButton:Disable() end
+end
+
+function MasterLooterWindow:RestoreSelection(player)
+    self:ClearSelection()
+    if player then
+        for index, roll in ipairs(self.rolls or {}) do
+            if roll.player == player and roll.choice ~= "PASS" then
+                self.selected = roll
+                if self.winnerLabel then self.winnerLabel:SetText("Gewinner: " .. roll.player .. " (" .. roll.choice .. ")") end
+                if self.awardButton and type(self.awardButton.Enable) == "function" then self.awardButton:Enable() end
+                self.page = math.floor((index - 1) / ROWS) + 1
+                break
+            end
+        end
+    end
+    self:RefreshRows()
 end
 
 function MasterLooterWindow:SelectRow(index)
@@ -639,7 +676,6 @@ end
 function MasterLooterWindow:AddPlusOne(index)
     local target = index and self.rolls and self.rolls[index]
     if not target or not target.player then return nil, "Spieler ist nicht verfügbar." end
-    self:SelectRow(index)
     if not GA.PlusOnes or type(GA.PlusOnes.Add) ~= "function" then
         self:SetStatus("+1-System ist nicht verfügbar.", Theme.colors.red)
         return nil, "+1-System ist nicht verfügbar."
@@ -667,7 +703,7 @@ function MasterLooterWindow:AwardSelected()
     local ok, result, errorMessage = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
     if ok and result ~= nil and result ~= false then
         self:RefreshRows()
-        self:SetStatus("Vergeben an " .. self.selected.player .. ".", Theme.colors.green)
+        self:SetStatus("Vergabe an " .. self.selected.player .. " gestartet.", Theme.colors.green)
         if GA.Trace then GA:Trace("ACTION", "ITEM_AWARDED_BY_CLICK", self.selected.player, self.selected.choice, self.sessionId) end
         self.sourceLoot, self.sourceInventory = nil, nil
         self.awardButton:Disable()

@@ -105,7 +105,9 @@ function TradeWindow:OnInitialize()
     self:EnsureFrame(); local refresh = function() TradeWindow:Refresh() end
     for _, event in ipairs({ "GA_TRADE_PENDING_ADDED", "GA_TRADE_PENDING_UPDATED", "GA_TRADE_PENDING_REMOVED", "GA_TRADE_STATE_CHANGED", "GA_TRADE_COMPLETED" }) do GA.Events:On(event, refresh, self) end
     GA.Events:On("GA_AWARD_PENDING_CHANGED", function(_, _, _, reason)
-        if reason == "ADDED" then TradeWindow:Show() else TradeWindow:Refresh() end
+        -- Pending delivery work updates an already open assistant, but never
+        -- forces this optional management window into the player's view.
+        TradeWindow:Refresh()
     end, self)
     return true
 end

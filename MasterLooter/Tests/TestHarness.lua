@@ -636,12 +636,14 @@ expect(rollWindow:EndSession("STOPPED", { id = "queue-item-2" }),
 same(rollWindow.lastButtonsEnabled, false, "the current queue item disables its buttons when it actually ends")
 
 loadFile(alice, "UI/MasterLooterWindow.lua")
-same(aliceGA.UI.MasterLooterWindow.WIDTH, 540, "the Gargul-style loot-master window keeps its compact width")
-same(aliceGA.UI.MasterLooterWindow.HEIGHT, 470, "the loot-master controls and roll table fit one compact window")
+same(aliceGA.UI.MasterLooterWindow.WIDTH, 520, "the Gargul-style loot-master window keeps its compact width")
+same(aliceGA.UI.MasterLooterWindow.HEIGHT, 450, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
-same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 4, "the row-action loot-master layout is active")
-same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 275, "the OS input is separated from its label")
-same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -170, "pagination sits above rather than over the table headers")
+same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 5, "the row-action loot-master layout is active")
+same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 282, "the OS /roll input is separated from its full label")
+same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -171, "pagination sits above rather than over the table headers")
+same(aliceGA.UI.MasterLooterWindow.TABLE_TOP, -205, "the status area ends before the roll table begins")
+same(aliceGA.UI.MasterLooterWindow.ROW_HEIGHT, 25, "six compact participant rows fit without clipping")
 local displayedRolls = aliceGA.UI.MasterLooterWindow:BuildRollList({ participants = {
     driomodo = { name = "Driomodo", choice = "MS", roll = 13 },
 } })
@@ -676,19 +678,22 @@ local masterWindow = aliceGA.UI.MasterLooterWindow
 local savedRollSession, savedRefreshRows, savedSetStatus = aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus
 local savedRolls, savedSelected, savedSessionID, savedAwardButton = masterWindow.rolls, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton
 local manualAwards = 0
+local previouslySelected = { player = "Keptwinner", choice = "MS", roll = 77 }
 masterWindow.rolls = { { player = "Manualwinner", choice = "MS", roll = 88, plusOne = 0 } }
-masterWindow.selected = masterWindow.rolls[1]
+masterWindow.selected = previouslySelected
 masterWindow.sessionId = "manual-plus-one-session"
 masterWindow.awardButton = { Disable = function() end }
 masterWindow.RefreshRows = function() end
 masterWindow.SetStatus = function() end
 aliceGA.RollSession = { Award = function() manualAwards = manualAwards + 1; return {} end }
+masterWindow.selected = masterWindow.rolls[1]
 masterWindow:AwardSelected()
 same(manualAwards, 1, "click-selected winner can be awarded")
 same(aliceGA.PlusOnes:Get("Manualwinner"), 0, "item award never creates an automatic +1")
+masterWindow.selected = previouslySelected
 same(masterWindow:AddPlusOne(1), 1, "row +1 button adds exactly one strike")
 same(aliceGA.PlusOnes:Get("Manualwinner"), 1, "row +1 action persists independently of the award")
-same(masterWindow.selected, masterWindow.rolls[1], "row +1 action also selects the visible winner")
+same(masterWindow.selected, previouslySelected, "row +1 action never changes the click-selected winner")
 same(masterWindow.manualPlusOneEdit, nil, "obsolete numeric +1 edit field is absent")
 aliceGA.RollSession, masterWindow.RefreshRows, masterWindow.SetStatus = savedRollSession, savedRefreshRows, savedSetStatus
 masterWindow.rolls, masterWindow.selected, masterWindow.sessionId, masterWindow.awardButton = savedRolls, savedSelected, savedSessionID, savedAwardButton

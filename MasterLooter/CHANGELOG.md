@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0-beta
+
+- Fehlgeschlagene Direktvergaben aus einem offenen Lootfenster nehmen automatisch den exakten Lootslot für den Lootmaster auf
+- Gewinner werden beim Handels-Fallback sofort per Whisper informiert, auch wenn sie MasterLooter nicht installiert haben
+- Ein Handelseintrag entsteht weiterhin erst nach der bestätigten Slotleerung; der Handel wird niemals automatisch angenommen oder abgeschlossen
+- Der optionale Handelsassistent öffnet sich bei einer Vergabe nicht mehr ungefragt
+- Lootmaster-Fenster auf ein kompakteres Layout mit getrennten Status-, Navigations- und Tabellenbereichen überarbeitet
+- OS-Bereich eindeutig als `OS /ROLL` beschriftet und Spalten für Bilanz und manuelles `+1` getrennt
+- Gewinner werden ausschließlich per Klick ausgewählt; `+1` verändert die Auswahl nicht und neue Sitzungen übernehmen keinen alten Gewinner
+- Neuer 3.3.5a-UI-Simulator prüft Geometrie, Überlappungen, Eingaben, Gewinnerauswahl, Warteschlange und Vergabezustände
+
 ## 0.13.8-beta
 
 - Direkte ElvUI-Lootauswahl benötigt nicht mehr, dass das optionale Fenster „Erfasster Loot“ zuvor geöffnet wurde

@@ -89,6 +89,35 @@ function Trade:RemindWinner(entry, force)
     return true
 end
 
+-- Inform an addonless winner as soon as a direct masterloot assignment has
+-- fallen back to a personal pickup. This notice deliberately does not wait
+-- for the item to appear in the loot master's bags: the actual trade queue is
+-- still created only after LOOT_SLOT_CLEARED confirms the pickup. Seeding the
+-- normal reminder state prevents a duplicate whisper a moment later.
+function Trade:NotifyAwardFallback(result)
+    if type(result) ~= "table" or type(result.winner) ~= "string" or
+        sameName(result.winner, UnitName and UnitName("player")) then return false end
+    if type(SendChatMessage) ~= "function" then return false end
+    self.fallbackNotices = self.fallbackNotices or {}
+    local key = tostring(result.sessionID or result.itemLink or "?") .. "\031" ..
+        string.lower(baseName(result.winner) or result.winner)
+    if self.fallbackNotices[key] then return false end
+    local lootmaster = (UnitName and UnitName("player")) or "den Lootmaster"
+    local message = "MasterLooter: Du hast " .. tostring(result.itemLink or "ein Item") ..
+        " gewonnen. Direktvergabe war nicht möglich; ich nehme es an mich. Bitte handle " ..
+        tostring(lootmaster) .. " an, sobald wir in Reichweite sind."
+    local ok = pcall(SendChatMessage, message, "WHISPER", nil, result.winner)
+    if not ok then return false end
+    self.fallbackNotices[key] = timestamp()
+    self.reminders = self.reminders or {}
+    local winnerKey = string.lower(baseName(result.winner) or result.winner)
+    local reminder = self.reminders[winnerKey] or { count = 0, last = 0 }
+    reminder.count, reminder.last = math.max(1, tonumber(reminder.count) or 0), timestamp()
+    self.reminders[winnerKey] = reminder
+    if GA.Trace then GA:Trace("TRADE", "FALLBACK_WHISPER", result.winner, result.itemLink) end
+    return true
+end
+
 function Trade:CoordinateWinner(entry)
     if type(entry) ~= "table" or entry.status ~= "READY" or
         (entry.rangeStatus ~= "IN_RANGE" and entry.rangeStatus ~= "GROUP_RANGE") then return false end
@@ -601,6 +630,7 @@ function Trade:OnInitialize()
     self.store = GA.DB.data.character.trade
     self.pending, self.nextID = self.store.pending or {}, tonumber(self.store.nextID) or 0
     self.reminders = {}
+    self.fallbackNotices = {}
     self.autoInitiations = {}
     self.store.pending = self.pending
     for index = 1, #self.pending do
