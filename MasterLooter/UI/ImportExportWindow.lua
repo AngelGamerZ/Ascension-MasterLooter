@@ -7,12 +7,26 @@ local ImportExportWindow = { moduleIndex = 1, modules = {
     { key = "priority", label = "Prioritäten", direct = "Priority" },
     { key = "plusones", label = "PlusOnes", direct = "PlusOnes" },
     { key = "boosts", label = "Boosts", direct = "BoostedRolls" },
+    { key = "tmbpriority", label = "TMB-Prioritäten", direct = "Priority", exportMethod = "ExportTMB", importMethod = "ImportTMB" },
+    { key = "autoroll", label = "AutoRoll-Regeln", direct = "AutoRoll", directOnly = true },
     { key = "awards", label = "Vergaben", direct = "Award" },
     { key = "gdkp", label = "GDKP", direct = "GDKP" },
 } }
 GA.UI.ImportExportWindow = ImportExportWindow
 
 local function callManager(method, moduleName, text)
+    local definition
+    for _, candidate in ipairs(ImportExportWindow.modules) do if candidate.key == moduleName then definition = candidate; break end end
+    if definition and (definition.directOnly or definition.exportMethod or definition.importMethod) then
+        local module = GA[definition.direct]
+        local actual = method == "Export" and (definition.exportMethod or "Export") or
+            method == "Import" and (definition.importMethod or "Import") or method
+        if method == "Validate" then return true, type(text) == "string" and text ~= "", "Paste wird beim Import zeilenweise geprüft." end
+        if type(module) == "table" and type(module[actual]) == "function" then
+            return pcall(module[actual], module, text)
+        end
+        return false, "Modul unterstützt " .. method .. " nicht."
+    end
     local manager = GA.ImportExport
     if type(manager) == "table" and type(manager[method]) == "function" then
         local optionKeys = { softres = "softRes", priority = "priority", plusones = "plusOnes", boosts = "boosts", awards = "awards", gdkp = "gdkp" }

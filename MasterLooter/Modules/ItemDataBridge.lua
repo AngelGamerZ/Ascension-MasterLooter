@@ -14,14 +14,19 @@ function ItemDataBridge:Get(itemID)
     return provider and provider:Get(itemID) or nil
 end
 
-function ItemDataBridge:Search(query, limit)
+function ItemDataBridge:Search(query, limit, filters)
     local provider = self:Load()
-    return provider and provider:Search(query, limit) or {}
+    return provider and provider:Search(query, limit, filters) or {}
 end
 
 function ItemDataBridge:GetFamily(itemID)
     local provider = self:Load()
     return provider and provider.GetFamily and provider:GetFamily(itemID) or nil
+end
+
+function ItemDataBridge:GetStats()
+    local provider = self:Load()
+    return provider and provider.GetStats and provider:GetStats() or { items = 0, families = 0, verified = 0 }
 end
 
 function ItemDataBridge:OnInitialize() return true end

@@ -17,8 +17,10 @@ local DEFAULTS = {
         sound = true,
     },
     profiles = {},
+    profileAssignments = {},
     activeProfile = "Default",
     history = { awards = {}, gdkp = {} },
+    lootLedger = { entries = {}, nextID = 0 },
     softRes = { reservations = {}, hardReserved = {} },
     plusOnes = {},
     priorities = {},
@@ -99,7 +101,9 @@ function DB:Initialize(saved)
 end
 
 function DB:GetProfile()
-    local name = self.data.activeProfile or "Default"
+    local character = self:GetCharacterKey()
+    local name = (character and self.data.profileAssignments and self.data.profileAssignments[character]) or self.data.activeProfile or "Default"
+    self.data.activeProfile = name
     local profile = self.data.profiles[name]
     if type(profile) ~= "table" then
         profile = deepCopy(self.data.profile)
@@ -109,9 +113,69 @@ function DB:GetProfile()
     return copyDefaults(DEFAULTS.profile, profile)
 end
 
+function DB:GetCharacterKey()
+    if type(UnitName) ~= "function" then return nil end
+    local name = UnitName("player")
+    if not name then return nil end
+    local realm = type(GetRealmName) == "function" and GetRealmName() or ""
+    return string.lower(tostring(name) .. "-" .. tostring(realm))
+end
+
+function DB:GetProfileNames()
+    local names = {}
+    for name in pairs(self.data.profiles or {}) do names[#names + 1] = name end
+    if #names == 0 then self:GetProfile(); names[1] = self.data.activeProfile or "Default" end
+    table.sort(names, function(a, b) return string.lower(a) < string.lower(b) end)
+    return names
+end
+
+function DB:CopyProfile(source, target)
+    if type(target) ~= "string" or target == "" or self.data.profiles[target] then return nil, "Profilname existiert bereits oder ist ungültig." end
+    local current = self.data.profiles[source or self.data.activeProfile]
+    if type(current) ~= "table" then return nil, "Quellprofil nicht gefunden." end
+    self.data.profiles[target] = deepCopy(current)
+    return self.data.profiles[target]
+end
+
+function DB:RenameProfile(source, target)
+    if type(source) ~= "string" or type(self.data.profiles[source]) ~= "table" then return false, "Profil nicht gefunden." end
+    if type(target) ~= "string" or target == "" or self.data.profiles[target] then return false, "Zielprofil existiert bereits oder ist ungültig." end
+    self.data.profiles[target], self.data.profiles[source] = self.data.profiles[source], nil
+    if self.data.activeProfile == source then self.data.activeProfile = target end
+    for character, profileName in pairs(self.data.profileAssignments or {}) do if profileName == source then self.data.profileAssignments[character] = target end end
+    return true
+end
+
+function DB:DeleteProfile(name)
+    if not self.data.profiles[name] then return false, "Profil nicht gefunden." end
+    if #self:GetProfileNames() <= 1 then return false, "Das letzte Profil kann nicht gelöscht werden." end
+    self.data.profiles[name] = nil
+    for character, profileName in pairs(self.data.profileAssignments or {}) do if profileName == name then self.data.profileAssignments[character] = nil end end
+    if self.data.activeProfile == name then self.data.activeProfile = self:GetProfileNames()[1] end
+    return true
+end
+
+function DB:AssignProfile(name)
+    if type(self.data.profiles[name]) ~= "table" then return false, "Profil nicht gefunden." end
+    self.data.activeProfile = name
+    local character = self:GetCharacterKey()
+    if character then self.data.profileAssignments[character] = name end
+    return true
+end
+
+function DB:ResetAll()
+    local target = self.data or {}
+    for key in pairs(target) do target[key] = nil end
+    copyDefaults(DEFAULTS, target)
+    _G.MasterLooterDB, self.data = target, target
+    return target
+end
+
 function DB:SetProfile(name)
     assert(type(name) == "string" and name ~= "", "Profile name required")
     self.data.activeProfile = name
+    local character = self:GetCharacterKey()
+    if character then self.data.profileAssignments[character] = name end
     return self:GetProfile()
 end
 

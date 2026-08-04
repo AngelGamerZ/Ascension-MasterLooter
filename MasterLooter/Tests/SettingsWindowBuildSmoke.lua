@@ -90,4 +90,31 @@ expect(settings:OpenTool("RulesWindow"), "settings launcher opens a standalone t
 expect(childFrame.shown and childFrame.raised and childFrame.toplevel, "standalone tool is explicitly raised to top level")
 expect(not settings.frame.shown, "settings launcher closes instead of covering the opened tool")
 
+GA.Events = { On = function() end }
+GA.Profiles = {
+    List = function() return { "Default", "Raid" } end,
+    GetActive = function() return "Default" end,
+}
+GA.ItemData = {
+    Search = function() return { { itemID = 1, name = "Test", link = "|Hitem:1|h[Test]|h", quality = 3 } } end,
+    GetStats = function() return { items = 1, verified = 1 } end,
+}
+Theme.ShowItemTooltip = function() end
+Theme.HideOwnedTooltip = function() end
+for _, path in ipairs({
+    "MasterLooter/UI/ProfileWindow.lua",
+    "MasterLooter/UI/ItemSearchWindow.lua",
+    "MasterLooter/UI/WelcomeWindow.lua",
+}) do
+    local toolChunk, toolError = loadfile(path)
+    if not toolChunk then error(toolError) end
+    toolChunk("MasterLooter", GA)
+end
+expect(GA.UI.ProfileWindow:EnsureFrame() ~= nil, "profile manager builds against legacy UI")
+expect(#GA.UI.ProfileWindow.rows == 8, "profile manager renders its full visible page")
+expect(GA.UI.ItemSearchWindow:EnsureFrame() ~= nil, "item search builds against legacy UI")
+GA.UI.ItemSearchWindow:Search()
+expect(GA.UI.ItemSearchWindow.rows[1].shown, "item search renders provider results")
+expect(GA.UI.WelcomeWindow:EnsureFrame() ~= nil, "welcome window builds against legacy UI")
+
 print(string.format("PASS: %d settings-window build assertions", assertions))

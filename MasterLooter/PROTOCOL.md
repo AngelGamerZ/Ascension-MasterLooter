@@ -4,6 +4,13 @@ Prefix: `MLOOT335`
 
 Jede Nutzlast besteht aus längenkodierten Feldern. Sie wird in höchstens 210 Byte große Teile zerlegt; der Rahmen enthält Protokollversion, Paket-ID, Teilnummer und Gesamtzahl. Empfänger setzen Teile auch bei abweichender Reihenfolge zusammen, verwerfen Wiederholungen und räumen unvollständige Pakete nach einem Timeout auf.
 
+## Regel-Synchronisierung
+
+- `RS_REQ`: Protokoll und Nonce; fordert den aktuellen Regelstand per Whisper an.
+- `RS_SNAP`: Protokoll, Sender-Revision, Prüfsumme und atomarer +1-/Rollbonus-Snapshot.
+
+Snapshots werden nur von explizit vertrauten Spielern oder der aktuellen Gruppen-/Raidautorität angenommen. Senderbezogene Revisionen, Prüfsummen und Replay-Erkennung verhindern veraltete oder widersprüchliche Überschreibungen. Die begrenzte Nutzlast enthält ausschließlich Datenzeilen und wird niemals als Lua ausgeführt.
+
 ## Roll-Nachrichten
 
 - `START`: Protokoll, Sitzung, Sequenz, Itemlink, Erstellzeit, Dauer, Kategorien, Notiz, OS-Wurfmaximum

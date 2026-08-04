@@ -238,7 +238,8 @@ end
 function Commands:Help()
     GA:Print("/ml – Übersicht & Einstellungen | /ml master oder /lootmaster – Lootmaster-Fenster")
     GA:Print("/ml roll <Itemlink> [Sekunden]")
-    GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert]")
+    GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert] | /ml sync <Spieler>")
+    GA:Print("/ml trust <Spieler> on|off – Regel-Snapshots dieses Senders erlauben/sperren")
     GA:Print("/ml gdkp start|sale|finish | /ml version | /ml debug | /ml rolldebug | /ml commdebug | /ml tooltipdebug")
     GA:Print("/ml master|loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
 end
@@ -264,6 +265,18 @@ function Commands:Handle(message)
     elseif command == "plus" then
         local player, value = string.match(rest, "^(%S+)%s*(%d*)")
         if player then GA:Print(player .. ": +" .. GA.PlusOnes:Set(player, value ~= "" and value or GA.PlusOnes:Get(player) + 1)) end
+    elseif command == "sync" then
+        local player = string.match(rest or "", "^(%S+)")
+        local packet, err = GA.RuleSync and GA.RuleSync:Request(player)
+        GA:Print(packet and ("Regelstand bei " .. player .. " angefragt.") or tostring(err or "RuleSync ist nicht verfügbar."))
+    elseif command == "trust" then
+        local player, state = string.match(rest or "", "^(%S+)%s+(%S+)")
+        state = string.lower(state or "")
+        if not player or (state ~= "on" and state ~= "off") then GA:Print("Verwendung: /ml trust <Spieler> on|off")
+        else
+            local ok, err = GA.RuleSync and GA.RuleSync:SetTrusted(player, state == "on")
+            GA:Print(ok and (player .. (state == "on" and " ist für Regel-Sync vertrauenswürdig." or " wurde aus der Vertrauensliste entfernt.")) or tostring(err))
+        end
     elseif command == "gdkp" then
         local sub, args = split(rest)
         if sub == "start" then GA.GDKP:Start(args ~= "" and args or nil)

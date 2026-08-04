@@ -49,6 +49,13 @@ function HistoryWindow:EnsureFrame()
     ledger:SetPoint("LEFT", gdkp, "RIGHT", 6, 0)
     ledger:SetScript("OnClick", function() HistoryWindow:SetMode("LEDGER") end)
     self.ledgerButton = ledger
+    local lootLedger = Theme:CreateButton(frame, "Beute-Ledger", 115, 25)
+    lootLedger:SetPoint("LEFT", ledger, "RIGHT", 6, 0)
+    lootLedger:SetScript("OnClick", function()
+        HistoryWindow:Hide()
+        if GA.UI.LootLedgerWindow then GA.UI.LootLedgerWindow:Show() end
+    end)
+    self.lootLedgerButton = lootLedger
     local refresh = Theme:CreateButton(frame, "Aktualisieren", 105, 25)
     refresh:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -43)
     refresh:SetScript("OnClick", function() HistoryWindow:Refresh() end)

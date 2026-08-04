@@ -2,7 +2,7 @@
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.14.1-beta
+## Version: 0.15.0-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
@@ -17,16 +17,20 @@ Modules\BagInspector.lua
 Modules\RollSession.lua
 Modules\ChatRolls.lua
 Modules\Loot.lua
+Modules\LootLedger.lua
 Modules\PackMule.lua
 Modules\Trade.lua
 Modules\Award.lua
 Modules\SoftRes.lua
+Modules\AutoRoll.lua
 Modules\PlusOnes.lua
 Modules\Priority.lua
 Modules\BoostedRolls.lua
+Modules\RuleSync.lua
 Modules\Ranking.lua
 Modules\GDKP.lua
 Modules\GDKPAuction.lua
+Modules\GDKPMultiAuction.lua
 Modules\RaidManager.lua
 Modules\ItemDataBridge.lua
 Modules\VersionCheck.lua
@@ -34,6 +38,7 @@ Modules\TradeCoordination.lua
 Modules\Announcements.lua
 Modules\ImportExport.lua
 Modules\Commands.lua
+Modules\Profiles.lua
 
 UI\Theme.lua
 UI\RollDebugWindow.lua
@@ -41,10 +46,12 @@ UI\CommDebugWindow.lua
 UI\RollWindow.lua
 UI\MasterLooterWindow.lua
 UI\HistoryWindow.lua
+UI\LootLedgerWindow.lua
 UI\SettingsWindow.lua
 UI\SoftResWindow.lua
 UI\GDKPWindow.lua
 UI\GDKPAuctionWindow.lua
+UI\GDKPAdvancedWindow.lua
 UI\RaidManagerWindow.lua
 UI\VersionWindow.lua
 UI\BagInspectorWindow.lua
@@ -52,4 +59,9 @@ UI\LootWindow.lua
 UI\TradeWindow.lua
 UI\RulesWindow.lua
 UI\ImportExportWindow.lua
+UI\ProfileWindow.lua
+UI\ItemSearchWindow.lua
+UI\WelcomeWindow.lua
 UI\Launcher.lua
+
+Bindings.xml

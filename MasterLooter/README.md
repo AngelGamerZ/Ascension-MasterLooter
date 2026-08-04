@@ -33,6 +33,10 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - Unveränderte Blizzard-Gruppenloot-Oberfläche sowie Raidverwaltung, Versionsprüfung und Tascheninspektor
 - Persistente Profile und Einstellungen
 - Optionaler, zur Laufzeit lernender Ascension-Itemindex
+- Persistentes Beute-Ledger mit Status- und Genauigkeitskennzeichnung
+- Bis zu vier parallele GDKP-Auktionen, Gold-Ledger, Preislisten, Mutatoren und Cuts
+- AutoRoll-Empfehlungen, TMB-Import sowie abgesicherter +1-/Boosted-Roll-Sync
+- Profilverwaltung, Tastenkürzel, Willkommensfenster und vollständiger Datenreset
 
 ## Befehle
 
@@ -48,8 +52,10 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - `/ml debug` – kopierbare Gesamtdiagnose für Module, Events, Fehler, UI, Roll, Loot, Handel, Kommunikation und Tooltip öffnen
 - `/ml debug clear` – bisherige Trace-Daten leeren und eine frische Gesamtdiagnose öffnen
 - `/ml tooltipdebug` – kopierbare Zeitleiste aller globalen Tooltip- und Loot-/Taschenereignisse öffnen
+- `/ml sync <Spieler>` – autoritativen +1-/Boosted-Roll-Snapshot bei einem vertrauenswürdigen Spieler anfordern
+- `/ml trust <Spieler>` – vertrauenswürdigen Regeldaten-Sender setzen
 
-Am Minimap-Button öffnet Umschalt+Rechtsklick direkt das Lootmaster-Fenster. Items werden ausschließlich über die MasterLooter-Oberfläche beziehungsweise per Drag-and-drop ausgewählt; MasterLooter beobachtet keine Taschen- oder Lootbuttons.
+Am Minimap-Button öffnet Umschalt+Rechtsklick direkt das Lootmaster-Fenster. STRG+Rechtsklick auf unterstützten Blizzard-/Ascension-Lootslots oder Taschenitems übernimmt das Item in den Lootmaster; Drag-and-drop und die Ascension-Itemsuche bleiben gleichwertige Alternativen.
 
 MasterLooter verwendet für sämtliche eigenen Itemanzeigen einen isolierten `MasterLooterTooltip`. Der globale Blizzard-/Ascension-`GameTooltip` wird von der Oberfläche weder besetzt noch geleert oder ausgeblendet. Die Diagnose beobachtet ihn ausschließlich per Nach-Hook und verändert sein Verhalten nicht.
 

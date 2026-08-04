@@ -108,3 +108,13 @@ end
 
 function Launcher:OnInitialize() self:EnsureButton(); self:Refresh(); return true end
 GA:RegisterModule("Launcher", Launcher)
+
+BINDING_HEADER_MASTERLOOTER = "MasterLooter"
+BINDING_NAME_MASTERLOOTER_SETTINGS = "Einstellungen öffnen"
+BINDING_NAME_MASTERLOOTER_LOOTMASTER = "Lootmaster öffnen"
+BINDING_NAME_MASTERLOOTER_HISTORY = "Historie öffnen"
+BINDING_NAME_MASTERLOOTER_TRADE = "Handelsassistent öffnen"
+function MasterLooter_ToggleSettings() if GA.UI.SettingsWindow then GA.UI.SettingsWindow:Toggle() end end
+function MasterLooter_ToggleLootmaster() if GA.UI.MasterLooterWindow then GA.UI.MasterLooterWindow:Toggle() end end
+function MasterLooter_ToggleHistory() if GA.UI.HistoryWindow then GA.UI.HistoryWindow:Toggle() end end
+function MasterLooter_ToggleTrade() if GA.UI.TradeWindow then GA.UI.TradeWindow:Toggle() end end

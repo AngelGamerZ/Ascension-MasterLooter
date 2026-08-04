@@ -63,7 +63,11 @@ function GDKPWindow:EnsureFrame()
     reset:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -98)
     reset:SetScript("OnClick", function() GDKPWindow:RequestReset() end)
     self.resetButton = reset
-    players:SetPoint("RIGHT", reset, "LEFT", -10, 0)
+    local advanced = Theme:CreateButton(frame, "Verwaltung", 100, 24)
+    advanced:SetPoint("RIGHT", reset, "LEFT", -7, 0)
+    advanced:SetScript("OnClick", function() if GA.UI.GDKPAdvancedWindow then GA.UI.GDKPAdvancedWindow:Show() end end)
+    self.advancedButton = advanced
+    players:SetPoint("RIGHT", advanced, "LEFT", -10, 0)
 
     local itemLabel = Theme:CreateLabel(frame, "Itemlink / Item-ID", 11, Theme.colors.gold)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -148)

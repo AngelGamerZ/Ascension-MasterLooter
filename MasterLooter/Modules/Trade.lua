@@ -6,6 +6,7 @@ local Trade = {
     pending = {}, nextID = 0, state = "IDLE", offered = {}, bothAccepted = false,
     TRADE_SECONDS = 7200, REMINDER_COOLDOWN = 180, REMINDER_LIMIT = 2,
     AUTO_TRADE_COOLDOWN = 15,
+    EXPIRY_WARNINGS = { 1800, 600, 300 },
 }
 GA.Trade = Trade
 
@@ -210,6 +211,7 @@ function Trade:RefreshWinnerStatuses(remind)
                 self:TryAutoInitiate(entry)
                 seen["trade:" .. key] = true
             end
+            self:WarnExpiring(entry)
         end
     end
 end
@@ -223,6 +225,73 @@ function Trade:GetPending(player)
         end
     end
     return result
+end
+
+-- Includes closed entries for the trade-time history. The deadline is only a
+-- local two-hour estimate because 3.3.5a exposes no authoritative remaining
+-- trade time for an item.
+function Trade:GetTimeline(filters)
+    filters = filters or {}
+    local result = {}
+    for _, entry in ipairs(self.pending) do
+        local closed = entry.status == "DELIVERED" or entry.status == "CANCELLED"
+        local problem = entry.status == "MISSING" or entry.status == "EXPIRED"
+        local visible = (filters.includeClosed or not closed) and
+            (not filters.onlyReady or entry.status == "READY") and
+            (not filters.onlyProblems or problem)
+        if visible then result[#result + 1] = entry end
+    end
+    table.sort(result, function(a, b)
+        return (tonumber(a.tradeExpiresAt) or math.huge) < (tonumber(b.tradeExpiresAt) or math.huge)
+    end)
+    return result
+end
+
+function Trade:GetEstimatedRemaining(entry)
+    if type(entry) ~= "table" or not entry.tradeExpiresAt then return nil end
+    return math.max(0, tonumber(entry.tradeExpiresAt) - timestamp())
+end
+
+function Trade:WarnExpiring(entry)
+    if type(entry) ~= "table" or entry.status == "DELIVERED" or entry.status == "CANCELLED" then return false end
+    local remaining = self:GetEstimatedRemaining(entry)
+    if not remaining then return false end
+    entry.expiryWarnings = entry.expiryWarnings or {}
+    for _, threshold in ipairs(self.EXPIRY_WARNINGS) do
+        if remaining <= threshold and not entry.expiryWarnings[threshold] then
+            -- Crossing several thresholds between polls must produce one
+            -- useful whisper, not a burst of 30/10/5-minute messages.
+            for _, crossed in ipairs(self.EXPIRY_WARNINGS) do
+                if remaining <= crossed then entry.expiryWarnings[crossed] = timestamp() end
+            end
+            local minutes = math.max(1, math.ceil(remaining / 60))
+            if type(SendChatMessage) == "function" and entry.winner and not sameName(entry.winner, UnitName and UnitName("player")) then
+                pcall(SendChatMessage, "MasterLooter: Die geschaetzte Handelsfrist fuer " .. tostring(entry.itemLink or "dein Item") ..
+                    " endet in etwa " .. tostring(minutes) .. " Min. Bitte handle den Lootmaster an.", "WHISPER", nil, entry.winner)
+            end
+            GA.Events:Emit("GA_TRADE_EXPIRY_WARNING", entry, remaining, threshold)
+            return true
+        end
+    end
+    return false
+end
+
+function Trade:BroadcastPending()
+    local groups = self:GetGroups()
+    if #groups == 0 then return nil, "Keine offenen Handelsitems." end
+    if type(SendChatMessage) ~= "function" then return nil, "Chat-API ist nicht verfuegbar." end
+    local channel = "SAY"
+    if type(GetNumRaidMembers) == "function" and (GetNumRaidMembers() or 0) > 0 then channel = "RAID_WARNING"
+    elseif type(GetNumPartyMembers) == "function" and (GetNumPartyMembers() or 0) > 0 then channel = "PARTY" end
+    local sent = 0
+    pcall(SendChatMessage, "MasterLooter: Offene Handelsitems (Fristen sind 3.3.5a-Schaetzungen):", channel)
+    for _, group in ipairs(groups) do
+        local left = group.tradeExpiresAt and math.max(0, group.tradeExpiresAt - timestamp()) or nil
+        local text = tostring(group.winner or "?") .. ": " .. tostring(group.quantity or #group.entries) ..
+            " Item(s)" .. (left and (", ca. " .. tostring(math.ceil(left / 60)) .. " Min.") or "")
+        if pcall(SendChatMessage, text, channel) then sent = sent + 1 end
+    end
+    return sent
 end
 
 function Trade:GetGroups()

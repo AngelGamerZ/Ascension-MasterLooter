@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.0-beta
+
+- Erweiterter GDKP-Bereich mit bis zu vier parallelen Auktionen, Bieterzuständen, Anti-Snipe, Taschenwarteschlange und Reload-Wiederherstellung
+- GDKP-Ledger, Goldtransaktionen, Teilnehmer, gewichtete Cuts, Management-Cut, Mutatoren, Preislisten und versionierter Im-/Export ergänzt
+- Neues persistentes Beute-Ledger verfolgt Drops bestmöglich von `DROPPED` über Aufnahme und Vergabe bis Handel, Entzauberung oder ungeklärtem Verlust
+- Handelsassistent zeigt die geschätzte Zwei-Stunden-Frist, filtert offene/problematische Aufgaben und warnt bei 30, 10 und 5 Minuten; Handelsabschluss bleibt manuell
+- AutoRoll-Regeln, TMB-Prioritätsdaten, SoftRes-Limits und -Verbrauch, PackMule-Ausnahmen sowie begründete Regelvorschauen ergänzt
+- Abgesicherter Raid-Sync für +1 und Boosted Rolls mit vertrauenswürdigen Sendern, Revision, Prüfsumme, Replay- und Konfliktschutz
+- Vollständige Profilverwaltung mit Erstellen, Kopieren, Umbenennen, Löschen und charakterspezifischer Zuordnung
+- Ascension-Itemsuche nach Name/ID, Qualität und Itemlevel auf dem laufzeitlernenden Itemindex ergänzt
+- Willkommens-/Neuigkeitenfenster, globale Tastenkürzel und zweistufig bestätigter Komplett-Reset ergänzt
+- Neue Simulationspakete prüfen GDKP, Regel-Sync, Ledger/Handelszeit, Profile, Itemsuche und den Legacy-UI-Aufbau
+
 ## 0.14.1-beta
 
 - Ascension-fehlerhaftes `InputBoxTemplate` durch eigene, vollständig sichtbare 3.3.5a-Eingabefelder ersetzt

@@ -42,8 +42,24 @@ end
 
 function PackMule:GetRules()
     self.rules = self.rules or { enabled = false, minimumQuality = 2, includeBoE = true, includeBoP = false,
-        targets = {}, disenchanters = {}, roundRobinIndex = 0 }
+        targets = {}, disenchanters = {}, ignores = {}, roundRobinIndex = 0 }
+    self.rules.ignores = type(self.rules.ignores) == "table" and self.rules.ignores or {}
     return self.rules
+end
+
+function PackMule:SetIgnored(item, ignored, reason)
+    local id = GA.Compat:GetItemID(item)
+    if not id then return false, "invalid item" end
+    local ignores = self:GetRules().ignores
+    ignores[tostring(id)] = ignored and { reason = tostring(reason or "Manuell ignoriert"):gsub("[%c]", " "):sub(1, 120) } or nil
+    GA.Events:Emit("GA_PACKMULE_IGNORE_CHANGED", id, ignored and true or false)
+    return true
+end
+
+function PackMule:IsIgnored(item)
+    local id = GA.Compat:GetItemID(item)
+    local entry = id and self:GetRules().ignores[tostring(id)]
+    return entry and true or false, type(entry) == "table" and entry.reason or nil
 end
 
 function PackMule:SetRules(rules)
@@ -72,17 +88,33 @@ function PackMule:ChooseTarget(forDisenchant)
     return baseName(targets[rules.roundRobinIndex])
 end
 
-function PackMule:EvaluateItem(itemLink, bindType, forDisenchant)
+function PackMule:PreviewItem(itemLink, bindType, forDisenchant)
     local rules = self:GetRules()
-    if not rules.enabled or type(itemLink) ~= "string" then return nil, "rules disabled or invalid item" end
+    local result = { itemLink = itemLink, bindType = bindType, forDisenchant = forDisenchant and true or false }
+    if not rules.enabled or type(itemLink) ~= "string" then result.reasonCode, result.reason = "DISABLED", "Regeln deaktiviert oder Item ungültig"; return result end
+    local ignored, ignoreReason = self:IsIgnored(itemLink)
+    if ignored then result.reasonCode, result.reason = "IGNORED", ignoreReason or "Item wird ignoriert"; return result end
     local quality
     if type(GetItemInfo) == "function" then local _, _, itemQuality = GetItemInfo(itemLink); quality = itemQuality end
-    if quality == nil then return nil, "item data unavailable" end
-    if quality < (tonumber(rules.minimumQuality) or 2) then return nil, "below minimum quality" end
-    if bindType == "BOE" and not rules.includeBoE or bindType == "BOP" and not rules.includeBoP then return nil, "binding excluded" end
-    local target = self:ChooseTarget(forDisenchant)
-    if not target then return nil, "no target configured" end
-    return target
+    result.quality = quality
+    if quality == nil then result.reasonCode, result.reason = "ITEM_DATA", "Itemdaten noch nicht verfügbar"; return result end
+    if quality < (tonumber(rules.minimumQuality) or 2) then result.reasonCode, result.reason = "QUALITY", "Unter Mindestqualität"; return result end
+    if bindType == "BOE" and not rules.includeBoE or bindType == "BOP" and not rules.includeBoP then result.reasonCode, result.reason = "BINDING", "Bindungsart ausgeschlossen"; return result end
+    local targets = forDisenchant and rules.disenchanters or rules.targets
+    local target = self.target
+    if type(targets) == "table" and #targets > 0 then
+        local nextIndex = ((tonumber(rules.roundRobinIndex) or 0) % #targets) + 1
+        target = baseName(targets[nextIndex])
+    end
+    if not target then result.reasonCode, result.reason = "NO_TARGET", "Kein Ziel konfiguriert"; return result end
+    result.accepted, result.target, result.reasonCode, result.reason = true, target, "MATCH", "Regel passt; Ziel: " .. target
+    return result
+end
+
+function PackMule:EvaluateItem(itemLink, bindType, forDisenchant)
+    local preview = self:PreviewItem(itemLink, bindType, forDisenchant)
+    if preview.accepted then preview.target = self:ChooseTarget(forDisenchant); preview.reason = "Regel passt; Ziel: " .. tostring(preview.target) end
+    return preview.accepted and preview.target or nil, preview.reason, preview
 end
 
 function PackMule:Add(itemLink, quantity, source, note)

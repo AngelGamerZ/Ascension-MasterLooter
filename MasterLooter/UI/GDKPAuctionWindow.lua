@@ -62,10 +62,11 @@ function GDKPAuctionWindow:EnsureFrame()
     self.frame = frame
 
     local itemLabel = Theme:CreateLabel(frame, "Itemlink", 11, Theme.colors.gold); itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -46)
-    local item = Theme:CreateEditBox(frame, 350, 24); item:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -64); self.itemEdit = item
+    local item = Theme:CreateEditBox(frame, 285, 24); item:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -64); self.itemEdit = item
     item:SetScript("OnReceiveDrag", function() GDKPAuctionWindow:AcceptCursorItem() end)
     local start = Theme:CreateButton(frame, "Start", 75, 25); start:SetPoint("LEFT", item, "RIGHT", 8, 0); start:SetScript("OnClick", function() GDKPAuctionWindow:StartAuction() end); self.startButton = start
     local enqueue = Theme:CreateButton(frame, "Queue", 75, 25); enqueue:SetPoint("LEFT", start, "RIGHT", 5, 0); enqueue:SetScript("OnClick", function() GDKPAuctionWindow:QueueAuction() end); self.queueButton = enqueue
+    local parallel = Theme:CreateButton(frame, "Multi", 65, 25); parallel:SetPoint("LEFT", enqueue, "RIGHT", 5, 0); parallel:SetScript("OnClick", function() GDKPAuctionWindow:StartParallelAuction() end); self.parallelButton = parallel
     self.queueLabel = Theme:CreateLabel(frame, "Queue: 0", 11, Theme.colors.muted); self.queueLabel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -101)
 
     local definitions = {
@@ -125,7 +126,16 @@ end
 
 function GDKPAuctionWindow:RefreshQueue()
     local queue = GA.GDKPAuction and GA.GDKPAuction.GetQueue and GA.GDKPAuction:GetQueue() or {}
-    if self.queueLabel then self.queueLabel:SetText("Queue: " .. tostring(#queue)) end
+    local multi, active = GA.GDKPMultiAuction and GA.GDKPMultiAuction:GetAuctions() or {}, 0
+    for _, state in ipairs(multi) do if state.status == "ACTIVE" then active = active + 1 end end
+    if self.queueLabel then self.queueLabel:SetText("Queue: " .. tostring(#queue) .. " · Multi: " .. tostring(active)) end
+end
+
+function GDKPAuctionWindow:StartParallelAuction()
+    local manager = GA.GDKPMultiAuction
+    if not manager then self:SetResult("Multi-Auktionen nicht verfügbar.", Theme.colors.red); return end
+    local state, err = manager:Start(self.itemEdit:GetText(), tonumber(self.minBidEdit:GetText()), tonumber(self.incrementEdit:GetText()), tonumber(self.durationEdit:GetText()))
+    if state then self:UpdateState(state); self:SetResult("Parallele Auktion gestartet.", Theme.colors.green) else self:SetResult(err, Theme.colors.red) end
 end
 
 function GDKPAuctionWindow:AcceptCursorItem()
@@ -150,16 +160,20 @@ function GDKPAuctionWindow:StartAuction()
 end
 
 function GDKPAuctionWindow:StopAuction()
-    local manager = GA.GDKPAuction; if not manager or type(manager.Stop) ~= "function" then return end
-    local ok, result, err = pcall(manager.Stop, manager)
+    local parallel = self.state and GA.GDKPMultiAuction and GA.GDKPMultiAuction:Get(self.state.id)
+    local manager = parallel and GA.GDKPMultiAuction or GA.GDKPAuction; if not manager or type(manager.Stop) ~= "function" then return end
+    local ok, result, err
+    if parallel then ok, result, err = pcall(manager.Stop, manager, self.state.id) else ok, result, err = pcall(manager.Stop, manager) end
     if ok and result ~= false and result ~= nil then self:SetResult("Auktion beendet.") else self:SetResult(tostring(err or result or "Stop fehlgeschlagen."), Theme.colors.red) end
 end
 
 function GDKPAuctionWindow:Bid()
     local amount = tonumber(self.bidEdit:GetText())
     if not amount then self:SetResult("Bitte einen gültigen Betrag eingeben.", Theme.colors.red); return end
-    local manager = GA.GDKPAuction; if not manager or type(manager.Bid) ~= "function" then self:SetResult("Auktionsmodul nicht verfügbar.", Theme.colors.red); return end
-    local ok, result, err = pcall(manager.Bid, manager, math.floor(amount))
+    local parallel = self.state and GA.GDKPMultiAuction and GA.GDKPMultiAuction:Get(self.state.id)
+    local manager = parallel and GA.GDKPMultiAuction or GA.GDKPAuction; if not manager or type(manager.Bid) ~= "function" then self:SetResult("Auktionsmodul nicht verfügbar.", Theme.colors.red); return end
+    local ok, result, err
+    if parallel then ok, result, err = pcall(manager.Bid, manager, self.state.id, math.floor(amount)) else ok, result, err = pcall(manager.Bid, manager, math.floor(amount)) end
     if ok and result then self:SetResult("Gebot gesendet: " .. math.floor(amount) .. "g", Theme.colors.green) else self:SetResult(tostring(err or result or "Gebot abgelehnt."), Theme.colors.red) end
 end
 
@@ -220,6 +234,10 @@ function GDKPAuctionWindow:OnInitialize()
     GA.Events:On("GA_GDKP_AUCTION_UPDATED", function(...) GDKPAuctionWindow:UpdateState(eventState("GA_GDKP_AUCTION_UPDATED", ...)) end, self)
     GA.Events:On("GA_GDKP_AUCTION_ENDED", function(...) local state, reason = eventState("GA_GDKP_AUCTION_ENDED", ...); GDKPAuctionWindow:EndState(state, reason) end, self)
     GA.Events:On("GA_GDKP_AUCTION_QUEUE_CHANGED", function() GDKPAuctionWindow:RefreshQueue() end, self)
+    GA.Events:On("GA_GDKP_MULTI_CHANGED", function(_, _, state, action)
+        GDKPAuctionWindow:RefreshQueue()
+        if state and action ~= "REMOVE" then GDKPAuctionWindow:UpdateState(state) end
+    end, self)
     return true
 end
 

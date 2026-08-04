@@ -1,4 +1,4 @@
-# Funktionsstatus 0.14.1-beta
+# Funktionsstatus 0.15.0-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
@@ -41,8 +41,13 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 ## Betrieb und Diagnose
 
 - Kopierbare Roll- und Kommunikationsdiagnose, begrenztes internes Fehlerprotokoll und Kommunikations-Trace.
-- Profile, UI-Skalierung, Positionsreset, Ansagekanal und PackMule-Einstellungen.
+- Profile mit charakterspezifischer Zuordnung, UI-Skalierung, Positionsreset, Ansagekanal und PackMule-Einstellungen.
 - Optionaler Itemdaten-Begleiter lernt echte Ascension-Links und trennt Beobachtungen nach Realm, Locale und Client-Interface.
+- AutoRoll-Regeln geben sichere MS-/OS-/Passen-Empfehlungen; der eigentliche `/roll` bleibt ein bewusster Klick.
+- TMB-Prioritäten, SoftRes-Limits sowie +1-/Boosted-Roll-Snapshots lassen sich importieren beziehungsweise kontrolliert im Raid synchronisieren.
+- Das persistente Beute-Ledger zeigt Drop, Aufnahme, Vergabe, Handel, Entzauberung und ungeklärte Zustände mit Genauigkeitskennzeichnung.
+- GDKP unterstützt parallele Auktionen, Gold-Ledger, Teilnehmer/Cuts, Mutatoren, Preislisten sowie versionierten Im-/Export.
+- Willkommensfenster, Tastenkürzel, Ascension-Itemsuche und zweistufig bestätigter Komplett-Reset.
 
 ## Technische Grenzen
 

@@ -13,6 +13,9 @@ function Ranking:Score(session, participant)
     local effectiveRoll = GA.BoostedRolls:Apply(player, participant.roll)
     participant.softReserved = softRes == 1
     participant.priority = priority
+    if GA.Priority.GetDisplay then
+        participant.priorityDisplay, participant.priorityReason = GA.Priority:GetDisplay(item, player)
+    end
     participant.plusOne = plusOne
     if GA.PlusOnes.GetStats then
         participant.itemCounts = GA.PlusOnes:GetStats(player)

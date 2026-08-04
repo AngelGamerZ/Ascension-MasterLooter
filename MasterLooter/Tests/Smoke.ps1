@@ -4,8 +4,11 @@ $ErrorActionPreference = "Stop"
 $tests = @(
     "MasterLooter/Tests/TestHarness.lua",
     "MasterLooter/Tests/RulesLedgerSmoke.lua",
+    "MasterLooter/Tests/RulesSyncSmoke.lua",
     "MasterLooter/Tests/AdminGDKPSmoke.lua",
+    "MasterLooter/Tests/GDKPAdvancedSmoke.lua",
     "MasterLooter/Tests/LootTradeSmoke.lua",
+    "MasterLooter/Tests/LootLedgerSmoke.lua",
     "MasterLooter/Tests/TradeAutomationSmoke.lua",
     "MasterLooter/Tests/TradeHandshakeSmoke.lua",
     "MasterLooter/Tests/MasterLooterWindowSmoke.lua",
@@ -13,6 +16,7 @@ $tests = @(
     "MasterLooter/Tests/ResetWindowsSmoke.lua",
     "MasterLooter/Tests/AdminWindowLayoutSmoke.lua",
     "MasterLooter/Tests/SettingsWindowBuildSmoke.lua",
+    "MasterLooter/Tests/ProfilesItemSearchSmoke.lua",
     "MasterLooter/Tests/TooltipSafetySmoke.lua",
     "MasterLooter/Tests/TooltipDebugSmoke.lua",
     "MasterLooter/Tests/ParseAll.lua"

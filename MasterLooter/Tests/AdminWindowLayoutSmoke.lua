@@ -108,8 +108,9 @@ function Theme:SetItemTooltip() end
 assert(loadfile("MasterLooter/UI/TradeWindow.lua"))("MasterLooter", GA)
 assert(loadfile("MasterLooter/UI/RulesWindow.lua"))("MasterLooter", GA)
 assert(loadfile("MasterLooter/UI/GDKPWindow.lua"))("MasterLooter", GA)
-local trade, rules, gdkp = GA.UI.TradeWindow, GA.UI.RulesWindow, GA.UI.GDKPWindow
-trade:EnsureFrame(); rules:EnsureFrame(); gdkp:EnsureFrame()
+assert(loadfile("MasterLooter/UI/LootLedgerWindow.lua"))("MasterLooter", GA)
+local trade, rules, gdkp, lootLedger = GA.UI.TradeWindow, GA.UI.RulesWindow, GA.UI.GDKPWindow, GA.UI.LootLedgerWindow
+trade:EnsureFrame(); rules:EnsureFrame(); gdkp:EnsureFrame(); lootLedger:EnsureFrame()
 
 for _, window in ipairs({ trade, rules, gdkp }) do expect(window.frame.toplevel, "administrative window is top-level"); inside(window.resetButton or window.clearButton, window.frame, "reset control stays inside its window") end
 horizontal(rules.itemSummary, rules.resetButton, "rules summary does not run underneath reset button")
@@ -120,5 +121,7 @@ for _, row in ipairs(rules.rows) do
     for _, edit in ipairs({ row.softRes, row.priority, row.plusOne, row.boost }) do inside(edit, row, "rules edit box stays inside its row") end
 end
 for _, edit in ipairs({ gdkp.sessionName, gdkp.itemInput, gdkp.buyerInput, gdkp.amountInput, gdkp.cutPlayerEdit, gdkp.cutWeightEdit }) do inside(edit, gdkp.frame, "GDKP edit box stays visible") end
+for _, control in ipairs({ lootLedger.search, lootLedger.filter, lootLedger.stateButton, lootLedger.deleteButton, lootLedger.list }) do inside(control, lootLedger.frame, "loot-ledger control stays visible") end
+for _, row in ipairs(lootLedger.rows) do inside(row, lootLedger.list, "loot-ledger row stays inside list") end
 
 print("PASS: " .. assertions .. " administrative-window geometry assertions")

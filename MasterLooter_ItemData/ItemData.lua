@@ -197,18 +197,23 @@ function addon:GetFamily(itemID)
     return self.DB and self.DB.families[familyID] or nil
 end
 
-function addon:Search(query, limit)
+function addon:Search(query, limit, filters)
+    local numericID = tonumber(tostring(query or ""):match("^%s*(%d+)%s*$"))
     query = normalize(query)
     limit = math.max(1, math.min(tonumber(limit) or 20, 100))
-    if #query < 2 then
+    filters = type(filters) == "table" and filters or {}
+    if #query < 2 and not numericID then
         return {}
     end
 
     local results = {}
     for itemID, entry in pairs(self.DB.items) do
         local name = entry.searchName or normalize(entry.name)
-        local startAt = name:find(query, 1, true)
-        if startAt then
+        local startAt = numericID and tonumber(itemID) == numericID and 0 or name:find(query, 1, true)
+        local quality = tonumber(entry.quality) or -1
+        local level = tonumber(entry.itemLevel) or 0
+        if startAt and quality >= (tonumber(filters.minimumQuality) or -1) and level >= (tonumber(filters.minimumLevel) or 0) and
+            (not filters.classID or tonumber(entry.classID) == tonumber(filters.classID)) then
             results[#results + 1] = {
                 itemID = itemID,
                 name = entry.name,
@@ -216,6 +221,12 @@ function addon:Search(query, limit)
                 quality = entry.quality,
                 familyID = entry.familyID,
                 difficulty = entry.difficulty,
+                itemLevel = entry.itemLevel,
+                classID = entry.classID,
+                subclassID = entry.subclassID,
+                inventoryType = entry.inventoryType,
+                source = entry.source,
+                verified = entry.verified,
                 score = startAt == 1 and 0 or startAt,
             }
         end
@@ -230,6 +241,13 @@ function addon:Search(query, limit)
         table.remove(results)
     end
     return results
+end
+
+function addon:GetStats()
+    local items, families, verified = 0, 0, 0
+    for _, entry in pairs(self.DB and self.DB.items or {}) do items = items + 1; if entry.verified then verified = verified + 1 end end
+    for _ in pairs(self.DB and self.DB.families or {}) do families = families + 1 end
+    return { items = items, families = families, verified = verified, context = self:GetContext() }
 end
 
 local frame = CreateFrame("Frame")

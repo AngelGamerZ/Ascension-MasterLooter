@@ -102,6 +102,7 @@ function SettingsWindow:BuildHome()
         { "SoftRes", "SoftResWindow" }, { "Regeln & Strichliste", "RulesWindow" }, { "Historie", "HistoryWindow" },
         { "GDKP", "GDKPWindow" }, { "GDKP-Auktion", "GDKPAuctionWindow" }, { "Raidverwaltung", "RaidManagerWindow" },
         { "Tascheninspektor", "BagInspectorWindow" }, { "Import / Export", "ImportExportWindow" }, { "Versionscheck", "VersionWindow" },
+        { "Ascension-Itemsuche", "ItemSearchWindow" }, { "Profile", "ProfileWindow" }, { "Neuigkeiten", "WelcomeWindow" },
     }
     for index, tool in ipairs(tools) do
         local column = ((index - 1) % 3) + 1
@@ -129,6 +130,8 @@ function SettingsWindow:BuildGeneral()
     self.profileEdit = Theme:CreateEditBox(section, 190, 24); self.profileEdit:SetPoint("LEFT", profileLabel, "RIGHT", 20, 0)
     local switchProfile = Theme:CreateButton(section, "Wechseln", 90, 24); switchProfile:SetPoint("LEFT", self.profileEdit, "RIGHT", 8, 0)
     switchProfile:SetScript("OnClick", function() SettingsWindow:SwitchProfile() end)
+    local manageProfiles = Theme:CreateButton(section, "Profile verwalten", 145, 24); manageProfiles:SetPoint("LEFT", switchProfile, "RIGHT", 8, 0)
+    manageProfiles:SetScript("OnClick", function() openWindow("ProfileWindow") end)
 end
 
 function SettingsWindow:BuildLoot()
@@ -184,6 +187,7 @@ function SettingsWindow:BuildData()
     apply:SetScript("OnClick", function() SettingsWindow:ApplyScale() end)
     local reset = Theme:CreateButton(section, "Fensterpositionen zurücksetzen", 210, 26); reset:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -306)
     reset:SetScript("OnClick", function() SettingsWindow:ResetPositions() end)
+    local factory = Theme:CreateButton(section, "Gesamtes Addon zurücksetzen", 210, 26); factory:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -344); factory:SetScript("OnClick", function() SettingsWindow:RequestFactoryReset() end); self.factoryResetButton = factory
 end
 
 function SettingsWindow:EnsureFrame()
@@ -253,6 +257,19 @@ function SettingsWindow:ResetPositions()
     local current = profile()
     for key, value in pairs(current) do if type(value) == "table" and (string.find(string.lower(key), "window") or value.point) then value.point, value.relativePoint, value.x, value.y = nil, nil, nil, nil end end
     self:SetStatus("Gespeicherte Fensterpositionen zurückgesetzt. /reload anwenden.", Theme.colors.green)
+end
+
+function SettingsWindow:RequestFactoryReset()
+    if not self.factoryResetArmed then
+        self.factoryResetArmed = true; self.factoryResetButton:SetText("Wirklich alles löschen")
+        self:SetStatus("Noch einmal klicken: Profile, Regeln, Historie, GDKP und alle Einstellungen werden gelöscht.", Theme.colors.red)
+        if GA.Compat and type(GA.Compat.After) == "function" then GA.Compat:After(8, function() if SettingsWindow.factoryResetArmed then SettingsWindow.factoryResetArmed = false; SettingsWindow.factoryResetButton:SetText("Gesamtes Addon zurücksetzen"); SettingsWindow:SetStatus("Zurücksetzen abgebrochen.") end end) end
+        return false
+    end
+    self.factoryResetArmed = false; self.factoryResetButton:SetText("Gesamtes Addon zurücksetzen")
+    GA.DB:ResetAll(); self:SetStatus("Daten zurückgesetzt. Oberfläche wird neu geladen.", Theme.colors.green)
+    if type(ReloadUI) == "function" then ReloadUI() end
+    return true
 end
 
 function SettingsWindow:SaveDuration()

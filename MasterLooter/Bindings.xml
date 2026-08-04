@@ -1,0 +1,6 @@
+<Bindings>
+    <Binding name="MASTERLOOTER_SETTINGS" header="MASTERLOOTER">MasterLooter_ToggleSettings()</Binding>
+    <Binding name="MASTERLOOTER_LOOTMASTER">MasterLooter_ToggleLootmaster()</Binding>
+    <Binding name="MASTERLOOTER_HISTORY">MasterLooter_ToggleHistory()</Binding>
+    <Binding name="MASTERLOOTER_TRADE">MasterLooter_ToggleTrade()</Binding>
+</Bindings>
