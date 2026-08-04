@@ -175,22 +175,6 @@ function LootWindow:SafeSetScript(frame, scriptName, handler)
     return pcall(frame.SetScript, frame, scriptName, handler)
 end
 
-function LootWindow:IsVisibleLootButton(button)
-    if not button or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return false end
-    if type(self:SafeGetScript(button, "OnClick")) ~= "function" then return false end
-    if type(button.IsShown) == "function" and not button:IsShown() then return false end
-    local current, lootHierarchy = button, false
-    for _ = 1, 8 do
-        if not current then break end
-        local name = string.lower(self:GetFrameName(current))
-        if string.find(name, "loot", 1, true) then lootHierarchy = true; break end
-        current = type(current.GetParent) == "function" and current:GetParent() or nil
-    end
-    if not lootHierarchy then return false end
-    local slot = self:GetButtonSlot(button)
-    return slot and type(GetLootSlotLink) == "function" and GetLootSlotLink(slot) and true or false
-end
-
 function LootWindow:InstallLootButtonHooks(reason)
     self.nativeButtonHooks = self.nativeButtonHooks or {}
     local installed, detected, active = 0, 0, 0
@@ -219,20 +203,17 @@ function LootWindow:InstallLootButtonHooks(reason)
         install(_G["LootButton" .. index], "GLOBAL_LOOTBUTTON")
         install(_G["LootFrameItem" .. index], "GLOBAL_LOOTFRAMEITEM")
     end
-    if type(EnumerateFrames) == "function" then
-        local frame, scanned = nil, 0
-        while scanned < 10000 do
-            frame = EnumerateFrames(frame)
-            if not frame then break end
-            scanned = scanned + 1
-            if self:IsVisibleLootButton(frame) then install(frame, "VISIBLE_LOOT_FRAME") end
-        end
-        self.lastEnumeratedFrames = scanned
+    local elvCount = math.max(tonumber(type(GetNumLootItems) == "function" and GetNumLootItems()) or 0, 40)
+    for index = 1, elvCount do install(_G["ElvLootSlot" .. index], "ELVUI_LOOT_SLOT") end
+    local elvFrame = _G.ElvLootFrame
+    if elvFrame and type(elvFrame.slots) == "table" then
+        for _, button in pairs(elvFrame.slots) do install(button, "ELVUI_LOOT_FRAME_SLOTS") end
     end
+    self.lastEnumeratedFrames = 0
     self.hookScanCount = (tonumber(self.hookScanCount) or 0) + 1
     self.lastHookScan = {
         at = type(GetTime) == "function" and GetTime() or 0, reason = reason or "MANUAL",
-        detected = detected, installed = installed, active = active, enumerated = self.lastEnumeratedFrames or 0,
+        detected = detected, installed = installed, active = active, enumerated = 0,
     }
     if GA.Trace then GA:Trace("INPUT", "LOOT_HOOK_SCAN", self.lastHookScan.reason, detected, installed, active, self.lastHookScan.enumerated) end
     return active > 0

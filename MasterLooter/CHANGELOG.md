@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.7-beta
+
+- Tatsächlich verwendete ElvUI-Lootzeilen `ElvLootSlot1` bis `ElvLootSlot40` werden direkt eingebunden
+- Zusätzlich werden die von `ElvLootFrame.slots` bereitgestellten Slotbuttons übernommen
+- Breite `EnumerateFrames`-Suche entfernt; kein 10.000-Frame-Limit und keine unnötige Vollsuche mehr
+- Need-, Greed- und andere Gruppenwurf-Buttons werden nicht mehr fälschlich als Lootfenster-Items erkannt
+- Live-verwendeter ElvUI-`OnClick`-Pfad mit `GetLootSlotLink(self:GetID())` wird vor dem ursprünglichen Itemlink-Klick abgefangen
+- Diagnose kennzeichnet diese Hooks ausdrücklich als `ELVUI_LOOT_SLOT` beziehungsweise `ELVUI_LOOT_FRAME_SLOTS`
+
 ## 0.13.6-beta
 
 - Dynamische Framesuche gegen unbenannte Frames abgesichert, die bei einer nicht unterstützten `OnClick`-Abfrage selbst einen Lua-Fehler werfen

@@ -189,33 +189,25 @@ control, arg1 = false, "LeftButton"
 directLootButton:GetScript("OnClick")(directLootButton, nil)
 same(directOriginalClicks, 1, "ordinary direct loot-button clicks retain native behavior")
 
-local customRoot = { GetName = function() return "AscensionLootFrame" end }
-local customOriginalClicks = 0
-local unsupportedFrame = {
-    GetName = function() return nil end, GetParent = function() return customRoot end,
-    GetScript = function(_, scriptName) error("<unnamed> doesn't have a \"" .. tostring(scriptName) .. "\" script") end,
-    SetScript = function() end, IsShown = function() return true end, GetID = function() return 1 end,
-}
-local customLootButton = { slot = 1, scripts = {}, GetName = function() return nil end }
-function customLootButton:GetParent() return customRoot end
-function customLootButton:GetScript(name) return self.scripts[name] end
-function customLootButton:SetScript(name, handler) self.scripts[name] = handler end
-function customLootButton:IsShown() return true end
-function customLootButton:RegisterForClicks() end
-customLootButton.scripts.OnClick = function() customOriginalClicks = customOriginalClicks + 1 end
-local enumerated = { customRoot, unsupportedFrame, customLootButton }
-EnumerateFrames = function(previous)
-    if not previous then return enumerated[1] end
-    for index, frame in ipairs(enumerated) do if frame == previous then return enumerated[index + 1] end end
-end
+local elvOriginalClicks = 0
+local elvLootButton = { id = 1, scripts = {}, GetName = function() return "ElvLootSlot1" end }
+function elvLootButton:GetID() return self.id end
+function elvLootButton:GetScript(name) return self.scripts[name] end
+function elvLootButton:SetScript(name, handler) self.scripts[name] = handler end
+function elvLootButton:RegisterForClicks() end
+elvLootButton.scripts.OnClick = function() elvOriginalClicks = elvOriginalClicks + 1 end
+ElvLootSlot1, ElvLootFrame = elvLootButton, { slots = { elvLootButton } }
+local unrelatedGroupRoll = { scripts = { OnClick = function() end }, GetID = function() return 1 end,
+    GetScript = function(self, name) return self.scripts[name] end, SetScript = function(self, name, value) self.scripts[name] = value end }
+GroupLootFrame1RollButton = unrelatedGroupRoll
 control, arg1, selected, used = true, "RightButton", nil, false
-local safeScan, scanResult = pcall(GA.UI.LootWindow.InstallLootButtonHooks, GA.UI.LootWindow, "ASCENSION_SMOKE")
-expect(safeScan and scanResult, "unsupported unnamed frames cannot abort Ascension loot-button discovery")
-customLootButton:GetScript("OnClick")(customLootButton, nil)
-same(customOriginalClicks, 0, "custom Ascension loot button suppresses native looting for handled CTRL-right-click")
-expect(selected and selected.slot == 1 and used, "custom Ascension loot button opens the loot-master workflow")
-expect(string.find(GA.UI.LootWindow:GetHookDiagnosticText(), "VISIBLE_LOOT_FRAME", 1, true),
-    "loot diagnostics expose dynamically discovered frame hooks")
+expect(GA.UI.LootWindow:InstallLootButtonHooks("ELVUI_SMOKE"), "real ElvUI loot slot is discovered directly")
+elvLootButton:GetScript("OnClick")(elvLootButton, nil)
+same(elvOriginalClicks, 0, "ElvUI loot slot suppresses native looting for handled CTRL-right-click")
+expect(selected and selected.slot == 1 and used, "ElvUI loot slot opens the loot-master workflow")
+expect(string.find(GA.UI.LootWindow:GetHookDiagnosticText(), "ELVUI_LOOT_SLOT", 1, true),
+    "loot diagnostics expose the explicit ElvUI slot hook")
+same(GA.UI.LootWindow.nativeButtonHooks[unrelatedGroupRoll], nil, "group-roll buttons are never mistaken for loot-window items")
 GA.UI.LootWindow:RemoveLootClickHooks()
 GA.UI.LootWindow:OnEnable()
 expect(GA.UI.LootWindow.nativeClickHooks.LootFrameItem_OnClick ~= nil,

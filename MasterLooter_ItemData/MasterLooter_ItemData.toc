@@ -2,7 +2,7 @@
 ## Title: MasterLooter Item Data
 ## Notes: Sparse Ascension item index for MasterLooter.
 ## Author: MasterLooter Team
-## Version: 0.13.6-beta
+## Version: 0.13.7-beta
 ## Dependencies: MasterLooter
 ## LoadOnDemand: 1
 ## SavedVariables: MasterLooterItemDB
