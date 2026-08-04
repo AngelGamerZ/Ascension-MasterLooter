@@ -18,10 +18,26 @@ GA.UI.SettingsWindow = SettingsWindow
 local function profile() return GA.DB:GetProfile() end
 
 local function openWindow(name)
+    return SettingsWindow:OpenTool(name)
+end
+
+function SettingsWindow:OpenTool(name)
     local window = GA.UI and GA.UI[name]
-    if window and type(window.Show) == "function" then window:Show(); return true end
-    if GA.Print then GA:Print("Fenster ist nicht verfügbar: " .. tostring(name)) end
-    return false
+    if not window or type(window.Show) ~= "function" then
+        if GA.Print then GA:Print("Fenster ist nicht verfügbar: " .. tostring(name)) end
+        return false
+    end
+    local opened = window:Show()
+    if opened == false then return false end
+    local child = window.frame
+    if child then
+        if type(child.SetToplevel) == "function" then child:SetToplevel(true) end
+        if type(child.Raise) == "function" then child:Raise() end
+    end
+    -- The settings hub is a launcher, not a modal cover. Closing it here also
+    -- works on clients where equal DIALOG strata ignore Raise().
+    self:Hide()
+    return true
 end
 
 function SettingsWindow:GetSections() return self.SECTIONS end

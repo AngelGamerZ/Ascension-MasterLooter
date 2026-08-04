@@ -107,6 +107,14 @@ function PlusOnes:ResetStats(player, reason)
     return true
 end
 
+function PlusOnes:ResetAll(reason)
+    self:Reset(reason or "MANUAL_RESET_ALL")
+    local store = ensureStore()
+    store.players, store.processed, store.history = {}, {}, {}
+    GA.Events:Emit("GA_ITEM_LEDGER_RESET", reason)
+    return true
+end
+
 function PlusOnes:ExportLedger()
     local lines = { "Spieler\tGesamt\tMS\tOS\tSonstige\tPlus1" }
     local players = {}

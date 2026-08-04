@@ -66,11 +66,21 @@ function Theme:CreateButton(parent, text, width, height)
 end
 
 function Theme:CreateEditBox(parent, width, height, numeric)
-    local edit = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    -- Ascension's 3.3.5a InputBoxTemplate can render its middle texture above
+    -- the edit text.  That leaves only the first and last characters visible.
+    -- A self-contained inset avoids client-template draw-order differences.
+    local edit = CreateFrame("EditBox", nil, parent)
     edit:SetWidth(width or 120)
     edit:SetHeight(height or 22)
+    self:ApplyInset(edit)
+    if type(edit.SetFontObject) == "function" and _G.ChatFontNormal then
+        edit:SetFontObject(_G.ChatFontNormal)
+    elseif type(edit.SetFont) == "function" and _G.STANDARD_TEXT_FONT then
+        edit:SetFont(_G.STANDARD_TEXT_FONT, 12, "")
+    end
+    if type(edit.SetTextColor) == "function" then edit:SetTextColor(unpack(self.colors.text)) end
     edit:SetAutoFocus(false)
-    edit:SetTextInsets(4, 4, 0, 0)
+    edit:SetTextInsets(7, 7, 0, 0)
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     edit:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     if numeric then

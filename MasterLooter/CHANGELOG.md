@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.1-beta
+
+- Ascension-fehlerhaftes `InputBoxTemplate` durch eigene, vollständig sichtbare 3.3.5a-Eingabefelder ersetzt
+- Aus den Einstellungen gestartete Werkzeuge werden zuverlässig in den Vordergrund gebracht; der Launcher schließt sich anschließend automatisch
+- Regeln/Strichliste und GDKP sind nun echte Top-Level-Fenster
+- Handelsassistent erhält einen zweistufig bestätigten Button zum Leeren aller Handelsaufgaben und offenen Vergaben
+- Regeln/Strichliste erhält einen zweistufig bestätigten Komplett-Reset für SoftRes, HardRes, Prioritäten, +1, Roll-Boni und erhaltene Items
+- GDKP erhält einen zweistufig bestätigten Komplett-Reset für aktive Sitzung, Formular und GDKP-Historie
+- Zusätzliche Simulationen prüfen die tatsächlichen Eingabefeld-Templates, Fensterebenen, Reset-Abläufe und 56 Geometriebedingungen der Verwaltungsfenster
+
 ## 0.14.0-beta
 
 - Fehlgeschlagene Direktvergaben aus einem offenen Lootfenster nehmen automatisch den exakten Lootslot für den Lootmaster auf

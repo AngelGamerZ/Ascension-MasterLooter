@@ -22,6 +22,7 @@ function GDKPWindow:EnsureFrame()
     frame:SetWidth(700)
     frame:SetHeight(545)
     frame:SetFrameStrata("DIALOG")
+    frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     Theme:AddTitle(frame, "GDKP-Sitzung")
@@ -58,6 +59,11 @@ function GDKPWindow:EnsureFrame()
     local players = Theme:CreateLabel(frame, "Spieler: 0", 11)
     players:SetPoint("LEFT", cut, "RIGHT", 80, 0)
     self.playersLabel = players
+    local reset = Theme:CreateButton(frame, "Alles zurücksetzen", 140, 24)
+    reset:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -98)
+    reset:SetScript("OnClick", function() GDKPWindow:RequestReset() end)
+    self.resetButton = reset
+    players:SetPoint("RIGHT", reset, "LEFT", -10, 0)
 
     local itemLabel = Theme:CreateLabel(frame, "Itemlink / Item-ID", 11, Theme.colors.gold)
     itemLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -148)
@@ -139,6 +145,35 @@ function GDKPWindow:EnsureFrame()
     local open = Theme:CreateButton(frame, "Offen", 75, 23); open:SetPoint("LEFT", paid, "RIGHT", 6, 0); open:SetScript("OnClick", function() GDKPWindow:SetPayment("OPEN") end)
     local cutHelp = Theme:CreateLabel(frame, "Spieler / Cut-Gewicht / Zahlungsstatus", 10, Theme.colors.muted); cutHelp:SetPoint("BOTTOMLEFT", cutPlayer, "TOPLEFT", 0, 3)
     return frame
+end
+
+function GDKPWindow:RequestReset()
+    if not self.resetArmed then
+        self.resetArmed = true
+        self.resetButton:SetText("Wirklich löschen")
+        self.saleResult:SetText("Noch einmal klicken: aktive Sitzung und GDKP-Historie werden gelöscht.")
+        self.saleResult:SetTextColor(unpack(Theme.colors.red))
+        if GA.Compat and type(GA.Compat.After) == "function" then
+            GA.Compat:After(6, function()
+                if GDKPWindow.resetArmed then
+                    GDKPWindow.resetArmed = false
+                    GDKPWindow.resetButton:SetText("Alles zurücksetzen")
+                    GDKPWindow:Refresh()
+                end
+            end)
+        end
+        return false
+    end
+    self.resetArmed = false
+    self.resetButton:SetText("Alles zurücksetzen")
+    if GA.GDKP and type(GA.GDKP.Reset) == "function" then GA.GDKP:Reset(true) end
+    self.lastFinished, self.offset = nil, 0
+    self.sessionName:SetText(""); self.itemInput:SetText(""); self.buyerInput:SetText(""); self.amountInput:SetText("")
+    self.cutPlayerEdit:SetText(""); self.cutWeightEdit:SetText("1")
+    self:Refresh()
+    self.saleResult:SetText("GDKP-Sitzung und Historie wurden zurückgesetzt.")
+    self.saleResult:SetTextColor(unpack(Theme.colors.green))
+    return true
 end
 
 function GDKPWindow:SetCutWeight()
@@ -273,6 +308,7 @@ function GDKPWindow:Initialize()
         GDKPWindow.lastFinished = session
         GDKPWindow:Refresh(session)
     end, self)
+    GA.Events:On("GA_GDKP_RESET", function() GDKPWindow.lastFinished = nil; GDKPWindow.offset = 0; GDKPWindow:Refresh() end, self)
     GA.Events:On("GA_GDKP_DISTRIBUTION_CHANGED", function(_, _, session) GDKPWindow:Refresh(session) end, self)
     self.initialized = true
     self:Refresh()

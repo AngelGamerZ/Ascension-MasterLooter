@@ -58,6 +58,7 @@ function RulesWindow:EnsureFrame()
     frame:SetWidth(950)
     frame:SetHeight(570)
     frame:SetFrameStrata("DIALOG")
+    frame:SetToplevel(true)
     frame:Hide()
     Theme:ApplyPanel(frame)
     Theme:AddTitle(frame, "Loot-Regeln und Spielerwerte")
@@ -105,10 +106,15 @@ function RulesWindow:EnsureFrame()
     local refreshButton = Theme:CreateButton(frame, "Gruppe neu laden", 125, 24)
     refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -108)
     refreshButton:SetScript("OnClick", function() RulesWindow:Refresh(true) end)
+    self.refreshButton = refreshButton
+    local resetButton = Theme:CreateButton(frame, "Alles zurücksetzen", 140, 24)
+    resetButton:SetPoint("RIGHT", refreshButton, "LEFT", -8, 0)
+    resetButton:SetScript("OnClick", function() RulesWindow:RequestReset() end)
+    self.resetButton = resetButton
 
     local itemSummary = Theme:CreateLabel(frame, "Kein Item ausgewählt.", 12)
     itemSummary:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -112)
-    itemSummary:SetPoint("RIGHT", refreshButton, "LEFT", -10, 0)
+    itemSummary:SetPoint("RIGHT", resetButton, "LEFT", -10, 0)
     self.itemSummary = itemSummary
 
     local list = CreateFrame("Frame", nil, frame)
@@ -193,6 +199,37 @@ function RulesWindow:EnsureFrame()
     end)
     self.nextButton = nextButton
     return frame
+end
+
+function RulesWindow:RequestReset()
+    if not self.resetArmed then
+        self.resetArmed = true
+        self.resetButton:SetText("Wirklich löschen")
+        self:SetStatus("Noch einmal klicken: SoftRes, Prioritäten, +1, Roll-Boni und Strichliste werden gelöscht.", true)
+        if GA.Compat and type(GA.Compat.After) == "function" then
+            GA.Compat:After(6, function()
+                if RulesWindow.resetArmed then
+                    RulesWindow.resetArmed = false
+                    RulesWindow.resetButton:SetText("Alles zurücksetzen")
+                    RulesWindow:SetStatus("Zurücksetzen abgebrochen.")
+                end
+            end)
+        end
+        return false
+    end
+    self.resetArmed = false
+    self.resetButton:SetText("Alles zurücksetzen")
+    if GA.SoftRes and type(GA.SoftRes.Reset) == "function" then GA.SoftRes:Reset() end
+    if GA.Priority and type(GA.Priority.Reset) == "function" then GA.Priority:Reset() end
+    if GA.PlusOnes and type(GA.PlusOnes.ResetAll) == "function" then GA.PlusOnes:ResetAll("RULES_UI_RESET_ALL") end
+    if GA.BoostedRolls and type(GA.BoostedRolls.Reset) == "function" then GA.BoostedRolls:Reset() end
+    self.currentItem = nil
+    self.itemInput:SetText("")
+    self.itemSummary:SetText("Kein Item ausgewählt.")
+    self.offset = 0
+    self:Refresh(true)
+    self:SetStatus("Alle Regeln, +1-Werte und die Strichliste wurden zurückgesetzt.")
+    return true
 end
 
 function RulesWindow:SetStatus(message, isError)
@@ -323,7 +360,8 @@ function RulesWindow:Initialize()
     local refreshEvents = {
         "GA_SOFTRES_CHANGED", "GA_PRIORITY_CHANGED", "GA_PLUSONE_CHANGED",
         "GA_PLUSONE_RESET", "GA_BOOST_CHANGED", "GA_HARDRES_CHANGED",
-        "GA_ITEM_LEDGER_CHANGED", "GA_LEDGER_RULE_CHANGED",
+        "GA_ITEM_LEDGER_CHANGED", "GA_LEDGER_RULE_CHANGED", "GA_SOFTRES_RESET",
+        "GA_PRIORITY_RESET", "GA_BOOST_RESET", "GA_ITEM_LEDGER_RESET",
     }
     for index = 1, #refreshEvents do
         GA.Events:On(refreshEvents[index], function() RulesWindow:Refresh(false) end, self)

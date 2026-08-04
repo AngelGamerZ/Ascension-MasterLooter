@@ -239,4 +239,12 @@ GA.UI.LootWindow:OnEnable()
 expect(GA.UI.LootWindow.nativeClickHooks.LootFrameItem_OnClick ~= nil,
     "loot click wrapper is restored after re-enabling the module")
 
+local cancelledResetTimer = false
+GA.Award.pending[99] = { timer = { Cancel = function() cancelledResetTimer = true end } }
+expect(GA.Trade:ClearPending() > 0, "trade reset removes existing delivery tasks")
+same(#GA.Trade:GetPending(), 0, "trade reset leaves an empty assistant queue")
+expect(GA.Award:ClearDeferred() > 0, "award reset removes deferred loot assignments")
+same(#GA.Award:GetDeferred(true), 0, "award reset leaves no hidden deferred assignments")
+expect(cancelledResetTimer, "award reset cancels outstanding confirmation timers")
+
 print("PASS: " .. assertions .. " loot/trade smoke assertions")

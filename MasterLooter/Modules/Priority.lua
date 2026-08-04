@@ -21,6 +21,12 @@ function Priority:Get(item, player)
     return bucket and tonumber(bucket[playerKey(player)]) or 0
 end
 
+function Priority:Reset()
+    GA.DB.data.priorities = {}
+    GA.Events:Emit("GA_PRIORITY_RESET")
+    return true
+end
+
 function Priority:Import(text)
     local imported, rejected = 0, 0
     for line in string.gmatch((text or "") .. "\n", "([^\r\n]*)[\r\n]") do

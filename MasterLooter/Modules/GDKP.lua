@@ -131,6 +131,16 @@ function GDKP:Finish()
     return finished
 end
 
+function GDKP:Reset(clearHistory)
+    self.active = nil
+    persist(self)
+    if clearHistory and GA.DB.data.history and type(GA.DB.data.history.gdkp) == "table" then
+        for index = #GA.DB.data.history.gdkp, 1, -1 do table.remove(GA.DB.data.history.gdkp, index) end
+    end
+    GA.Events:Emit("GA_GDKP_RESET", clearHistory and true or false)
+    return true
+end
+
 function GDKP:OnInitialize()
     GA.DB.data.character.gdkp = GA.DB.data.character.gdkp or { active = nil }
     self.store = GA.DB.data.character.gdkp

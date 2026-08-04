@@ -12,6 +12,11 @@ function BoostedRolls:Set(player, bonus)
     GA.Events:Emit("GA_BOOST_CHANGED", player, bonus)
     return bonus
 end
+function BoostedRolls:Reset()
+    GA.DB.data.boostedRolls = {}
+    GA.Events:Emit("GA_BOOST_RESET")
+    return true
+end
 function BoostedRolls:Apply(player, roll) return math.max(1, math.min(100, (tonumber(roll) or 0) + self:Get(player))) end
 function BoostedRolls:OnInitialize() return true end
 GA:RegisterModule("BoostedRolls", BoostedRolls)

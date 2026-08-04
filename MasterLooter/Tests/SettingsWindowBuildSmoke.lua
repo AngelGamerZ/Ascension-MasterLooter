@@ -19,6 +19,8 @@ local function widget(name)
         "RegisterForClicks", "SetScale", "ClearAllPoints", "SetHighlightTexture", "SetTexture", "SetTexCoord",
     }) do object[method] = noOp end
     function object:GetName() return self.name end
+    function object:SetToplevel(value) self.toplevel = value end
+    function object:Raise() self.raised = true end
     function object:SetScript(event, callback) self[event] = callback end
     function object:CreateFontString() return widget() end
     function object:CreateTexture() return widget() end
@@ -81,5 +83,11 @@ expect(settings:Refresh(), "a complete settings frame refreshes safely")
 same(#settings:GetSections(), 5, "all navigation sections survive complete construction")
 expect(settings:Show("LOOT"), "settings can open a requested section")
 same(settings.activeSection, "LOOT", "requested section becomes active")
+local childFrame = widget("ChildTool"); childFrame:Hide()
+GA.UI.RulesWindow = { frame = childFrame, Show = function(self) self.frame:Show(); return true end }
+settings.frame:Show()
+expect(settings:OpenTool("RulesWindow"), "settings launcher opens a standalone tool")
+expect(childFrame.shown and childFrame.raised and childFrame.toplevel, "standalone tool is explicitly raised to top level")
+expect(not settings.frame.shown, "settings launcher closes instead of covering the opened tool")
 
 print(string.format("PASS: %d settings-window build assertions", assertions))

@@ -59,6 +59,11 @@ same(distribution[1].amount, 666, "weighted cut floor")
 expect(GA.GDKP:SetPaymentStatus("Alice", "PAID"), "payment status accepted")
 expect(not GA.GDKP:SetPaymentStatus("Alice", "INVALID"), "invalid payment rejected")
 expect(not GA.GDKP:SetCutWeight("Alice", -1), "negative cut rejected")
+GA.DB.data.history.gdkp[1] = { name = "Old" }
+expect(GA.GDKP:Reset(true), "GDKP full reset succeeds")
+same(GA.GDKP.active, nil, "GDKP reset removes the active session")
+same(#GA.DB.data.history.gdkp, 0, "GDKP full reset clears persisted history")
+same(GA.GDKP.store.active, nil, "GDKP reset persists the empty active state")
 
 GA.GDKPAuction.Start = function(self, link, minimum, increment, duration)
     self.active = { status = "ACTIVE", itemLink = link, minimum = minimum, increment = increment, duration = duration }

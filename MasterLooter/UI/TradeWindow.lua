@@ -43,12 +43,41 @@ function TradeWindow:EnsureFrame()
     local page = Theme:CreateLabel(frame, "1 / 1", 12, Theme.colors.muted); page:SetPoint("LEFT", previous, "RIGHT", 8, 0); self.pageLabel = page
     local nextButton = Theme:CreateButton(frame, ">", 35, 23); nextButton:SetPoint("LEFT", page, "RIGHT", 8, 0); self.next = nextButton
     nextButton:SetScript("OnClick", function() TradeWindow.page = math.min(TradeWindow.totalPages or 1, TradeWindow.page + 1); TradeWindow:Refresh() end)
+    local clear = Theme:CreateButton(frame, "Alles leeren", 115, 23); clear:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 70); self.clearButton = clear
+    clear:SetScript("OnClick", function() TradeWindow:RequestClear() end)
     local selected = Theme:CreateLabel(frame, "Auswahl: –", 12); selected:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 47); selected:SetWidth(590); self.selectedLabel = selected
     local take = Theme:CreateButton(frame, "An mich nehmen", 125, 27); take:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 15); take:SetScript("OnClick", function() TradeWindow:TakePendingAward() end); take:Disable(); self.take = take
     local prepare = Theme:CreateButton(frame, "Taschen prüfen", 115, 27); prepare:SetPoint("LEFT", take, "RIGHT", 8, 0); prepare:SetScript("OnClick", function() TradeWindow:PrepareSelected() end); prepare:Disable(); self.prepare = prepare
     local place = Theme:CreateButton(frame, "Items einlegen", 115, 27); place:SetPoint("LEFT", prepare, "RIGHT", 8, 0); place:SetScript("OnClick", function() TradeWindow:PlaceSelected() end); place:Disable(); self.place = place
     local note = Theme:CreateLabel(frame, "Gewinner werden automatisch angehandelt und Items eingelegt; den Handel immer selbst annehmen.", 12, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 22); note:SetWidth(280); note:SetJustifyH("RIGHT")
     return frame
+end
+
+function TradeWindow:RequestClear()
+    if not self.clearArmed then
+        self.clearArmed = true
+        self.clearButton:SetText("Wirklich leeren")
+        self.selectedLabel:SetText("Noch einmal klicken: alle offenen Vergaben und Handelsaufgaben werden entfernt.")
+        if GA.Compat and type(GA.Compat.After) == "function" then
+            GA.Compat:After(6, function()
+                if TradeWindow.clearArmed then
+                    TradeWindow.clearArmed = false
+                    TradeWindow.clearButton:SetText("Alles leeren")
+                    TradeWindow:Refresh()
+                end
+            end)
+        end
+        return false
+    end
+    self.clearArmed = false
+    self.clearButton:SetText("Alles leeren")
+    local trades = GA.Trade and type(GA.Trade.ClearPending) == "function" and GA.Trade:ClearPending() or 0
+    local awards = GA.Award and type(GA.Award.ClearDeferred) == "function" and GA.Award:ClearDeferred() or 0
+    self.selected, self.pendingAward, self.page = nil, nil, 1
+    self.prepare:Disable(); self.place:Disable(); self.take:Disable()
+    self:Refresh()
+    self.selectedLabel:SetText(tostring((tonumber(trades) or 0) + (tonumber(awards) or 0)) .. " offene Einträge gelöscht.")
+    return true
 end
 
 function TradeWindow:Refresh()
@@ -98,7 +127,7 @@ function TradeWindow:TakePendingAward()
     self.selectedLabel:SetText(attempt and "Item wird an dich vergeben; Lootfenster offen lassen." or tostring(err)); self:Refresh()
 end
 
-function TradeWindow:Show() local frame = self:EnsureFrame(); if frame then self:Refresh(); frame:Show() end end
+function TradeWindow:Show() local frame = self:EnsureFrame(); if frame then self:Refresh(); frame:Show(); if type(frame.Raise) == "function" then frame:Raise() end; return true end return false end
 function TradeWindow:Hide() if self.frame then self.frame:Hide() end end
 function TradeWindow:Toggle() local frame = self:EnsureFrame(); if frame:IsShown() then self:Hide() else self:Show() end end
 function TradeWindow:OnInitialize()

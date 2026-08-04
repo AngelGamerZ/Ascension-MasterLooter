@@ -288,6 +288,21 @@ function Trade:Remove(id)
     return true
 end
 
+function Trade:ClearPending()
+    local count = #self.pending
+    for index = #self.pending, 1, -1 do
+        local entry = self.pending[index]
+        table.remove(self.pending, index)
+        GA.Events:Emit("GA_TRADE_PENDING_REMOVED", entry)
+    end
+    self.prepared, self.preparedGroup, self.selected = nil, nil, nil
+    self.offered, self.placedThisTrade, self.autoPlaced = {}, nil, nil
+    self.rangePollAttempts = 0
+    if self.store then self.store.pending = self.pending end
+    GA.Events:Emit("GA_TRADE_PENDING_CLEARED", count)
+    return count
+end
+
 function Trade:FindInBags(idOrItem)
     local entry = type(idOrItem) == "string" and self:Get(idOrItem) or nil
     local item = entry and entry.itemID or idOrItem

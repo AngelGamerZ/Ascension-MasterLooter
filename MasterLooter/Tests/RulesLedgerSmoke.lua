@@ -111,4 +111,25 @@ same(GA.PlusOnes:Get("Alice"), 2, "statistic reset does not alter ranking +1")
 GA.PlusOnes:Reset("TEST")
 same(GA.PlusOnes:Get("Alice"), 0, "global +1 reset works")
 
+GA.DB.data.softRes = { reservations = { ["100"] = { alice = 1 } }, hardReserved = { ["100"] = true } }
+GA.DB.data.priorities = { ["100"] = { alice = 5 } }
+GA.DB.data.boostedRolls = { alice = 10 }
+GA.DB.data.plusOnes = { alice = 2 }
+GA.DB.data.itemLedger = { players = { alice = { total = 3 } }, processed = { one = true }, history = { { action = "TEST" } } }
+assert(loadfile("MasterLooter/Modules/SoftRes.lua"))("MasterLooter", GA)
+assert(loadfile("MasterLooter/Modules/Priority.lua"))("MasterLooter", GA)
+assert(loadfile("MasterLooter/Modules/BoostedRolls.lua"))("MasterLooter", GA)
+expect(GA.SoftRes:Reset(), "global SoftRes reset succeeds")
+expect(GA.Priority:Reset(), "global priority reset succeeds")
+expect(GA.BoostedRolls:Reset(), "global roll-bonus reset succeeds")
+expect(GA.PlusOnes:ResetAll("TEST_ALL"), "global +1 and item-ledger reset succeeds")
+same(next(GA.DB.data.softRes.reservations), nil, "SoftRes reservations are empty after reset")
+same(next(GA.DB.data.softRes.hardReserved), nil, "hard reserves are empty after reset")
+same(next(GA.DB.data.priorities), nil, "priorities are empty after reset")
+same(next(GA.DB.data.boostedRolls), nil, "roll bonuses are empty after reset")
+same(next(GA.DB.data.plusOnes), nil, "+1 values are empty after reset")
+same(next(GA.DB.data.itemLedger.players), nil, "received-item counters are empty after reset")
+same(next(GA.DB.data.itemLedger.processed), nil, "ledger deduplication state is empty after reset")
+same(next(GA.DB.data.itemLedger.history), nil, "ledger history is empty after reset")
+
 print("PASS: " .. assertions .. " rules/ledger smoke assertions")

@@ -105,6 +105,18 @@ function Award:GetDeferredByID(id)
     for index = 1, #self.deferred do if self.deferred[index].id == id then return self.deferred[index] end end
 end
 
+function Award:ClearDeferred()
+    local count = #self.deferred
+    for slot, attempt in pairs(self.pending) do
+        if attempt and attempt.timer and type(attempt.timer.Cancel) == "function" then attempt.timer:Cancel() end
+        self.pending[slot] = nil
+    end
+    for index = #self.deferred, 1, -1 do self.deferred[index] = nil end
+    if self.store then self.store.deferred = self.deferred end
+    GA.Events:Emit("GA_AWARD_PENDING_CHANGED", nil, "CLEARED")
+    return count
+end
+
 function Award:Defer(result, session, reason)
     self.nextID = self.nextID + 1
     local queued = findResultQueue(result)

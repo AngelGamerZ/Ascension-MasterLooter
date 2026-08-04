@@ -49,6 +49,14 @@ function SoftRes:IsHardReserved(item)
     return id and GA.DB.data.softRes.hardReserved[tostring(id)] and true or false
 end
 
+function SoftRes:Reset()
+    local store = GA.DB.data.softRes
+    store.reservations, store.hardReserved = {}, {}
+    GA.Events:Emit("GA_SOFTRES_RESET")
+    GA.Events:Emit("GA_HARDRES_CHANGED", nil, false)
+    return true
+end
+
 function SoftRes:Import(text)
     local imported, rejected = 0, 0
     for line in string.gmatch((text or "") .. "\n", "([^\r\n]*)[\r\n]") do
