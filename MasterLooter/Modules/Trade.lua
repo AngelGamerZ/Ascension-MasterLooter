@@ -160,22 +160,27 @@ end
 function Trade:RefreshWinnerStatuses(remind)
     local seen = {}
     for _, entry in ipairs(self:GetPending()) do
-        local key = string.lower(baseName(entry.winner) or entry.winner or "?")
-        local old = entry.rangeStatus
-        if not (self.state == "OPEN" and self.placedThisTrade and self.placedThisTrade[entry.id]) then self:Assess(entry) end
-        entry.rangeStatus = self:GetWinnerRangeStatus(entry.winner)
-        entry.rangeCheckedAt = timestamp()
-        if remind and not seen[key] and (old ~= entry.rangeStatus or not entry.lastReminderAt) then
-            self:RemindWinner(entry)
-            seen[key] = true
-        end
-        if not seen["coord:" .. key] then
-            self:CoordinateWinner(entry)
-            seen["coord:" .. key] = true
-        end
-        if not seen["trade:" .. key] then
-            self:TryAutoInitiate(entry)
-            seen["trade:" .. key] = true
+        -- Expired entries remain visible in the delivery history but can
+        -- never become tradeable again. Reassessing them on every target,
+        -- bag and range event only floods the whole-addon diagnostics.
+        if entry.status ~= "EXPIRED" then
+            local key = string.lower(baseName(entry.winner) or entry.winner or "?")
+            local old = entry.rangeStatus
+            if not (self.state == "OPEN" and self.placedThisTrade and self.placedThisTrade[entry.id]) then self:Assess(entry) end
+            entry.rangeStatus = self:GetWinnerRangeStatus(entry.winner)
+            entry.rangeCheckedAt = timestamp()
+            if remind and not seen[key] and (old ~= entry.rangeStatus or not entry.lastReminderAt) then
+                self:RemindWinner(entry)
+                seen[key] = true
+            end
+            if not seen["coord:" .. key] then
+                self:CoordinateWinner(entry)
+                seen["coord:" .. key] = true
+            end
+            if not seen["trade:" .. key] then
+                self:TryAutoInitiate(entry)
+                seen["trade:" .. key] = true
+            end
         end
     end
 end

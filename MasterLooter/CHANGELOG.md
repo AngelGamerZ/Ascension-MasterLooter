@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.5-beta
+
+- Sichtbare Lootbuttons von AscensionUI und anderen angepassten Lootframes werden zur Laufzeit erkannt, auch wenn sie unbenannt sind
+- Lootbutton-Erkennung läuft bei `LOOT_OPENED` sofort sowie nochmals nach 0 und 0,2 Sekunden
+- Überschriebene `OnClick`-Hooks werden bei der nächsten Erkennung wiederhergestellt, ohne Tooltip-Skripte anzufassen
+- `/ml debug` zeigt Scananzahl, erkannte und aktive Lootbutton-Hooks, Framequelle, Slot und den letzten erreichten Klick
+- Abgelehnte STRG+Rechtsklicks werden mit Ursache protokolliert
+- `/ml debug clear` bestätigt den Reset sichtbar im Chat
+- Bereits abgelaufene Handelsaufgaben überfluten einen frisch geleerten Gesamt-Trace nicht mehr
+
 ## 0.13.4-beta
 
 - STRG+Rechtsklick im nativen 3.3.5a-Lootfenster direkt auf `LootButton1` bis `LootButton4` abgefangen

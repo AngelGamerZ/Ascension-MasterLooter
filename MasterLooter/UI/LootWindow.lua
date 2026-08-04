@@ -126,8 +126,13 @@ end
 
 function LootWindow:OpenLootItem(button, mouseButton)
     mouseButton = mouseButton or _G.arg1
-    if mouseButton ~= "RightButton" or type(IsControlKeyDown) ~= "function" or not IsControlKeyDown() then return false end
+    local controlDown = type(IsControlKeyDown) == "function" and IsControlKeyDown() and true or false
     local slot = self:GetButtonSlot(button)
+    self.lastClickDiagnostic = {
+        at = type(GetTime) == "function" and GetTime() or 0, button = self:GetFrameName(button),
+        mouseButton = mouseButton, controlDown = controlDown, slot = slot, outcome = "IGNORED",
+    }
+    if mouseButton ~= "RightButton" or not controlDown then return false end
     local record = slot and GA.Loot:GetSlot(slot)
     if slot and (not record or record.cleared or not record.link) and type(GetLootSlotLink) == "function" then
         local link = GetLootSlotLink(slot)
@@ -138,36 +143,105 @@ function LootWindow:OpenLootItem(button, mouseButton)
                 capturedAt = type(GetTime) == "function" and GetTime() or 0 }
         end
     end
-    if not record or record.cleared or not record.link then return false end
+    if not record or record.cleared or not record.link then
+        self.lastClickDiagnostic.outcome = "NO_LIVE_LOOT_RECORD"
+        if GA.Trace then GA:Trace("INPUT", "CTRL_RIGHTCLICK_LOOT_REJECTED", slot, self:GetFrameName(button), "NO_LIVE_LOOT_RECORD") end
+        return false
+    end
     self:Select(record)
     self:UseSelected()
+    self.lastClickDiagnostic.outcome, self.lastClickDiagnostic.itemLink = "OPENED", record.link
     if GA.Trace then GA:Trace("INPUT", "CTRL_RIGHTCLICK_LOOT", slot, record.link) end
     return true
 end
 
-function LootWindow:InstallLootButtonHooks()
+function LootWindow:GetFrameName(frame)
+    if not frame then return "nil" end
+    if type(frame.GetName) == "function" then
+        local ok, name = pcall(frame.GetName, frame)
+        if ok and name then return tostring(name) end
+    end
+    return tostring(frame)
+end
+
+function LootWindow:IsVisibleLootButton(button)
+    if not button or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return false end
+    if type(button:GetScript("OnClick")) ~= "function" then return false end
+    if type(button.IsShown) == "function" and not button:IsShown() then return false end
+    local current, lootHierarchy = button, false
+    for _ = 1, 8 do
+        if not current then break end
+        local name = string.lower(self:GetFrameName(current))
+        if string.find(name, "loot", 1, true) then lootHierarchy = true; break end
+        current = type(current.GetParent) == "function" and current:GetParent() or nil
+    end
+    if not lootHierarchy then return false end
+    local slot = self:GetButtonSlot(button)
+    return slot and type(GetLootSlotLink) == "function" and GetLootSlotLink(slot) and true or false
+end
+
+function LootWindow:InstallLootButtonHooks(reason)
     self.nativeButtonHooks = self.nativeButtonHooks or {}
-    local installed = false
+    local installed, detected, active = 0, 0, 0
     local count = math.max(tonumber(_G.LOOTFRAME_NUMBUTTONS) or 4, 4)
-    local function install(button)
-        if not button or self.nativeButtonHooks[button] or type(button.GetScript) ~= "function" or
-            type(button.SetScript) ~= "function" then return end
+    local function install(button, source)
+        if not button or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return end
+        detected = detected + 1
+        local previous = LootWindow.nativeButtonHooks[button]
+        if previous and button:GetScript("OnClick") == previous.wrapper then active = active + 1; return end
         local original = button:GetScript("OnClick")
         if type(original) ~= "function" then return end
         local wrapper = function(self, mouseButton, ...)
             if LootWindow:OpenLootItem(self, mouseButton or _G.arg1) then return true end
             return original(self, mouseButton, ...)
         end
-        self.nativeButtonHooks[button] = { original = original, wrapper = wrapper }
+        LootWindow.nativeButtonHooks[button] = {
+            original = original, wrapper = wrapper, source = source, name = LootWindow:GetFrameName(button),
+        }
         button:SetScript("OnClick", wrapper)
         if type(button.RegisterForClicks) == "function" then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
-        installed = true
+        installed, active = installed + 1, active + 1
     end
     for index = 1, count do
-        install(_G["LootButton" .. index])
-        install(_G["LootFrameItem" .. index])
+        install(_G["LootButton" .. index], "GLOBAL_LOOTBUTTON")
+        install(_G["LootFrameItem" .. index], "GLOBAL_LOOTFRAMEITEM")
     end
-    return installed
+    if type(EnumerateFrames) == "function" then
+        local frame, scanned = nil, 0
+        while scanned < 10000 do
+            frame = EnumerateFrames(frame)
+            if not frame then break end
+            scanned = scanned + 1
+            if self:IsVisibleLootButton(frame) then install(frame, "VISIBLE_LOOT_FRAME") end
+        end
+        self.lastEnumeratedFrames = scanned
+    end
+    self.hookScanCount = (tonumber(self.hookScanCount) or 0) + 1
+    self.lastHookScan = {
+        at = type(GetTime) == "function" and GetTime() or 0, reason = reason or "MANUAL",
+        detected = detected, installed = installed, active = active, enumerated = self.lastEnumeratedFrames or 0,
+    }
+    if GA.Trace then GA:Trace("INPUT", "LOOT_HOOK_SCAN", self.lastHookScan.reason, detected, installed, active, self.lastHookScan.enumerated) end
+    return active > 0
+end
+
+function LootWindow:GetHookDiagnosticText()
+    local lines, scan = { "Loot-Klickdiagnose" }, self.lastHookScan or {}
+    lines[#lines + 1] = "Scans=" .. tostring(self.hookScanCount or 0) .. ", letzter Grund=" .. tostring(scan.reason or "keiner") ..
+        ", erkannt=" .. tostring(scan.detected or 0) .. ", installiert=" .. tostring(scan.installed or 0) ..
+        ", aktiv=" .. tostring(scan.active or 0) .. ", Frames=" .. tostring(scan.enumerated or 0)
+    local activeHooks = 0
+    for button, hook in pairs(self.nativeButtonHooks or {}) do
+        local active = type(button.GetScript) == "function" and button:GetScript("OnClick") == hook.wrapper
+        if active then activeHooks = activeHooks + 1 end
+        lines[#lines + 1] = tostring(hook.name or self:GetFrameName(button)) .. " | Quelle=" .. tostring(hook.source) ..
+            ", Slot=" .. tostring(self:GetButtonSlot(button)) .. ", aktiv=" .. tostring(active and true or false)
+    end
+    lines[#lines + 1] = "Aktive konkrete Hooks=" .. tostring(activeHooks)
+    local click = self.lastClickDiagnostic
+    lines[#lines + 1] = click and ("Letzter Klick: Taste=" .. tostring(click.mouseButton) .. ", STRG=" .. tostring(click.controlDown) ..
+        ", Button=" .. tostring(click.button) .. ", Slot=" .. tostring(click.slot) .. ", Ergebnis=" .. tostring(click.outcome)) or "Letzter Klick: keiner"
+    return table.concat(lines, "\n")
 end
 
 function LootWindow:InstallLootClickHooks()
@@ -218,20 +292,24 @@ function LootWindow:OnInitialize()
     -- window is an explicit user action via /ml loot or the launcher menu.
     GA.Events:On("GA_LOOT_OPENED", function(...)
         LootWindow:InstallLootClickHooks()
-        LootWindow:InstallLootButtonHooks()
+        LootWindow:InstallLootButtonHooks("GA_LOOT_OPENED")
+        if GA.Compat and type(GA.Compat.After) == "function" then
+            GA.Compat:After(0, function() LootWindow:InstallLootButtonHooks("GA_LOOT_OPENED_DELAY_0") end)
+            GA.Compat:After(0.20, function() LootWindow:InstallLootButtonHooks("GA_LOOT_OPENED_DELAY_020") end)
+        end
         LootWindow:Refresh(snapshotFromEvent(...))
     end, self)
     GA.Events:On("GA_LOOT_UPDATED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_LOOT_CLOSED", function(...) LootWindow:Refresh(snapshotFromEvent(...)) end, self)
     GA.Events:On("GA_PACKMULE_TARGET_CHANGED", function(_, _, target) if LootWindow.targetEdit then LootWindow.targetEdit:SetText(target or "") end end, self)
     self:InstallLootClickHooks()
-    self:InstallLootButtonHooks()
+    self:InstallLootButtonHooks("INITIALIZE")
     return true
 end
 
 function LootWindow:OnEnable()
     self:InstallLootClickHooks()
-    self:InstallLootButtonHooks()
+    self:InstallLootButtonHooks("ENABLE")
 end
 
 LootWindow.OnDisable = LootWindow.RemoveLootClickHooks

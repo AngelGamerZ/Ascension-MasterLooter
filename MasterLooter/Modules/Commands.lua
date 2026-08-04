@@ -173,6 +173,13 @@ function GA:GetFullDiagnosticText()
     lines[#lines + 1] = "Comm: Trace=" .. tostring(self.Comm and self.Comm.trace and #self.Comm.trace or 0) ..
         ", Fragmente=" .. tostring(self.Comm and safeCount(self.Comm.fragments) or 0)
 
+    lines[#lines + 1] = ""; lines[#lines + 1] = "LOOT-KLICK"
+    local lootClickText, lootClickError = diagnosticCall(function()
+        local window = self.UI and self.UI.LootWindow
+        return window and type(window.GetHookDiagnosticText) == "function" and window:GetHookDiagnosticText() or "nicht verfügbar"
+    end, "nicht verfügbar")
+    lines[#lines + 1] = lootClickText .. (lootClickError and ("\nFEHLER: " .. lootClickError) or "")
+
     lines[#lines + 1] = ""; lines[#lines + 1] = "UI"
     local uiNames = {}
     for name in pairs(self.UI or {}) do uiNames[#uiNames + 1] = name end
@@ -283,6 +290,7 @@ function Commands:Handle(message)
             if GA.ClearDebugTrace then GA:ClearDebugTrace() end
             if GA.Comm and type(GA.Comm.ClearTrace) == "function" then GA.Comm:ClearTrace() end
             if GA.TooltipDebug and type(GA.TooltipDebug.Clear) == "function" then GA.TooltipDebug:Clear() end
+            GA:Print("Gesamtdiagnose wurde geleert. Gespeicherte Vergaben und Historie bleiben erhalten.")
         end
         local window = GA.UI and GA.UI.AddonDebugWindow
         if window and type(window.Show) == "function" then window:Show()
