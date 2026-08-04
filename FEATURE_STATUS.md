@@ -1,4 +1,4 @@
-# Funktionsstatus 0.13.7-beta
+# Funktionsstatus 0.13.8-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 

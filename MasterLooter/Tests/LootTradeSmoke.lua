@@ -144,6 +144,7 @@ GA.Loot:OnLootOpened(false)
 local afterReload = assert(GA.Loot:QueueSlot(1, "AFTER_RELOAD"))
 expect(afterReload.id ~= oldQueueID, "reused loot slot receives a fresh queue identity")
 
+GA.UI.Theme = { colors = { green = { 0, 1, 0 }, red = { 1, 0, 0 }, muted = { 0.5, 0.5, 0.5 } } }
 loadModule("UI/LootWindow.lua")
 local control, selected, used, ordinaryLootClicks = true, nil, false, 0
 IsControlKeyDown = function() return control end
@@ -151,6 +152,18 @@ local tooltipEnter, tooltipLeave = function() end, function() end
 local lootButton = { id = 1, scripts = { OnEnter = tooltipEnter, OnLeave = tooltipLeave } }
 function lootButton:GetID() return self.id end
 function lootButton:GetScript(name) return self.scripts[name] end
+local backgroundShows, backgroundItem = 0, nil
+GA.UI.MasterLooterWindow = {
+    Show = function() backgroundShows = backgroundShows + 1 end,
+    SetItem = function(_, link) backgroundItem = link end,
+}
+GA.UI.LootWindow.selectedLabel, GA.UI.LootWindow.useButton, GA.UI.LootWindow.muleButton, GA.UI.LootWindow.status = nil, nil, nil, nil
+local backgroundSelectOK, backgroundSelectError = pcall(GA.UI.LootWindow.Select, GA.UI.LootWindow, GA.Loot:GetSlot(1))
+expect(backgroundSelectOK, backgroundSelectError or "background loot selection does not require its management frame")
+local backgroundUseOK, backgroundUseError = pcall(GA.UI.LootWindow.UseSelected, GA.UI.LootWindow)
+expect(backgroundUseOK, backgroundUseError or "background loot workflow does not require its management frame")
+same(backgroundShows, 1, "background loot workflow opens the loot-master window")
+same(backgroundItem, lootLink, "background loot workflow forwards the selected item")
 GA.UI.LootWindow.Select = function(_, value) selected = value end
 GA.UI.LootWindow.UseSelected = function() used = true end
 expect(GA.UI.LootWindow:OpenLootItem(lootButton, "RightButton"), "CTRL-right-click captures the live loot slot")

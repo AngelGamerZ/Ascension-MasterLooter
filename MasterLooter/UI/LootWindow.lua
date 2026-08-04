@@ -76,13 +76,17 @@ function LootWindow:EnsureFrame()
 end
 
 function LootWindow:SetStatus(text, color)
-    self.status:SetText(text or ""); self.status:SetTextColor(unpack(color or Theme.colors.muted))
+    self.lastStatus = text or ""
+    if not self.status then return end
+    self.status:SetText(self.lastStatus); self.status:SetTextColor(unpack(color or Theme.colors.muted))
 end
 
 function LootWindow:Select(record)
     if not record or record.cleared then return end
-    self.selected = record; self.selectedLabel:SetText("Auswahl: " .. (record.link or record.name or ("Slot " .. record.slot)))
-    self.useButton:Enable(); self.muleButton:Enable()
+    self.selected = record
+    if self.selectedLabel then self.selectedLabel:SetText("Auswahl: " .. (record.link or record.name or ("Slot " .. record.slot))) end
+    if self.useButton and type(self.useButton.Enable) == "function" then self.useButton:Enable() end
+    if self.muleButton and type(self.muleButton.Enable) == "function" then self.muleButton:Enable() end
 end
 
 function LootWindow:Refresh(snapshot)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.8-beta
+
+- Direkte ElvUI-Lootauswahl benötigt nicht mehr, dass das optionale Fenster „Erfasster Loot“ zuvor geöffnet wurde
+- `Select` setzt die Hintergrundauswahl auch ohne `selectedLabel`, `useButton` und `muleButton`
+- Statusmeldungen werden gespeichert und nur dann gerendert, wenn das Statusfeld bereits existiert
+- STRG+Rechtsklick kann dadurch unmittelbar nach dem Login den Lootslot übernehmen und das eigentliche Lootmaster-Fenster öffnen
+- Regressionstest deckt den kompletten Hintergrundpfad ohne erzeugten LootWindow-Frame ab
+
 ## 0.13.7-beta
 
 - Tatsächlich verwendete ElvUI-Lootzeilen `ElvLootSlot1` bis `ElvLootSlot40` werden direkt eingebunden
