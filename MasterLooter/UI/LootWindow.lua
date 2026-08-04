@@ -164,9 +164,20 @@ function LootWindow:GetFrameName(frame)
     return tostring(frame)
 end
 
+function LootWindow:SafeGetScript(frame, scriptName)
+    if not frame or type(frame.GetScript) ~= "function" then return nil end
+    local ok, handler = pcall(frame.GetScript, frame, scriptName)
+    return ok and handler or nil
+end
+
+function LootWindow:SafeSetScript(frame, scriptName, handler)
+    if not frame or type(frame.SetScript) ~= "function" then return false end
+    return pcall(frame.SetScript, frame, scriptName, handler)
+end
+
 function LootWindow:IsVisibleLootButton(button)
     if not button or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return false end
-    if type(button:GetScript("OnClick")) ~= "function" then return false end
+    if type(self:SafeGetScript(button, "OnClick")) ~= "function" then return false end
     if type(button.IsShown) == "function" and not button:IsShown() then return false end
     local current, lootHierarchy = button, false
     for _ = 1, 8 do
@@ -188,18 +199,20 @@ function LootWindow:InstallLootButtonHooks(reason)
         if not button or type(button.GetScript) ~= "function" or type(button.SetScript) ~= "function" then return end
         detected = detected + 1
         local previous = LootWindow.nativeButtonHooks[button]
-        if previous and button:GetScript("OnClick") == previous.wrapper then active = active + 1; return end
-        local original = button:GetScript("OnClick")
+        if previous and LootWindow:SafeGetScript(button, "OnClick") == previous.wrapper then active = active + 1; return end
+        local original = LootWindow:SafeGetScript(button, "OnClick")
         if type(original) ~= "function" then return end
         local wrapper = function(self, mouseButton, ...)
             if LootWindow:OpenLootItem(self, mouseButton or _G.arg1) then return true end
             return original(self, mouseButton, ...)
         end
+        if not LootWindow:SafeSetScript(button, "OnClick", wrapper) then return end
         LootWindow.nativeButtonHooks[button] = {
             original = original, wrapper = wrapper, source = source, name = LootWindow:GetFrameName(button),
         }
-        button:SetScript("OnClick", wrapper)
-        if type(button.RegisterForClicks) == "function" then button:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
+        if type(button.RegisterForClicks) == "function" then
+            pcall(button.RegisterForClicks, button, "LeftButtonUp", "RightButtonUp")
+        end
         installed, active = installed + 1, active + 1
     end
     for index = 1, count do
@@ -232,7 +245,7 @@ function LootWindow:GetHookDiagnosticText()
         ", aktiv=" .. tostring(scan.active or 0) .. ", Frames=" .. tostring(scan.enumerated or 0)
     local activeHooks = 0
     for button, hook in pairs(self.nativeButtonHooks or {}) do
-        local active = type(button.GetScript) == "function" and button:GetScript("OnClick") == hook.wrapper
+        local active = self:SafeGetScript(button, "OnClick") == hook.wrapper
         if active then activeHooks = activeHooks + 1 end
         lines[#lines + 1] = tostring(hook.name or self:GetFrameName(button)) .. " | Quelle=" .. tostring(hook.source) ..
             ", Slot=" .. tostring(self:GetButtonSlot(button)) .. ", aktiv=" .. tostring(active and true or false)
@@ -271,8 +284,7 @@ function LootWindow:RemoveLootClickHooks()
     end
     self.nativeClickHooks = {}
     for button, hook in pairs(self.nativeButtonHooks or {}) do
-        if type(button.GetScript) == "function" and type(button.SetScript) == "function" and
-            button:GetScript("OnClick") == hook.wrapper then button:SetScript("OnClick", hook.original) end
+        if self:SafeGetScript(button, "OnClick") == hook.wrapper then self:SafeSetScript(button, "OnClick", hook.original) end
     end
     self.nativeButtonHooks = {}
 end

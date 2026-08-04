@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.6-beta
+
+- Dynamische Framesuche gegen unbenannte Frames abgesichert, die bei einer nicht unterstützten `OnClick`-Abfrage selbst einen Lua-Fehler werfen
+- Sämtliche `GetScript`- und `SetScript`-Zugriffe der Lootbutton-Erkennung laufen nun geschützt
+- Nicht anklickbare Frames werden übersprungen, ohne die weitere Suche nach dem tatsächlichen Ascension-Lootbutton abzubrechen
+- `RegisterForClicks` wird ebenfalls geschützt ausgeführt
+- Regressionstest bildet die gemeldete Fehlermeldung `<unnamed> doesn't have a "OnClick" script` exakt nach
+
 ## 0.13.5-beta
 
 - Sichtbare Lootbuttons von AscensionUI und anderen angepassten Lootframes werden zur Laufzeit erkannt, auch wenn sie unbenannt sind

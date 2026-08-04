@@ -191,6 +191,11 @@ same(directOriginalClicks, 1, "ordinary direct loot-button clicks retain native 
 
 local customRoot = { GetName = function() return "AscensionLootFrame" end }
 local customOriginalClicks = 0
+local unsupportedFrame = {
+    GetName = function() return nil end, GetParent = function() return customRoot end,
+    GetScript = function(_, scriptName) error("<unnamed> doesn't have a \"" .. tostring(scriptName) .. "\" script") end,
+    SetScript = function() end, IsShown = function() return true end, GetID = function() return 1 end,
+}
 local customLootButton = { slot = 1, scripts = {}, GetName = function() return nil end }
 function customLootButton:GetParent() return customRoot end
 function customLootButton:GetScript(name) return self.scripts[name] end
@@ -198,13 +203,14 @@ function customLootButton:SetScript(name, handler) self.scripts[name] = handler 
 function customLootButton:IsShown() return true end
 function customLootButton:RegisterForClicks() end
 customLootButton.scripts.OnClick = function() customOriginalClicks = customOriginalClicks + 1 end
-local enumerated = { customRoot, customLootButton }
+local enumerated = { customRoot, unsupportedFrame, customLootButton }
 EnumerateFrames = function(previous)
     if not previous then return enumerated[1] end
     for index, frame in ipairs(enumerated) do if frame == previous then return enumerated[index + 1] end end
 end
 control, arg1, selected, used = true, "RightButton", nil, false
-expect(GA.UI.LootWindow:InstallLootButtonHooks("ASCENSION_SMOKE"), "visible Ascension loot-frame button is discovered")
+local safeScan, scanResult = pcall(GA.UI.LootWindow.InstallLootButtonHooks, GA.UI.LootWindow, "ASCENSION_SMOKE")
+expect(safeScan and scanResult, "unsupported unnamed frames cannot abort Ascension loot-button discovery")
 customLootButton:GetScript("OnClick")(customLootButton, nil)
 same(customOriginalClicks, 0, "custom Ascension loot button suppresses native looting for handled CTRL-right-click")
 expect(selected and selected.slot == 1 and used, "custom Ascension loot button opens the loot-master workflow")
