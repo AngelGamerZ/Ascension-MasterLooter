@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.2-beta
+
+- Masterloot-Kandidaten werden über alle 40 möglichen 3.3.5a-Indizes gesucht, auch wenn dazwischen leere Plätze liegen
+- Spieler, die im Blizzard-Lootmenü auswählbar sind, werden dadurch nicht mehr fälschlich als außerhalb der Reichweite oder unberechtigt behandelt
+- Kandidatenvergleich toleriert Realmzusätze, umgebende Leerzeichen und WoW-Farbcodes
+- Die Gesamtdiagnose protokolliert bei einer weiterhin fehlenden Zuordnung alle tatsächlich gefundenen Kandidatenindizes
+- Regressionstest bildet eine lückenhafte Kandidatenliste nach, bei der Blizzard den Gewinner an Index 3 anbietet
+
 ## 0.15.1-beta
 
 - MasterLooter-Panel unter `Interface → AddOns` beim Erstellen ausdrücklich verborgen

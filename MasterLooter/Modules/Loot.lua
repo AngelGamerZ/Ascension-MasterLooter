@@ -19,8 +19,10 @@ local function readCandidates(slot)
     if type(GetMasterLootCandidate) ~= "function" then return candidates end
     for index = 1, 40 do
         local name = GetMasterLootCandidate(slot, index)
-        if not name then break end
-        candidates[#candidates + 1] = { index = index, name = name }
+        -- 3.3.5a candidate indices can contain gaps (for example raid slots
+        -- that are not eligible for this item). A nil entry therefore does
+        -- not mean that every following candidate is absent.
+        if name then candidates[#candidates + 1] = { index = index, name = name } end
     end
     return candidates
 end

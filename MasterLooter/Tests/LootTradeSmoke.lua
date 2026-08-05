@@ -58,6 +58,15 @@ GA.Loot:OnInitialize(); GA.Trade:OnInitialize(); GA.Award:OnInitialize(); GA.UI.
 GA.Loot:OnLootOpened(false)
 local record = GA.Loot:GetSlot(1)
 expect(record and record.itemID == 12345, "loot slot is captured")
+-- GetMasterLootCandidate uses raid-slot-like indices on some 3.3.5a clients;
+-- nil gaps must not terminate enumeration because Blizzard's own menu still
+-- finds candidates after those gaps.
+candidates = { [1] = "Lootmaster", [3] = "|cff33ff99Alice-Realm|r" }
+GA.Loot:Refresh("SPARSE_CANDIDATES", true)
+same(#GA.Loot:GetSlot(1).candidates, 2, "loot snapshot keeps candidates after nil index gaps")
+local sparseIndex, sparseName = GA.Award:FindCandidate(1, " Alice ")
+same(sparseIndex, 3, "award finds the same sparse candidate as Blizzard's loot menu")
+same(sparseName, "|cff33ff99Alice-Realm|r", "candidate normalization accepts realm and color decoration")
 local queued = assert(GA.Loot:QueueSlot(1, "SMOKE"))
 same(assert(GA.Loot:QueueSlot(1)).id, queued.id, "same loot slot is not queued twice")
 same(#GA.Loot:GetQueue(), 1, "active loot queue contains one entry")

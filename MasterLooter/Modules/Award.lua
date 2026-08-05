@@ -7,7 +7,13 @@ local Award = { pending = {}, deferred = {}, nextID = 0, confirmTimeout = 2 }
 GA.Award = Award
 
 local function stamp() return (time and time()) or 0 end
-local function baseName(name) return type(name) == "string" and (string.match(name, "^[^-]+") or name) or nil end
+local function baseName(name)
+    if type(name) ~= "string" then return nil end
+    name = string.gsub(name, "|c%x%x%x%x%x%x%x%x", "")
+    name = string.gsub(name, "|r", "")
+    name = string.match(name, "^%s*(.-)%s*$") or name
+    return string.match(name, "^[^-]+") or name
+end
 local function sameName(left, right)
     left, right = baseName(left), baseName(right)
     return left and right and string.lower(left) == string.lower(right)
@@ -43,11 +49,15 @@ end
 function Award:FindCandidate(slot, player)
     if type(GetMasterLootCandidate) ~= "function" then return nil end
     local wanted = string.lower(baseName(player) or "")
+    local seen = {}
     for index = 1, 40 do
         local candidate = GetMasterLootCandidate(slot, index)
-        if not candidate then break end
-        if string.lower(baseName(candidate) or "") == wanted then return index, candidate end
+        if candidate then
+            seen[#seen + 1] = tostring(index) .. ":" .. candidate
+            if string.lower(baseName(candidate) or "") == wanted then return index, candidate end
+        end
     end
+    if GA.Trace then GA:Trace("AWARD", "CANDIDATE_NOT_FOUND", slot, player, table.concat(seen, ", ")) end
 end
 
 function Award:BeginGive(result, session, options)
