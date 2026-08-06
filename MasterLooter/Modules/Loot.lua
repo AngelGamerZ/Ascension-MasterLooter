@@ -14,11 +14,13 @@ local function copyArray(source)
     return result
 end
 
-local function readCandidates(slot)
+local function readCandidates()
     local candidates = {}
     if type(GetMasterLootCandidate) ~= "function" then return candidates end
     for index = 1, 40 do
-        local name = GetMasterLootCandidate(slot, index)
+        -- Blizzard 3.3.5a exposes GetMasterLootCandidate(candidateIndex).
+        -- The loot slot is passed later to GiveMasterLoot, not to this query.
+        local name = GetMasterLootCandidate(index)
         -- 3.3.5a candidate indices can contain gaps (for example raid slots
         -- that are not eligible for this item). A nil entry therefore does
         -- not mean that every following candidate is absent.
@@ -45,7 +47,7 @@ local function readSlot(slot)
         isQuestItem = isQuestItem and true or false,
         questID = questID,
         isActive = isActive and true or false,
-        candidates = readCandidates(slot),
+        candidates = readCandidates(),
         capturedAt = now(),
         cleared = false,
     }

@@ -450,7 +450,10 @@ same(aliceGA.Trade.state, "COMPLETED", "TRADE_CLOSED does not downgrade a confir
 -- fallback, survives through the roll result.
 alice.env.GetNumLootItems = function() return 2 end
 alice.env.GetLootSlotLink = function(slot) return (slot == 1 or slot == 2) and itemLink or nil end
-alice.env.GetMasterLootCandidate = function(slot, index) return (slot == 1 or slot == 2) and index == 1 and "Bob" or nil end
+alice.env.GetMasterLootCandidate = function(index, unexpectedSecondArgument)
+    expect(unexpectedSecondArgument == nil, "3.3.5 masterloot candidate API receives one index argument")
+    return index == 1 and "Bob" or nil
+end
 alice.env.GiveMasterLoot = function(slot, candidate) alice.lastGive = { slot = slot, candidate = candidate } end
 local confirmedSession = aliceGA.RollSession:Start(itemLink, { duration = 30, lootSlot = 2, lootQueueID = "exact-loot-queue", lootGeneration = 17 })
 same(confirmedSession.lootSlot, 2, "roll session preserves the selected loot slot")

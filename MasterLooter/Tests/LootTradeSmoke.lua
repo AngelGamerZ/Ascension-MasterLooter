@@ -41,7 +41,10 @@ GetLootSlotLink = function(slot) return slot == 1 and lootLink or nil end
 GetLootSlotInfo = function(slot) if slot == 1 and lootLink then return "icon", "Testbeute", 1, 4, false, false end end
 LootSlotHasItem = function(slot) return slot == 1 and lootLink ~= nil end
 local candidates = { "Lootmaster" }
-GetMasterLootCandidate = function(slot, index) return slot == 1 and candidates[index] or nil end
+GetMasterLootCandidate = function(index, unexpectedSecondArgument)
+    expect(unexpectedSecondArgument == nil, "native GetMasterLootCandidate receives only the candidate index")
+    return candidates[index]
+end
 local gives = {}
 GiveMasterLoot = function(slot, candidate) gives[#gives + 1] = { slot, candidate } end
 
@@ -67,6 +70,11 @@ same(#GA.Loot:GetSlot(1).candidates, 2, "loot snapshot keeps candidates after ni
 local sparseIndex, sparseName = GA.Award:FindCandidate(1, " Alice ")
 same(sparseIndex, 3, "award finds the same sparse candidate as Blizzard's loot menu")
 same(sparseName, "|cff33ff99Alice-Realm|r", "candidate normalization accepts realm and color decoration")
+local nativeAttempt = assert(GA.Award:BeginGive({ itemLink = lootLink, winner = "Alice" }))
+same(gives[#gives][1], 1, "native GiveMasterLoot receives the live loot slot")
+same(gives[#gives][2], 3, "native GiveMasterLoot receives Blizzard's candidate index")
+if nativeAttempt.timer then nativeAttempt.timer:Cancel() end
+GA.Award.pending[1] = nil
 local queued = assert(GA.Loot:QueueSlot(1, "SMOKE"))
 same(assert(GA.Loot:QueueSlot(1)).id, queued.id, "same loot slot is not queued twice")
 same(#GA.Loot:GetQueue(), 1, "active loot queue contains one entry")
@@ -75,12 +83,13 @@ same(#GA.Loot:GetQueue(), 1, "active loot queue contains one entry")
 -- exact item for the loot master and informs even an addonless winner, while
 -- the trade entry still waits for server confirmation.
 candidates = { "Lootmaster" }
+local givesBeforeFallback = #gives
 local result = { sessionID = "s1", itemLink = lootLink, winner = "Alice", choice = "MS", roll = 88 }
 GA.Award:OnResult(result, { owner = "Lootmaster", itemLink = lootLink })
 same(#GA.Award:GetDeferred(true), 1, "out-of-range winner creates recoverable award")
 same(#GA.Trade:GetPending(), 0, "trade is not queued while item remains in loot")
 same(GA.Award:GetDeferred(true)[1].status, "TAKING_SELF", "fallback self-take starts automatically")
-same(#gives, 1, "self-take invokes GiveMasterLoot once")
+same(#gives, givesBeforeFallback + 1, "self-take invokes GiveMasterLoot once")
 same(#whispers, 1, "fallback immediately whispers an addonless winner")
 same(whispers[1][2], "WHISPER", "fallback notice is a private message")
 same(whispers[1][3], "Alice", "fallback notice targets the winner")

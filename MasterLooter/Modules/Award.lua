@@ -51,7 +51,9 @@ function Award:FindCandidate(slot, player)
     local wanted = string.lower(baseName(player) or "")
     local seen = {}
     for index = 1, 40 do
-        local candidate = GetMasterLootCandidate(slot, index)
+        -- Native 3.3.5a signature: GetMasterLootCandidate(candidateIndex).
+        -- GiveMasterLoot receives the loot slot separately below.
+        local candidate = GetMasterLootCandidate(index)
         if candidate then
             seen[#seen + 1] = tostring(index) .. ":" .. candidate
             if string.lower(baseName(candidate) or "") == wanted then return index, candidate end

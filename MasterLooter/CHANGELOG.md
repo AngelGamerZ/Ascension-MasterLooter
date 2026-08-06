@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.3-beta
+
+- Masterloot-Vergabe exakt auf die originale Blizzard-3.3.5a-API-Signatur umgestellt
+- Kandidaten werden wie im Blizzard-Lootmenü über `GetMasterLootCandidate(candidateIndex)` ermittelt
+- Die eigentliche Vergabe verwendet unverändert die native Funktion `GiveMasterLoot(lootSlot, candidateIndex)`
+- Falscher Zwei-Parameter-Aufruf von `GetMasterLootCandidate` entfernt, durch den auf 3.3.5a wiederholt derselbe Kandidat gelesen wurde
+- Regressionstest lehnt jeden zusätzlichen Kandidatenparameter ab und prüft Lootslot sowie Kandidatenindex der nativen Vergabe getrennt
+
 ## 0.15.2-beta
 
 - Masterloot-Kandidaten werden über alle 40 möglichen 3.3.5a-Indizes gesucht, auch wenn dazwischen leere Plätze liegen
