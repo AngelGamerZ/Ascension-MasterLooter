@@ -2,7 +2,7 @@
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.15.3-beta
+## Version: 0.16.0-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
@@ -25,6 +25,7 @@ Modules\SoftRes.lua
 Modules\AutoRoll.lua
 Modules\PlusOnes.lua
 Modules\Priority.lua
+Modules\ExternalImports.lua
 Modules\BoostedRolls.lua
 Modules\RuleSync.lua
 Modules\Ranking.lua

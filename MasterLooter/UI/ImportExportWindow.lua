@@ -8,6 +8,10 @@ local ImportExportWindow = { moduleIndex = 1, modules = {
     { key = "plusones", label = "PlusOnes", direct = "PlusOnes" },
     { key = "boosts", label = "Boosts", direct = "BoostedRolls" },
     { key = "tmbpriority", label = "TMB-Prioritäten", direct = "Priority", exportMethod = "ExportTMB", importMethod = "ImportTMB" },
+    { key = "bisbeard", label = "BISBEARD SoftRes", direct = "ExternalImports", importMethod = "ImportBisBeard", validateMethod = "ValidateBisBeard", importOnly = true },
+    { key = "dftpriority", label = "DFT-Prioritäten", direct = "ExternalImports", importMethod = "ImportDFT", validateMethod = "ValidateDFT", importOnly = true },
+    { key = "classicpr", label = "ClassicPR / CSV", direct = "ExternalImports", importMethod = "ImportClassicPR", validateMethod = "ValidateClassicPR", importOnly = true },
+    { key = "rrobin", label = "RRobin-Prioritäten", direct = "ExternalImports", importMethod = "ImportRRobin", validateMethod = "ValidateRRobin", importOnly = true },
     { key = "autoroll", label = "AutoRoll-Regeln", direct = "AutoRoll", directOnly = true },
     { key = "awards", label = "Vergaben", direct = "Award" },
     { key = "gdkp", label = "GDKP", direct = "GDKP" },
@@ -19,9 +23,11 @@ local function callManager(method, moduleName, text)
     for _, candidate in ipairs(ImportExportWindow.modules) do if candidate.key == moduleName then definition = candidate; break end end
     if definition and (definition.directOnly or definition.exportMethod or definition.importMethod) then
         local module = GA[definition.direct]
+        if method == "Export" and definition.importOnly then return false, "Dieses Fremdformat kann nur importiert werden." end
         local actual = method == "Export" and (definition.exportMethod or "Export") or
-            method == "Import" and (definition.importMethod or "Import") or method
-        if method == "Validate" then return true, type(text) == "string" and text ~= "", "Paste wird beim Import zeilenweise geprüft." end
+            method == "Import" and (definition.importMethod or "Import") or
+            method == "Validate" and (definition.validateMethod or "Validate") or method
+        if method == "Validate" and not definition.validateMethod then return true, type(text) == "string" and text ~= "", "Paste wird beim Import zeilenweise geprüft." end
         if type(module) == "table" and type(module[actual]) == "function" then
             return pcall(module[actual], module, text)
         end
@@ -70,7 +76,7 @@ function ImportExportWindow:EnsureFrame()
     Theme:ApplyPanel(frame); Theme:AddTitle(frame, "MasterLooter – Import / Export")
     Theme:MakeMovable(frame, "importExportWindow"); Theme:RestorePosition(frame, "importExportWindow", "CENTER", 0, 10); Theme:RegisterForEscape(frame); self.frame = frame
     local moduleLabel = Theme:CreateLabel(frame, "Modul", 12, Theme.colors.muted); moduleLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -48)
-    local moduleButton = Theme:CreateButton(frame, self.modules[self.moduleIndex].label, 145, 25); moduleButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 84, -42)
+    local moduleButton = Theme:CreateButton(frame, self.modules[self.moduleIndex].label, 175, 25); moduleButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 84, -42)
     moduleButton:SetScript("OnClick", function() ImportExportWindow:NextModule() end); self.moduleButton = moduleButton
     local hint = Theme:CreateLabel(frame, "Klicken, um das nächste Modul auszuwählen", 12, Theme.colors.muted); hint:SetPoint("LEFT", moduleButton, "RIGHT", 10, 0)
 

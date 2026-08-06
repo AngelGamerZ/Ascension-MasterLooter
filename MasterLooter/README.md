@@ -35,7 +35,8 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - Optionaler, zur Laufzeit lernender Ascension-Itemindex
 - Persistentes Beute-Ledger mit Status- und Genauigkeitskennzeichnung
 - Bis zu vier parallele GDKP-Auktionen, Gold-Ledger, Preislisten, Mutatoren und Cuts
-- AutoRoll-Empfehlungen, TMB-Import sowie abgesicherter +1-/Boosted-Roll-Sync
+- AutoRoll-Empfehlungen, TMB-, BISBEARD-, DFT-, ClassicPR-/CSV- und RRobin-Import sowie abgesicherter +1-/Boosted-Roll-Sync
+- Optionale automatische Reservierungsübernahme aus LootReserve
 - Profilverwaltung, Tastenkürzel, Willkommensfenster und vollständiger Datenreset
 
 ## Befehle

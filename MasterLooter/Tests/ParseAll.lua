@@ -8,7 +8,7 @@ local files = {
     "MasterLooter/Modules/RollSession.lua", "MasterLooter/Modules/ChatRolls.lua",
     "MasterLooter/Modules/Loot.lua", "MasterLooter/Modules/LootLedger.lua", "MasterLooter/Modules/PackMule.lua", "MasterLooter/Modules/Trade.lua",
     "MasterLooter/Modules/Award.lua", "MasterLooter/Modules/SoftRes.lua", "MasterLooter/Modules/AutoRoll.lua", "MasterLooter/Modules/PlusOnes.lua",
-    "MasterLooter/Modules/Priority.lua", "MasterLooter/Modules/BoostedRolls.lua", "MasterLooter/Modules/RuleSync.lua",
+    "MasterLooter/Modules/Priority.lua", "MasterLooter/Modules/ExternalImports.lua", "MasterLooter/Modules/BoostedRolls.lua", "MasterLooter/Modules/RuleSync.lua",
     "MasterLooter/Modules/Ranking.lua", "MasterLooter/Modules/GDKP.lua",
     "MasterLooter/Modules/GDKPAuction.lua", "MasterLooter/Modules/GDKPMultiAuction.lua",
     "MasterLooter/Modules/RaidManager.lua",

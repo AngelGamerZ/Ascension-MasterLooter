@@ -1,4 +1,4 @@
-# MasterLooter 0.15.3-beta – Funktionsparität
+# MasterLooter 0.16.0-beta – Funktionsparität
 
 Diese Matrix bildet den Clean-Room-Funktionskatalog aus `REVERSE_ENGINEERING_REPORT.md` auf die eigenständige Ascension-3.3.5a-Implementierung ab. „Mit Clientgrenze“ bedeutet, dass der Ablauf vollständig modelliert ist, der alte Client oder der Server aber keine verbindliche API für den letzten Schritt bereitstellt.
 
@@ -9,8 +9,8 @@ Diese Matrix bildet den Clean-Room-Funktionskatalog aus `REVERSE_ENGINEERING_REP
 | Awarded Loot / Strichliste | umgesetzt | Direkte Vergabe, bestätigte Zustellung, manuelle Gewinnerwahl, getrennte G/MS/OS-Zähler und ausschließlich manueller `+1`-Button |
 | PackMule | umgesetzt, klickgebunden | Qualitäts-/Bindungs-/Ziel-/Disenchanter-/Round-Robin-Regeln, Ausnahmen und nebenwirkungsfreie Vorschau mit Begründung |
 | Handel und Frist | umgesetzt, mit Clientgrenze | Automatisches Anhandeln und Einlegen, Whisper-Fallback, geschätzte Zwei-Stunden-Leiste und Warnungen; Annahme/Abschluss bleiben bewusst manuell |
-| SoftRes / HardRes | umgesetzt | Reservierungen, Limits, Notizen, Verbrauch, Import und Rankingintegration |
-| TMB / Prioritäten | umgesetzt | Paste-Import/-Export, Prioritätsgrund und Anzeige im Ranking |
+| SoftRes / HardRes | umgesetzt | Reservierungen, Limits, Notizen, Verbrauch, BISBEARD-Import, LootReserve-Anbindung und Rankingintegration |
+| TMB / Prioritäten | umgesetzt | TMB, DFT, ClassicPR/CSV und RRobin mit Paste-Import sowie Prioritätsanzeige im Ranking |
 | Plus Ones | umgesetzt | Manuelle Pflege, Auditdaten und abgesicherter Snapshot-Sync |
 | Boosted Rolls | umgesetzt | Punktelogik, Rankingintegration und abgesicherter Snapshot-Sync |
 | AutoRoll | umgesetzt, sicherer 3.3.5a-Ablauf | Priorisierte Regeln liefern MS-/OS-/Passen-Empfehlungen; der geschützte öffentliche Wurf erfolgt erst per Nutzerklick |

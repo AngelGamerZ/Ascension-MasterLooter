@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0-beta
+
+- BISBEARD-RollFor-Exporte als Base64-JSON-Import für SoftRes und HardRes ergänzt
+- Mehrfachreservierungen aus BISBEARD werden pro Spieler und Item korrekt zusammengefasst
+- DFT-, ClassicPR-/CSV- und RRobin-Prioritätsimporte im zentralen Importfenster ergänzt
+- Optionale LootReserve-Anbindung übernimmt laufende Reservierungen automatisch über den öffentlichen `RESERVES`-Listener
+- Fremddaten werden durch begrenzte, nicht ausführbare Base64- und JSON-Parser verarbeitet
+- Importauswahl verbreitert und formatbezogene Validierung sowie verständliche Fehlermeldungen ergänzt
+- Neue Smoke-Tests prüfen leere und befüllte BISBEARD-Daten, Duplikate, HardRes, ungültige Eingaben und alle weiteren Importadapter
+
 ## 0.15.3-beta
 
 - Masterloot-Vergabe exakt auf die originale Blizzard-3.3.5a-API-Signatur umgestellt
