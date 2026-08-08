@@ -61,6 +61,7 @@ local function widget(kind, name, parent)
     function object:SetTexCoord() end
     function object:SetJustifyH() end
     function object:SetJustifyV() end
+    function object:SetWordWrap() end
     function object:SetTextColor(...) self.textColor = { ... } end
     function object:SetAutoFocus() end
     function object:SetTextInsets() end
@@ -212,6 +213,11 @@ function Theme:RestorePosition(frame, _, point, x, y) frame:SetPoint(point or "C
 function Theme:RegisterForEscape() end
 function Theme:ShowItemTooltip() end
 function Theme:HideOwnedTooltip() end
+function Theme:SetItemTooltip(widget, link)
+    widget.itemLink = link
+    widget:SetScript("OnEnter", function() end)
+    widget:SetScript("OnLeave", function() end)
+end
 function Theme:ShowTextTooltip() end
 function Theme:TakeDraggedItem() return nil end
 
@@ -347,6 +353,26 @@ expect(window.awardButton.enabled, "immediately selected second winner can be aw
 window:AwardSelected()
 same(#multiState.awards, 2, "two separate clicks award both copies from one roll session")
 expect(window.sourceLoot == nil, "the source clears only after every identical copy is awarded")
+
+-- The participant roll widget exposes the item strip as a real Blizzard-style
+-- modified-click target instead of a passive font string.
+local modifiedClicks, modifiedLink, modifiedButton = 0, nil, nil
+IsControlKeyDown = function() return true end
+HandleModifiedItemClick = function(link, button)
+    modifiedClicks, modifiedLink, modifiedButton = modifiedClicks + 1, link, button
+    return true
+end
+chunk, loadError = loadfile("MasterLooter/UI/RollWindow.lua")
+if not chunk then error(loadError) end
+chunk("MasterLooter", GA)
+local participantWindow = GA.UI.RollWindow
+participantWindow:EnsureFrame()
+expect(participantWindow.itemInteraction ~= nil, "participant item has a dedicated hover and click surface")
+participantWindow.itemLink = item
+participantWindow.itemInteraction.scripts.OnClick(participantWindow.itemInteraction, "LeftButton")
+same(modifiedClicks, 1, "CTRL-click uses Blizzard's modified-item-click handler")
+same(modifiedLink, item, "modified click preserves the complete item hyperlink")
+same(modifiedButton, "LeftButton", "modified click forwards the native mouse button")
 
 -- Trade assistant regression: pending work may refresh its data, but must not
 -- force a second modal window into the loot master's face.

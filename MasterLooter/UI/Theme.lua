@@ -167,9 +167,20 @@ end
 function Theme:SetItemTooltip(widget, itemLink)
     widget.itemLink = itemLink
     widget:SetScript("OnEnter", function(self)
+        self.itemTooltipShift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false
         Theme:ShowItemTooltip(self, self.itemLink)
     end)
-    widget:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end)
+    widget:SetScript("OnLeave", function(self)
+        self.itemTooltipShift = nil
+        Theme:HideOwnedTooltip(self)
+    end)
+    widget.UpdateTooltip = function(self)
+        local shift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false
+        if self.itemTooltipShift == shift then return end
+        self.itemTooltipShift = shift
+        Theme:HideOwnedTooltip(self)
+        Theme:ShowItemTooltip(self, self.itemLink)
+    end
 end
 
 function Theme:GetTooltip()
@@ -190,6 +201,20 @@ function Theme:ShowItemTooltip(owner, itemLink, anchor)
     tooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
     tooltip:SetHyperlink(itemLink)
     tooltip:Show()
+    local shift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false
+    if shift and type(GameTooltip_ShowCompareItem) == "function" then
+        if type(tooltip.shoppingTooltips) ~= "table" then
+            local source = _G.GameTooltip and _G.GameTooltip.shoppingTooltips
+            if type(source) == "table" then
+                tooltip.shoppingTooltips = source
+            elseif _G.ShoppingTooltip1 and _G.ShoppingTooltip2 and _G.ShoppingTooltip3 then
+                tooltip.shoppingTooltips = { _G.ShoppingTooltip1, _G.ShoppingTooltip2, _G.ShoppingTooltip3 }
+            end
+        end
+        if type(tooltip.shoppingTooltips) == "table" and #tooltip.shoppingTooltips >= 3 then
+            pcall(GameTooltip_ShowCompareItem, tooltip, true)
+        end
+    end
     return true
 end
 

@@ -91,6 +91,7 @@ function RollWindow:EnsureFrame()
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
     icon.texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    icon:EnableMouse(false)
     self.icon = icon
 
     local item = Theme:CreateLabel(frame, "Warte auf ein Item ...", 12)
@@ -107,6 +108,14 @@ function RollWindow:EnsureFrame()
     note:SetHeight(14)
     note:SetWordWrap(false)
     self.note = note
+
+    local itemInteraction = CreateFrame("Button", nil, frame)
+    itemInteraction:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, 3)
+    itemInteraction:SetWidth(224)
+    itemInteraction:SetHeight(38)
+    itemInteraction:RegisterForClicks("LeftButtonUp")
+    itemInteraction:SetScript("OnClick", function(_, button) RollWindow:HandleItemClick(button) end)
+    self.itemInteraction = itemInteraction
 
     local timer = Theme:CreateLabel(frame, "0:00", 12, Theme.colors.gold)
     timer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -48)
@@ -130,6 +139,18 @@ function RollWindow:EnsureFrame()
 
     frame:SetScript("OnUpdate", function(_, elapsed) RollWindow:OnUpdate(elapsed) end)
     return frame
+end
+
+function RollWindow:HandleItemClick(mouseButton)
+    if type(self.itemLink) ~= "string" or self.itemLink == "" then return false end
+    if type(HandleModifiedItemClick) == "function" then
+        local ok, handled = pcall(HandleModifiedItemClick, self.itemLink, mouseButton or "LeftButton")
+        return ok and handled ~= false
+    end
+    if type(IsControlKeyDown) == "function" and IsControlKeyDown() and type(DressUpItemLink) == "function" then
+        return pcall(DressUpItemLink, self.itemLink)
+    end
+    return false
 end
 
 function RollWindow:SetButtonsEnabled(enabled)
@@ -168,7 +189,7 @@ function RollWindow:ShowSession(session)
         texture = select(10, GetItemInfo(self.itemLink))
     end
     self.icon.texture:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
-    Theme:SetItemTooltip(self.icon, self.itemLink)
+    Theme:SetItemTooltip(self.itemInteraction or self.icon, self.itemLink)
     self.status:SetText("Bitte wähle deine Roll-Kategorie.")
     self.status:SetTextColor(unpack(Theme.colors.muted))
     self:SetButtonsEnabled(true)

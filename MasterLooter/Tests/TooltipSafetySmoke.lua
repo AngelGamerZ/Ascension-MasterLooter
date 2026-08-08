@@ -49,4 +49,30 @@ expect(GA.UI.Theme:HideOwnedTooltip(masterOwner), "MasterLooter may hide its own
 same(privateHides, 1, "owned private tooltip receives exactly one Hide call")
 same(globalCalls, 0, "global Blizzard tooltip remains untouched after leave")
 
+-- Shift changes refresh only the private tooltip and invoke the native 3.3.5a
+-- comparison helper with Blizzard's shopping-tooltip set.
+local shiftDown, compareCalls, comparedTooltip = false, 0, nil
+IsShiftKeyDown = function() return shiftDown end
+ShoppingTooltip1, ShoppingTooltip2, ShoppingTooltip3 = {}, {}, {}
+GameTooltip.shoppingTooltips = { ShoppingTooltip1, ShoppingTooltip2, ShoppingTooltip3 }
+GameTooltip_ShowCompareItem = function(tooltip, shift)
+    compareCalls, comparedTooltip = compareCalls + 1, tooltip
+    expect(shift == true, "comparison helper receives the active Shift state")
+end
+local itemWidget = { scripts = {} }
+function itemWidget:SetScript(name, callback) self.scripts[name] = callback end
+GA.UI.Theme:SetItemTooltip(itemWidget, "|Hitem:2|h[Compare]|h")
+itemWidget.scripts.OnEnter(itemWidget)
+same(compareCalls, 0, "ordinary hover shows no equipment comparison")
+shiftDown = true
+itemWidget:UpdateTooltip()
+same(compareCalls, 1, "pressing Shift while hovering refreshes the equipment comparison")
+same(comparedTooltip, privateTooltip, "comparison remains attached to MasterLooter's private tooltip")
+same(privateLink, "|Hitem:2|h[Compare]|h", "modifier refresh preserves the hovered item link")
+shiftDown = false
+itemWidget:UpdateTooltip()
+same(compareCalls, 1, "releasing Shift removes comparison without creating another one")
+itemWidget.scripts.OnLeave(itemWidget)
+same(globalCalls, 0, "comparison support does not manipulate Blizzard's global tooltip")
+
 print(string.format("PASS: %d tooltip-safety assertions", assertions))

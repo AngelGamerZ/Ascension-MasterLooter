@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.8-beta
+
+- Item im Teilnehmer-Rollfenster als vollständige interaktive Hover- und Klickfläche umgesetzt
+- Shift während des Hoverns aktualisiert den Tooltip dynamisch und öffnet die nativen 3.3.5a-Ausrüstungsvergleiche
+- Loslassen von Shift entfernt die Vergleichsfenster wieder, ohne den Itemtooltip zu verlieren
+- STRG-Klick wird über Blizzards `HandleModifiedItemClick` an die native Itemvorschau weitergereicht
+- Weitere Blizzard-Modifikatorklicks wie das Einfügen eines Itemlinks in einen aktiven Chat werden über denselben Standardpfad unterstützt
+- Fallback auf `DressUpItemLink` ergänzt, falls ein Ascension-Client den allgemeinen Handler nicht bereitstellt
+- Private MasterLooter-Tooltips bleiben isoliert; globale oder fremde Tooltips werden nicht versteckt oder überschrieben
+- UI- und Tooltip-Simulationen prüfen Hyperlink, Maustaste, Shift-Aktualisierung, Vergleichsaufruf und Tooltip-Isolation
+
 ## 0.16.7-beta
 
 - Wartepflicht zwischen mehreren identischen Vergaben vollständig entfernt
