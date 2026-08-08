@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.6-beta
+
+- Hängende Spielerauswahl nach der ersten von mehreren identischen Vergaben korrigiert
+- Die UI wartet nicht mehr ausschließlich auf dieselbe numerische Lootslot-ID, da Ascension Slots beim Entfernen umnummerieren kann
+- Jede Vergabe erhält bei bestätigter nativer Slotleerung ein eigenes `lootConfirmed`-Merkmal
+- Die Auswahl des nächsten Gewinners wird über Sitzungs-ID, Vergabenummer und bestätigte Zustellung wieder freigegeben
+- Eine fremde Slotleerung oder eine andere Sitzung kann die Sperre weiterhin nicht aufheben
+- Bereits synchron bestätigte Vergaben zeigen sofort die Aufforderung zur Auswahl des nächsten Gewinners
+- UI-Regressionstest simuliert eine abweichende Ascension-Slotnummer und prüft die anschließende Auswahl des zweiten Spielers
+
 ## 0.16.5-beta
 
 - Mehrfachvergabe identischer Items gegen unvollständige Ascension-Loot-Snapshots abgesichert

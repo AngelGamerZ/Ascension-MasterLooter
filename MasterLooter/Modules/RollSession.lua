@@ -447,7 +447,7 @@ end
 function RollSession:Award(sessionID, winner, choice, roll, note)
     local state = resolveState(sessionID)
     if not state then return nil, "unknown session" end
-    if state.status == "AWARDED" and state.result and
+    if state.status == "AWARDED" and state.result and state.result.lootConfirmed and
         (state.result.delivery == "GIVEN" or state.result.delivery == "PENDING") and
         GA.Loot and type(GA.Loot.CountLiveAvailable) == "function" then
         local remainingCopies = GA.Loot:CountLiveAvailable(state.itemLink)

@@ -340,7 +340,11 @@ expect(window.sourceLoot ~= nil, "first copy keeps the original roll workflow op
 expect(window.rolls[1].awarded or window.rolls[2].awarded, "first winner is marked as already awarded")
 window:SelectRow(2)
 expect(window.selected == nil, "second winner cannot be submitted before the first loot slot clears")
-expect(window:OnLootSlotCleared({ slot = 1 }), "native slot confirmation unlocks the next copy")
+expect(not window:OnLootSlotCleared({ slot = 99 }), "an unrelated or renumbered slot cannot unlock the wrong award")
+expect(window.awardPending, "slot-number mismatch keeps the specific delivery pending")
+multiState.awards[1].lootConfirmed = true
+expect(window:OnAwardDeliveryChanged(multiState.awards[1], "GIVEN"),
+    "confirmed delivery unlocks selection even when Ascension reports a different slot number")
 expect(not window.awardPending, "second winner selection unlocks after confirmation")
 local nextIndex
 for index, response in ipairs(window.rolls) do if response.player ~= firstWinner then nextIndex = index; break end end

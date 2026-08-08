@@ -177,6 +177,7 @@ function Award:Confirm(slot)
     local attempt = slot and self.pending[slot]
     if not attempt then return false end
     self.pending[slot] = nil
+    if attempt.result then attempt.result.lootConfirmed = true end
     if attempt.mode == "SELF_TRADE" then
         local entry = self:GetDeferredByID(attempt.deferredID)
         if entry then
