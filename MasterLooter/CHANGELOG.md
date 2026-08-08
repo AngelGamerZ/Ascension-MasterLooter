@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.1-beta
+
+- Private Whisper-Abfrage `!SR` für die eigenen SoftRes ergänzt
+- Private Whisper-Abfrage `!SL` für den eigenen manuellen Strichstand ergänzt
+- Abfragen antworten ausschließlich Gruppen- oder Raidmitgliedern und nur vom aktiven Master Looter
+- Beim Erhalt des Master-Looter-Status wird im Raid einmalig eine Nachricht mit beiden Befehlen veröffentlicht
+- Die Befehlsnachricht verwendet nach Möglichkeit Raid Warning und fällt ohne Berechtigung auf Raidchat zurück
+- Lange SoftRes-Listen werden auf mehrere sichere Whisper-Nachrichten verteilt
+- Eigenständige Simulationen für Statuswechsel, Datenschutz, Realm-Namen, Mehrfachreservierungen und exakte Befehle ergänzt
+
 ## 0.16.0-beta
 
 - BISBEARD-RollFor-Exporte als Base64-JSON-Import für SoftRes und HardRes ergänzt

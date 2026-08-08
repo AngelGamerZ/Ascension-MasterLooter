@@ -10,9 +10,10 @@ Der automatisierte Harness prüft die Lua- und Mehrclient-Logik außerhalb des S
 6. Mit offenem Lootfenster direkte Vergabe prüfen. Danach einen absichtlich nicht direkt vergebbaren Fall testen und die Trade-Warteschlange kontrollieren.
 7. Trade abschließen und prüfen, dass erst die Ascension-Erfolgsmeldung den Eintrag als zugestellt markiert.
 8. SoftRes/HardRes, Priorität und Boost setzen; bei einer Vergabe `+1 = 0`, bei einer zweiten bewusst `+1 = 1` wählen und die Rangfolge mit mindestens drei Spielern prüfen.
-9. GDKP-Sitzung und Auktion starten; Mindestschritt, Rebid und Anti-Snipe testen; `/reload` während aktiver GDKP-Sitzung prüfen.
-10. Einen nativen Gruppenloot-Wurf auslösen und prüfen, dass ausschließlich Blizzards Bedarf-/Gier-/Entzaubern-/Passen-Oberfläche erscheint.
-11. Raidverwaltung und Tascheninspektor nur mit Testcharakteren verwenden; alle Aktionen bleiben explizite Buttonklicks.
-12. Bei einem Ascension-Custom-Item die Suche zuerst ohne, dann mit installiertem Ascension AtlasLoot prüfen.
+9. Im Raid Master Looter zuweisen, die einmalige Befehlsnachricht prüfen und von einem zweiten Client `!SR` sowie `!SL` ausschließlich per Whisper senden; Antworten dürfen weder im Raid- noch im Gruppenchat erscheinen.
+10. GDKP-Sitzung und Auktion starten; Mindestschritt, Rebid und Anti-Snipe testen; `/reload` während aktiver GDKP-Sitzung prüfen.
+11. Einen nativen Gruppenloot-Wurf auslösen und prüfen, dass ausschließlich Blizzards Bedarf-/Gier-/Entzaubern-/Passen-Oberfläche erscheint.
+12. Raidverwaltung und Tascheninspektor nur mit Testcharakteren verwenden; alle Aktionen bleiben explizite Buttonklicks.
+13. Bei einem Ascension-Custom-Item die Suche zuerst ohne, dann mit installiertem Ascension AtlasLoot prüfen.
 
 Bei einem Fehler bitte `MasterLooterDB`, die genaue Realm-/Season-Angabe, den Lua-Stack und den Ablauf beilegen. Servereigene Events oder Rückgabewerte können zwischen Ascension-Realms variieren.

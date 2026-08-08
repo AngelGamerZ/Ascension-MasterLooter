@@ -6,6 +6,7 @@ $tests = @(
     "MasterLooter/Tests/RulesLedgerSmoke.lua",
     "MasterLooter/Tests/RulesSyncSmoke.lua",
     "MasterLooter/Tests/ExternalImportSmoke.lua",
+    "MasterLooter/Tests/WhisperQueriesSmoke.lua",
     "MasterLooter/Tests/AdminGDKPSmoke.lua",
     "MasterLooter/Tests/GDKPAdvancedSmoke.lua",
     "MasterLooter/Tests/LootTradeSmoke.lua",
