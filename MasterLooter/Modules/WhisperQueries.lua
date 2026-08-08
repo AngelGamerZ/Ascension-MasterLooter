@@ -6,6 +6,11 @@ local _, GA = ...
 local WhisperQueries = { lastRequest = {}, wasMasterLooter = false }
 GA.WhisperQueries = WhisperQueries
 
+local COMMANDS = {
+    SR = "SR", ["#SR"] = "SR", ["?SR"] = "SR", ["!SR"] = "SR", MLSR = "SR", ["ML SR"] = "SR",
+    SL = "SL", ["#SL"] = "SL", ["?SL"] = "SL", ["!SL"] = "SL", MLSL = "SL", ["ML SL"] = "SL",
+}
+
 local function baseName(name)
     return string.lower(string.match(tostring(name or ""), "^[^-]+") or "")
 end
@@ -102,14 +107,15 @@ function WhisperQueries:ReplyStreakList(sender)
 end
 
 function WhisperQueries:HandleWhisper(message, sender)
-    local command = string.upper(tostring(message or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    if command ~= "!SR" and command ~= "!SL" then return false end
+    local received = string.upper(tostring(message or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    local command = COMMANDS[received]
+    if not command then return false end
     if not self:IsActiveMasterLooter() or not self:IsGroupMember(sender) then return false end
     local current = type(GetTime) == "function" and GetTime() or 0
     local requestKey = baseName(sender) .. ":" .. command
     if current - (tonumber(self.lastRequest[requestKey]) or -1000) < 0.5 then return false end
     self.lastRequest[requestKey] = current
-    if command == "!SR" then self:ReplySoftRes(sender) else self:ReplyStreakList(sender) end
+    if command == "SR" then self:ReplySoftRes(sender) else self:ReplyStreakList(sender) end
     GA.Events:Emit("GA_WHISPER_QUERY_RECEIVED", command, sender)
     return true
 end
@@ -120,7 +126,7 @@ function WhisperQueries:AnnounceCommands()
     if GA.Announcements and type(GA.Announcements.ResolveChannel) == "function" then
         channel = GA.Announcements:ResolveChannel("RAID_WARNING") or channel
     end
-    local message = "MasterLooter aktiv. Whisper-Befehle: !SR = eigene SoftRes prüfen, !SL = eigenen Strichstand prüfen."
+    local message = "MasterLooter aktiv. Per Whisper: SR = eigene SoftRes prüfen, SL = eigenen Strichstand prüfen."
     local ok = pcall(SendChatMessage, message, channel)
     if ok then GA.Events:Emit("GA_WHISPER_COMMANDS_ANNOUNCED", channel) end
     return ok

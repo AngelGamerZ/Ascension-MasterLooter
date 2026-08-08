@@ -46,8 +46,8 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - `/lootmaster` oder `/mlmaster` – Lootmaster-Fenster ohne Umweg öffnen
 - `/ml roll <Itemlink> [Sekunden]` – Roll direkt starten
 - `/ml sr <Spieler> <Item-ID>` – SoftRes setzen
-- `!SR` als Whisper an den aktiven Master Looter – eigene SoftRes abfragen
-- `!SL` als Whisper an den aktiven Master Looter – eigenen Strichstand abfragen
+- `SR` als Whisper an den aktiven Master Looter – eigene SoftRes abfragen
+- `SL` als Whisper an den aktiven Master Looter – eigenen Strichstand abfragen
 - `/ml plus <Spieler> [Wert]` – +1 ändern
 - `/ml gdkp start|sale|finish` – GDKP steuern
 - `/ml auction|raid|version|bags` – zusätzliche Werkzeuge öffnen

@@ -1,4 +1,4 @@
-# Funktionsstatus 0.16.3-beta
+# Funktionsstatus 0.16.4-beta
 
 MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension auf Basis des WoW-3.3.5a-Clients. Die Beta deckt den vollständigen geplanten Kernablauf von der Itemauswahl bis zur bestätigten Vergabe ab.
 
@@ -48,7 +48,7 @@ MasterLooter ist eine eigenständige Neuimplementierung für Project Ascension a
 - TMB-Prioritäten, SoftRes-Limits sowie +1-/Boosted-Roll-Snapshots lassen sich importieren beziehungsweise kontrolliert im Raid synchronisieren.
 - BISBEARD-RollFor-Exporte importieren SoftRes, Mehrfachreservierungen und HardRes; DFT, ClassicPR/CSV und RRobin importieren Prioritätslisten.
 - Ein installiertes LootReserve kann seine laufenden Reservierungen über dessen öffentlichen Listener automatisch an MasterLooter übergeben.
-- Raidmitglieder können ihre eigenen SoftRes mit `!SR` und ihren manuellen Strichstand mit `!SL` ausschließlich per Whisper beim aktiven Master Looter abfragen.
+- Raidmitglieder können ihre eigenen SoftRes mit `SR` und ihren manuellen Strichstand mit `SL` ausschließlich per Whisper beim aktiven Master Looter abfragen; Sonderzeichen-Aliase bleiben kompatibel, sofern Ascension sie zustellt.
 - Mehrere identische Drops bleiben auch dann einzeln vergebbar, wenn Ascension den nächsten Drop auf eine zuvor geleerte Lootslotnummer nachrücken lässt.
 - Das persistente Beute-Ledger zeigt Drop, Aufnahme, Vergabe, Handel, Entzauberung und ungeklärte Zustände mit Genauigkeitskennzeichnung.
 - GDKP unterstützt parallele Auktionen, Gold-Ledger, Teilnehmer/Cuts, Mutatoren, Preislisten sowie versionierten Im-/Export.

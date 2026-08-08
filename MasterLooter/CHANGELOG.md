@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.4-beta
+
+- Ascension-sichere Whisper-Befehle von `!SR` und `!SL` auf die alphanumerischen Primärbefehle `SR` und `SL` umgestellt
+- Raid-Warning des Master Looters nennt jetzt ausschließlich die zuverlässig übertragbaren Primärbefehle
+- `#SR`, `?SR`, `!SR`, `MLSR`, `ML SR` sowie die entsprechenden SL-Formen bleiben als exakte Aliase verfügbar, sofern Ascension sie zustellt
+- Alle Befehle werden intern auf `SR` oder `SL` normalisiert und teilen dadurch Datenschutz- und Rate-Limit-Prüfungen
+- Whisper-Simulation um Primärbefehle, Sonderzeichen-Aliase und ausgeschriebene ML-Aliase erweitert
+
 ## 0.16.3-beta
 
 - Eine Rollrunde kann jetzt mehrere identische Exemplare im selben Lootfenster nacheinander vergeben

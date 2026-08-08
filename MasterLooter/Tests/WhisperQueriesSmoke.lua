@@ -31,17 +31,18 @@ function GA.Events:Emit() end
 assert(loadfile("MasterLooter/Modules/WhisperQueries.lua"))("MasterLooter", GA)
 GA.WhisperQueries:OnInitialize()
 same(sent[1].channel, "RAID_WARNING", "becoming raid master looter announces through raid warning")
-expect(sent[1].message:find("!SR", 1, true) and sent[1].message:find("!SL", 1, true), "master-looter announcement lists both whisper commands")
+expect(sent[1].message:find("SR", 1, true) and sent[1].message:find("SL", 1, true) and not sent[1].message:find("!SR", 1, true),
+    "master-looter announcement uses Ascension-safe alphanumeric whisper commands")
 expect(registered.CHAT_MSG_WHISPER, "whisper event is registered")
 expect(not registered.CHAT_MSG_RAID and not registered.CHAT_MSG_PARTY, "public chat query events are not registered")
 
-same(callbacks.CHAT_MSG_WHISPER(nil, nil, "!SR", "Alice-Realm"), nil, "event callback does not leak a return value")
+same(callbacks.CHAT_MSG_WHISPER(nil, nil, "SR", "Alice-Realm"), nil, "event callback does not leak a return value")
 same(sent[#sent].channel, "WHISPER", "soft-reserve response is private")
 same(sent[#sent].target, "Alice-Realm", "soft-reserve response targets its requester")
 expect(sent[#sent].message:find("Item 1985", 1, true) and sent[#sent].message:find("x2", 1, true), "soft-reserve response includes item and duplicate amount")
 
 now = now + 1
-expect(GA.WhisperQueries:HandleWhisper("  !sl  ", "Alice-Realm"), "strich-list query is case-insensitive and whitespace tolerant")
+expect(GA.WhisperQueries:HandleWhisper("  sl  ", "Alice-Realm"), "strich-list query is case-insensitive and whitespace tolerant")
 expect(sent[#sent].message:find("3", 1, true), "strich-list response includes current manual plus-one value")
 same(sent[#sent].channel, "WHISPER", "strich-list response is private")
 
@@ -51,10 +52,20 @@ expect(not GA.WhisperQueries:HandleWhisper("!SR", "Outsider"), "players outside 
 expect(not GA.WhisperQueries:HandleWhisper("!SR extra", "Alice"), "only the exact command is accepted")
 same(#sent, before, "rejected queries send no response")
 
+for _, alias in ipairs({ "#SR", "?SR", "!SR", "MLSR", "ML SR" }) do
+    now = now + 1
+    expect(GA.WhisperQueries:HandleWhisper(alias, "Alice"), alias .. " remains a compatible SoftRes alias when delivered")
+end
+for _, alias in ipairs({ "#SL", "?SL", "!SL", "MLSL", "ML SL" }) do
+    now = now + 1
+    expect(GA.WhisperQueries:HandleWhisper(alias, "Alice"), alias .. " remains a compatible streak-list alias when delivered")
+end
+local afterAliases = #sent
+
 callbacks.RAID_ROSTER_UPDATE()
-same(#sent, before, "unchanged master-looter state is not announced twice")
+same(#sent, afterAliases, "unchanged master-looter state is not announced twice")
 raidMaster = 2; callbacks.PARTY_LOOT_METHOD_CHANGED()
 raidMaster = 1; callbacks.PARTY_LOOT_METHOD_CHANGED()
-same(#sent, before + 1, "regaining master looter announces commands again")
+same(#sent, afterAliases + 1, "regaining master looter announces commands again")
 
 print("PASS: " .. assertions .. " whisper-query assertions")
