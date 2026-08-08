@@ -524,6 +524,30 @@ expect(aliceGA.RollSession:Award(multiSession.id, "Bob", "MS", 99) == nil,
 lootCopies = 0
 fire(alice, "LOOT_SLOT_CLEARED", 1)
 
+-- Ascension may expose an incomplete cached count when the roll starts. Once
+-- the first delivery is confirmed, a remaining identical native slot reopens
+-- the same session instead of forcing a reroll or rejecting its participants.
+lootCopies = 2
+fire(alice, "LOOT_OPENED", false)
+local underestimated = aliceGA.RollSession:Start(itemLink, { duration = 30, awardLimit = 1 })
+underestimated.awardLimit = 1 -- emulate an Ascension snapshot that saw only one copy
+underestimated.participants.bob = { name = "Bob", choice = "MS", roll = 96 }
+underestimated.participants.alice = { name = "Alice", choice = "MS", roll = 95 }
+local underestimatedParticipants = underestimated.participants
+local underestimatedFirst = aliceGA.RollSession:Award(underestimated.id, "Bob", "MS", 96)
+same(underestimatedFirst.awardsRemaining, 0, "underestimated session initially closes after its first copy")
+lootCopies = 1
+fire(alice, "LOOT_SLOT_CLEARED", underestimatedFirst.lootSlot)
+same(underestimatedFirst.delivery, "GIVEN", "native slot confirmation authorizes identical-copy recovery")
+local recoveredSecond, recoveredError = aliceGA.RollSession:Award(underestimated.id, "Alice", "MS", 95)
+expect(recoveredSecond ~= nil, recoveredError or "remaining identical loot reopens the original session")
+same(recoveredSecond.sessionID, underestimatedFirst.sessionID, "recovered copy retains the original session identity")
+same(recoveredSecond.awardIndex, 2, "recovered identical copy is the second award, not a reroll")
+same(underestimated.participants, underestimatedParticipants, "session recovery preserves the original roll table")
+same(underestimated.participants.alice.roll, 95, "second winner keeps their original roll")
+lootCopies = 0
+fire(alice, "LOOT_SLOT_CLEARED", recoveredSecond.lootSlot)
+
 lootCopies = 2
 fire(alice, "LOOT_OPENED", false)
 local timeoutSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })

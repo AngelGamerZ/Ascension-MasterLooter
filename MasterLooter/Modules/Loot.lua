@@ -136,6 +136,17 @@ function Loot:FindSlot(item)
     end
 end
 
+function Loot:CountLiveAvailable(item)
+    local wanted = GA.Compat:GetItemID(item)
+    if not wanted then return 0 end
+    if type(GetNumLootItems) ~= "function" or type(GetLootSlotLink) ~= "function" then return 0 end
+    local count = 0
+    for slot = 1, (GetNumLootItems() or 0) do
+        if GA.Compat:GetItemID(GetLootSlotLink(slot)) == wanted then count = count + 1 end
+    end
+    return count
+end
+
 function Loot:CountAvailable(item)
     local wanted = GA.Compat:GetItemID(item)
     if not wanted then return 0 end
@@ -144,7 +155,7 @@ function Loot:CountAvailable(item)
         local record = self.slots[self.order[index]]
         if record and not record.cleared and record.itemID == wanted then count = count + 1 end
     end
-    return count
+    return math.max(count, self:CountLiveAvailable(item))
 end
 
 function Loot:Refresh(reason, silent)

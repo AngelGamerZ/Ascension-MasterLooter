@@ -105,6 +105,7 @@ end
 
 function Award:SetDelivery(attempt, delivery)
     if not attempt then return end
+    if attempt.result then attempt.result.delivery = delivery end
     if attempt.timer and type(attempt.timer.Cancel) == "function" then attempt.timer:Cancel() end
     if attempt.history then attempt.history.delivery = delivery end
     GA.Events:Emit("GA_AWARD_DELIVERY_CHANGED", attempt.result, delivery, attempt.history)

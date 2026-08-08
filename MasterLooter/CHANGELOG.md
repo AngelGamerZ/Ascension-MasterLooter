@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.5-beta
+
+- Mehrfachvergabe identischer Items gegen unvollständige Ascension-Loot-Snapshots abgesichert
+- Die Anzahl identischer Exemplare wird zusätzlich direkt über die aktuell sichtbaren nativen Lootslots ermittelt
+- Die RollSession übernimmt die native Zählung selbst und verlässt sich nicht mehr ausschließlich auf die UI-Option
+- Wurde eine Sitzung zu früh nach einem Exemplar geschlossen, wird sie nach bestätigter Zustellung kontrolliert wieder geöffnet, sofern dasselbe Item noch im Blizzard-Lootfenster liegt
+- Ursprüngliche Teilnehmer, Würfe und Sitzungs-ID bleiben bei der Wiederöffnung unverändert erhalten
+- Eine unbestätigte erste Vergabe kann die Sitzung nicht vorzeitig für weitere Gewinner freigeben
+- Regressionstest simuliert ausdrücklich eine auf ein Exemplar unterschätzte Sitzung und vergibt das zweite Exemplar ohne neuen Roll
+
 ## 0.16.4-beta
 
 - Ascension-sichere Whisper-Befehle von `!SR` und `!SL` auf die alphanumerischen Primärbefehle `SR` und `SL` umgestellt

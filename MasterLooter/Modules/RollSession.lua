@@ -282,6 +282,10 @@ function RollSession:Start(itemLink, options)
     duration = math.max(5, math.min(600, floor(duration)))
     local osRollMaximum = sanitizeOSMaximum(options.osRollMaximum)
     local now = GetTimeSafe()
+    local awardLimit = sanitizeAwardLimit(options.awardLimit)
+    if GA.Loot and type(GA.Loot.CountAvailable) == "function" then
+        awardLimit = math.max(awardLimit, sanitizeAwardLimit(GA.Loot:CountAvailable(itemLink)))
+    end
     local state = {
         id = makeID(), itemLink = itemLink, owner = playerName(), createdAt = TimeSafe(),
         receivedAt = now, duration = duration, expiresAt = now + duration, timeSource = "GetTime", status = "ACTIVE",
@@ -289,7 +293,7 @@ function RollSession:Start(itemLink, options)
         choices = sanitizeChoices(options.choices), note = tostring(options.note or ""),
         participants = {}, participantSequences = {}, rollAssignments = {}, sequence = 0,
         lootQueueID = options.lootQueueID, lootSlot = tonumber(options.lootSlot), lootGeneration = tonumber(options.lootGeneration),
-        awardLimit = sanitizeAwardLimit(options.awardLimit), awards = {}, awardedPlayers = {},
+        awardLimit = awardLimit, awards = {}, awardedPlayers = {},
     }
     self.sessions[state.id] = state
     self.activeID = state.id
@@ -443,6 +447,20 @@ end
 function RollSession:Award(sessionID, winner, choice, roll, note)
     local state = resolveState(sessionID)
     if not state then return nil, "unknown session" end
+    if state.status == "AWARDED" and state.result and
+        (state.result.delivery == "GIVEN" or state.result.delivery == "PENDING") and
+        GA.Loot and type(GA.Loot.CountLiveAvailable) == "function" then
+        local remainingCopies = GA.Loot:CountLiveAvailable(state.itemLink)
+        if remainingCopies > 0 then
+            state.awards, state.awardedPlayers = state.awards or {}, state.awardedPlayers or {}
+            state.awardLimit = math.min(40, #state.awards + remainingCopies)
+            state.status = "STOPPED"
+            state.result.awardLimit = state.awardLimit
+            state.result.awardsRemaining = remainingCopies
+            emit("GA_ROLL_SESSION_UPDATED", state, "IDENTICAL_LOOT_REOPENED", state.result)
+            if GA.Trace then GA:Trace("ROLL", "IDENTICAL_LOOT_REOPENED", state.id, state.itemLink, remainingCopies) end
+        end
+    end
     if state.status ~= "ACTIVE" and state.status ~= "STOPPED" then return nil, "session cannot be awarded" end
     if not self:IsAuthority(playerName()) or not samePlayer(state.owner, playerName()) then
         return nil, "only the session authority may award an item"
