@@ -663,7 +663,7 @@ function MasterLooterWindow:RestoreSelection(player)
     self:ClearSelection()
     if player then
         for index, roll in ipairs(self.rolls or {}) do
-            if roll.player == player and roll.choice ~= "PASS" and not roll.awarded and not self.awardPending then
+            if roll.player == player and roll.choice ~= "PASS" and not roll.awarded then
                 self.selected = roll
                 if self.winnerLabel then self.winnerLabel:SetText("Gewinner: " .. roll.player .. " (" .. roll.choice .. ")") end
                 if self.awardButton and type(self.awardButton.Enable) == "function" then self.awardButton:Enable() end
@@ -678,10 +678,6 @@ end
 function MasterLooterWindow:SelectRow(index)
     local selected = index and self.rolls and self.rolls[index]
     if not selected then return end
-    if self.awardPending then
-        self:SetStatus("Die vorherige Vergabe wird noch vom Lootfenster bestätigt.", Theme.colors.gold)
-        return
-    end
     if selected.awarded then
         self:SetStatus(selected.player .. " hat aus dieser Rollrunde bereits ein Exemplar erhalten.", Theme.colors.muted)
         return
@@ -716,7 +712,7 @@ function MasterLooterWindow:AddPlusOne(index)
 end
 
 function MasterLooterWindow:AwardSelected()
-    if not self.selected or self.selected.awarded or self.awardPending then return end
+    if not self.selected or self.selected.awarded then return end
     local target = self.selected
     local manager = GA.RollSession
     local method = manager and (manager.Award or manager.AwardItem or manager.SelectWinner)
@@ -727,22 +723,14 @@ function MasterLooterWindow:AwardSelected()
     local ok, result, errorMessage = pcall(method, manager, self.sessionId, target.player, target.choice, target.roll)
     if ok and result ~= nil and result ~= false then
         local remaining = tonumber(result.awardsRemaining) or 0
-        self.awardPending = remaining > 0 and not result.lootConfirmed
-        self.pendingAwardSlot = self.awardPending and tonumber(result.lootSlot) or nil
-        self.pendingAwardSessionID = self.awardPending and result.sessionID or nil
-        self.pendingAwardIndex = self.awardPending and tonumber(result.awardIndex) or nil
+        self.awardPending, self.pendingAwardSlot, self.pendingAwardSessionID, self.pendingAwardIndex = false, nil, nil, nil
         local state = manager and type(manager.GetState) == "function" and manager:GetState(self.sessionId) or self.session
         if state then self:UpdateSession(state) end
         self:ClearSelection()
         self:RefreshRows()
         if remaining > 0 then
-            if result.lootConfirmed then
-                self:SetStatus("Exemplar " .. tostring(result.awardIndex or 1) .. "/" .. tostring(result.awardLimit or 1) ..
-                    " an " .. target.player .. " vergeben. Nächsten Gewinner anklicken.", Theme.colors.green)
-            else
-                self:SetStatus("Exemplar " .. tostring(result.awardIndex or 1) .. "/" .. tostring(result.awardLimit or 1) ..
-                    " an " .. target.player .. " vergeben. Warte auf Loot-Bestätigung.", Theme.colors.gold)
-            end
+            self:SetStatus("Exemplar " .. tostring(result.awardIndex or 1) .. "/" .. tostring(result.awardLimit or 1) ..
+                " an " .. target.player .. " vergeben. Nächsten Gewinner anklicken.", Theme.colors.green)
         else
             self:SetStatus("Vergabe an " .. target.player .. " gestartet. Alle Exemplare sind vergeben.", Theme.colors.green)
             self.sourceLoot, self.sourceInventory = nil, nil
@@ -753,35 +741,6 @@ function MasterLooterWindow:AwardSelected()
         local reason = ok and errorMessage or result
         self:SetStatus("Item konnte nicht vergeben werden" .. (reason and (": " .. tostring(reason)) or "."), Theme.colors.red)
     end
-end
-
-function MasterLooterWindow:UnlockNextAward()
-    if not self.awardPending then return false end
-    self.awardPending, self.pendingAwardSlot, self.pendingAwardSessionID, self.pendingAwardIndex = false, nil, nil, nil
-    local manager = GA.RollSession
-    local state = manager and type(manager.GetState) == "function" and manager:GetState(self.sessionId) or self.session
-    if state then self:UpdateSession(state) end
-    self:ClearSelection()
-    local awarded = state and state.awards and #state.awards or 0
-    local limit = state and tonumber(state.awardLimit) or awarded + 1
-    self:SetStatus(tostring(awarded) .. "/" .. tostring(limit) ..
-        " Exemplaren vergeben. Bitte den nächsten Gewinner anklicken.", Theme.colors.green)
-    return true
-end
-
-function MasterLooterWindow:OnLootSlotCleared(record)
-    if not self.awardPending then return false end
-    local clearedSlot = type(record) == "table" and tonumber(record.slot) or tonumber(record)
-    if self.pendingAwardSlot and clearedSlot and self.pendingAwardSlot ~= clearedSlot then return false end
-    return self:UnlockNextAward()
-end
-
-function MasterLooterWindow:OnAwardDeliveryChanged(result, delivery)
-    if not self.awardPending or type(result) ~= "table" or not result.lootConfirmed then return false end
-    if delivery ~= "GIVEN" and delivery ~= "PENDING" then return false end
-    if self.pendingAwardSessionID and tostring(result.sessionID) ~= tostring(self.pendingAwardSessionID) then return false end
-    if self.pendingAwardIndex and tonumber(result.awardIndex) ~= self.pendingAwardIndex then return false end
-    return self:UnlockNextAward()
 end
 
 function MasterLooterWindow:Show()
@@ -829,15 +788,6 @@ function MasterLooterWindow:Initialize()
         local result = eventArgument("GA_ROLL_RESULT", ...)
         local state = result and GA.RollSession and type(GA.RollSession.GetState) == "function" and GA.RollSession:GetState(result.sessionID)
         if state then MasterLooterWindow:UpdateSession(state) end
-    end)
-    registerMessage("GA_LOOT_SLOT_CLEARED", function(...)
-        MasterLooterWindow:OnLootSlotCleared(eventArgument("GA_LOOT_SLOT_CLEARED", ...))
-    end)
-    registerMessage("GA_AWARD_DELIVERY_CHANGED", function(...)
-        local result, delivery
-        if select(2, ...) == "GA_AWARD_DELIVERY_CHANGED" then result, delivery = select(3, ...), select(4, ...)
-        elseif select(1, ...) == "GA_AWARD_DELIVERY_CHANGED" then result, delivery = select(2, ...), select(3, ...) end
-        MasterLooterWindow:OnAwardDeliveryChanged(result, delivery)
     end)
 end
 

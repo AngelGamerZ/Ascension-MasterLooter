@@ -335,21 +335,15 @@ window:UpdateSession(multiState)
 window:SelectRow(1)
 local firstWinner = window.selected.player
 window:AwardSelected()
-expect(window.awardPending, "first identical copy waits for native loot-slot confirmation")
+expect(not window.awardPending, "first identical copy never locks subsequent player selection")
 expect(window.sourceLoot ~= nil, "first copy keeps the original roll workflow open")
 expect(window.rolls[1].awarded or window.rolls[2].awarded, "first winner is marked as already awarded")
-window:SelectRow(2)
-expect(window.selected == nil, "second winner cannot be submitted before the first loot slot clears")
-expect(not window:OnLootSlotCleared({ slot = 99 }), "an unrelated or renumbered slot cannot unlock the wrong award")
-expect(window.awardPending, "slot-number mismatch keeps the specific delivery pending")
-multiState.awards[1].lootConfirmed = true
-expect(window:OnAwardDeliveryChanged(multiState.awards[1], "GIVEN"),
-    "confirmed delivery unlocks selection even when Ascension reports a different slot number")
-expect(not window.awardPending, "second winner selection unlocks after confirmation")
 local nextIndex
 for index, response in ipairs(window.rolls) do if response.player ~= firstWinner then nextIndex = index; break end end
 window:SelectRow(nextIndex)
-expect(window.awardButton.enabled, "the next-best player can be selected from the unchanged roll table")
+expect(window.selected and window.selected.player ~= firstWinner,
+    "the next-best player is selectable immediately without a loot-window acknowledgement")
+expect(window.awardButton.enabled, "immediately selected second winner can be awarded")
 window:AwardSelected()
 same(#multiState.awards, 2, "two separate clicks award both copies from one roll session")
 expect(window.sourceLoot == nil, "the source clears only after every identical copy is awarded")

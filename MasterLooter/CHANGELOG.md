@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.7-beta
+
+- Wartepflicht zwischen mehreren identischen Vergaben vollständig entfernt
+- Der nächste Gewinner kann sofort nach dem ersten Vergabeklick aus derselben Rolltabelle ausgewählt werden
+- Bereits gestartete native Vergaben reservieren ihren Lootslot lokal, ohne die gesamte Oberfläche zu sperren
+- Die nächste Vergabe überspringt jeden noch in Bearbeitung befindlichen identischen Slot und verwendet direkt das nächste Exemplar
+- Mehrere native Vergaben können unabhängig voneinander auf ihre jeweilige Serverbestätigung warten
+- Nachfolgende Items und RollSessions werden nicht mehr durch eine alte `awardPending`-Sperre blockiert
+- Integrationsprüfung vergibt zwei identische Items auf Slot 1 und Slot 2, bevor irgendeine Slotleerung gemeldet wird
+- UI-Simulation bestätigt die sofortige Auswahl und Vergabe des zweiten Spielers ohne Lootfenster-Rückmeldung
+
 ## 0.16.6-beta
 
 - Hängende Spielerauswahl nach der ersten von mehreren identischen Vergaben korrigiert

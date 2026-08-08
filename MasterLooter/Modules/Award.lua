@@ -39,9 +39,11 @@ function Award:FindLootSlot(link, preferredSlot)
     end
     local wanted, fallback = itemID(link), nil
     for slot = 1, (GetNumLootItems() or 0) do
-        local slotLink = GetLootSlotLink(slot)
-        if slotLink == link then return slot, slotLink end
-        if not fallback and itemID(slotLink) == wanted then fallback = slot end
+        if not self.pending[slot] then
+            local slotLink = GetLootSlotLink(slot)
+            if slotLink == link then return slot, slotLink end
+            if not fallback and itemID(slotLink) == wanted then fallback = slot end
+        end
     end
     return fallback, fallback and GetLootSlotLink(fallback) or nil
 end
@@ -66,7 +68,11 @@ function Award:BeginGive(result, session, options)
     options = options or {}
     local link, player = result.itemLink or (session and session.itemLink), options.player or result.winner
     if type(GiveMasterLoot) ~= "function" then return nil, "Masterloot-API nicht verfügbar." end
-    local slot, slotLink = self:FindLootSlot(link, options.slot or result.lootSlot)
+    local preferredSlot = tonumber(options.slot or result.lootSlot)
+    if preferredSlot and self.pending[preferredSlot] then
+        preferredSlot, result.lootSlot, result.lootQueueID = nil, nil, nil
+    end
+    local slot, slotLink = self:FindLootSlot(link, preferredSlot)
     if not slot then return nil, "Item ist nicht im geöffneten Lootfenster." end
     result.lootSlot = slot
     if not result.lootQueueID and GA.Loot and type(GA.Loot.QueueSlot) == "function" then

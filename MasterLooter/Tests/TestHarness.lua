@@ -524,6 +524,23 @@ expect(aliceGA.RollSession:Award(multiSession.id, "Bob", "MS", 99) == nil,
 lootCopies = 0
 fire(alice, "LOOT_SLOT_CLEARED", 1)
 
+-- The loot master must be able to click both winners immediately. The first
+-- in-flight native slot is reserved locally, so the second click targets the
+-- other identical slot without waiting for LOOT_SLOT_CLEARED.
+lootCopies = 2
+fire(alice, "LOOT_OPENED", false)
+local immediateSession = aliceGA.RollSession:Start(itemLink, { duration = 30, awardLimit = 2 })
+local immediateFirst = aliceGA.RollSession:Award(immediateSession.id, "Bob", "MS", 94)
+same(alice.lastGive.slot, 1, "first immediate award reserves the first identical native slot")
+expect(aliceGA.Award.pending[1] ~= nil, "first native slot stays tracked while its server confirmation is pending")
+local immediateSecond, immediateError = aliceGA.RollSession:Award(immediateSession.id, "Alice", "MS", 93)
+expect(immediateSecond ~= nil, immediateError or "second winner can be awarded without waiting for the loot window")
+same(alice.lastGive.slot, 2, "second immediate award skips the in-flight first slot")
+expect(aliceGA.Award.pending[1] and aliceGA.Award.pending[2], "both native awards are independently pending confirmation")
+lootCopies = 0
+fire(alice, "LOOT_SLOT_CLEARED", immediateFirst.lootSlot)
+fire(alice, "LOOT_SLOT_CLEARED", immediateSecond.lootSlot)
+
 -- Ascension may expose an incomplete cached count when the roll starts. Once
 -- the first delivery is confirmed, a remaining identical native slot reopens
 -- the same session instead of forcing a reroll or rejecting its participants.
