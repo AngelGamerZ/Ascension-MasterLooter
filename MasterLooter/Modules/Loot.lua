@@ -79,7 +79,7 @@ function Loot:GetQueue(includeClosed)
     local result = {}
     for index = 1, #self.queue do
         local entry = self.queue[index]
-        if entry.status ~= "AWARDED" and entry.status ~= "CANCELLED" then result[#result + 1] = entry end
+        if entry.status ~= "AWARDED" and entry.status ~= "CANCELLED" and entry.status ~= "REMOVED" then result[#result + 1] = entry end
     end
     return result
 end
@@ -93,9 +93,10 @@ end
 function Loot:QueueSlot(slot, source)
     local record = type(slot) == "table" and slot or self:GetSlot(slot)
     if not record or record.cleared or not record.link then return nil, "Lootslot ist nicht verfügbar." end
+    local reusable = { QUEUED = true, ROLLING = true, AWAITING_AWARD = true, TAKING_SELF = true }
     for index = 1, #self.queue do
         local existing = self.queue[index]
-        if existing.generation == self.generation and existing.slot == record.slot and existing.status ~= "CANCELLED" then
+        if existing.generation == self.generation and existing.slot == record.slot and existing.itemID == record.itemID and reusable[existing.status] then
             return existing
         end
     end
@@ -138,17 +139,18 @@ end
 function Loot:Refresh(reason, silent)
     if type(GetNumLootItems) ~= "function" then return self:GetSnapshot() end
     local count = GetNumLootItems() or 0
-    local newOrder = {}
+    local newOrder, newSlots = {}, {}
     for slot = 1, count do
         local record = readSlot(slot)
         if record then
-            local previous = self.slots[slot]
-            if previous and previous.cleared then record.cleared = true end
-            self.slots[slot] = record
+            -- A cleared slot number may immediately be reused when the client
+            -- compacts the remaining loot. A currently readable native slot
+            -- is always live, even if this numeric position was just cleared.
+            newSlots[slot] = record
             newOrder[#newOrder + 1] = slot
         end
     end
-    self.order = newOrder
+    self.slots, self.order = newSlots, newOrder
     local snapshot = self:GetSnapshot()
     if not silent then GA.Events:Emit("GA_LOOT_UPDATED", snapshot, reason or "REFRESH") end
     return snapshot
@@ -182,6 +184,16 @@ function Loot:OnSlotCleared(slot)
     local snapshot = self:GetSnapshot()
     GA.Events:Emit("GA_LOOT_SLOT_CLEARED", record, snapshot)
     GA.Events:Emit("GA_LOOT_UPDATED", snapshot, "SLOT_CLEARED", record)
+    -- Ascension clients can compact equal drops onto the cleared numeric slot.
+    -- Refresh on following frames so the next copy receives a fresh queue ID.
+    if GA.Compat and type(GA.Compat.After) == "function" then
+        local generation = self.generation
+        local refresh = function()
+            if Loot.open and Loot.generation == generation then Loot:Refresh("POST_SLOT_CLEAR") end
+        end
+        GA.Compat:After(0, refresh)
+        GA.Compat:After(0.15, refresh)
+    end
 end
 
 function Loot:OnLootClosed()

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.2-beta
+
+- Vergabe mehrerer identischer Drops aus dem Lootmaster-Fenster korrigiert
+- Nachrückende Ascension-Lootslots übernehmen nicht mehr fälschlich den Status eines zuvor geleerten Slots
+- Nach jeder Slotleerung wird das native Lootfenster auf den folgenden Frames erneut eingelesen
+- Abgeschlossene, entfernte oder abgebrochene Warteschlangeneinträge werden bei wiederverwendeten Slotnummern nicht erneut benutzt
+- Jeder weitere identische Drop erhält eine eigene Warteschlangen- und Vergabe-ID
+- Regressionstest simuliert zwei identische Items, bei denen das zweite Item nach der ersten Vergabe auf dieselbe Slotnummer nachrückt
+
 ## 0.16.1-beta
 
 - Private Whisper-Abfrage `!SR` für die eigenen SoftRes ergänzt

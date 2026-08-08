@@ -175,6 +175,26 @@ GA.Loot:OnLootOpened(false)
 local afterReload = assert(GA.Loot:QueueSlot(1, "AFTER_RELOAD"))
 expect(afterReload.id ~= oldQueueID, "reused loot slot receives a fresh queue identity")
 
+-- Some Ascension loot windows compact a second identical drop into the slot
+-- number that was just cleared. The live slot must not inherit the old clear
+-- flag or the completed queue identity.
+local compactLinks = { lootLink, lootLink }
+GetNumLootItems = function() return #compactLinks end
+GetLootSlotLink = function(slot) return compactLinks[slot] end
+GetLootSlotInfo = function(slot) if compactLinks[slot] then return "icon", "Testbeute", 1, 4, false, false end end
+LootSlotHasItem = function(slot) return compactLinks[slot] ~= nil end
+GA.Loot:OnLootOpened(false)
+local firstCompactQueue = assert(GA.Loot:QueueSlot(1, "COMPACT_FIRST"))
+GA.Loot:SetQueueStatus(firstCompactQueue.id, "AWARDED")
+compactLinks = { lootLink }
+GA.Loot:OnSlotCleared(1)
+GA.Loot:Refresh("COMPACTED_DUPLICATE", true)
+local compactedRecord = GA.Loot:GetSlot(1)
+expect(compactedRecord and not compactedRecord.cleared, "compacted identical drop is recognized as a live slot")
+local secondCompactQueue = assert(GA.Loot:QueueSlot(1, "COMPACT_SECOND"))
+expect(secondCompactQueue.id ~= firstCompactQueue.id, "compacted identical drop receives a fresh queue identity")
+same(secondCompactQueue.slot, 1, "fresh duplicate queue follows the native compacted slot")
+
 GA.UI.Theme = { colors = { green = { 0, 1, 0 }, red = { 1, 0, 0 }, muted = { 0.5, 0.5, 0.5 } } }
 loadModule("UI/LootWindow.lua")
 local control, selected, used, ordinaryLootClicks = true, nil, false, 0
