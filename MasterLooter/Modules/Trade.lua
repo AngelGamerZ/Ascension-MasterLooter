@@ -325,14 +325,16 @@ function Trade:QueueAward(result, source)
     end
     for index = 1, #self.pending do
         local existing = self.pending[index]
-        if result.sessionID and existing.sessionID == result.sessionID and sameName(existing.winner, result.winner) and existing.itemLink == result.itemLink then
+        if result.sessionID and existing.sessionID == result.sessionID and
+            tonumber(existing.awardIndex or 1) == tonumber(result.awardIndex or 1) and
+            sameName(existing.winner, result.winner) and existing.itemLink == result.itemLink then
             return existing
         end
     end
     local acquiredAt = tonumber(result.acquiredAt) or timestamp()
     local entry = {
         id = newID(), itemLink = result.itemLink, itemID = GA.Compat:GetItemID(result.itemLink),
-        sessionID = result.sessionID,
+        sessionID = result.sessionID, awardIndex = result.awardIndex, awardLimit = result.awardLimit,
         winner = result.winner, quantity = math.max(1, math.floor(tonumber(result.quantity) or 1)),
         choice = result.choice, roll = result.roll, note = result.note,
         status = "PENDING", source = source or "AWARD", createdAt = timestamp(), acquiredAt = acquiredAt,

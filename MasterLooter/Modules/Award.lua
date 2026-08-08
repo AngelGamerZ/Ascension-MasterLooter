@@ -68,6 +68,13 @@ function Award:BeginGive(result, session, options)
     if type(GiveMasterLoot) ~= "function" then return nil, "Masterloot-API nicht verfügbar." end
     local slot, slotLink = self:FindLootSlot(link, options.slot or result.lootSlot)
     if not slot then return nil, "Item ist nicht im geöffneten Lootfenster." end
+    result.lootSlot = slot
+    if not result.lootQueueID and GA.Loot and type(GA.Loot.QueueSlot) == "function" then
+        local queued = GA.Loot:QueueSlot(slot, "MULTI_AWARD")
+        if queued then
+            result.lootQueueID, result.lootGeneration = queued.id, queued.generation
+        end
+    end
     local candidate = self:FindCandidate(slot, player)
     if not candidate then return nil, "Spieler ist kein gültiger Loot-Kandidat (meist Entfernung oder Berechtigung)." end
     local attempt = {
@@ -88,6 +95,7 @@ function Award:Record(result, session, delivery)
     local record = {
         sessionID = result.sessionID, itemLink = result.itemLink or (session and session.itemLink),
         winner = result.winner, choice = result.choice, roll = result.roll, note = result.note,
+        awardIndex = result.awardIndex, awardLimit = result.awardLimit,
         time = result.awardedAt or stamp(), delivery = delivery or "RECORDED",
     }
     history[#history + 1] = record

@@ -1,4 +1,4 @@
-# MasterLooter 0.16.2-beta – Funktionsparität
+# MasterLooter 0.16.3-beta – Funktionsparität
 
 Diese Matrix bildet den Clean-Room-Funktionskatalog aus `REVERSE_ENGINEERING_REPORT.md` auf die eigenständige Ascension-3.3.5a-Implementierung ab. „Mit Clientgrenze“ bedeutet, dass der Ablauf vollständig modelliert ist, der alte Client oder der Server aber keine verbindliche API für den letzten Schritt bereitstellt.
 

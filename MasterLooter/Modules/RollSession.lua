@@ -178,6 +178,11 @@ local function sanitizeOSMaximum(value)
     return math.max(2, math.min(99, value))
 end
 
+local function sanitizeAwardLimit(value)
+    value = floor(tonumber(value) or 1)
+    return math.max(1, math.min(40, value))
+end
+
 local function hasChoice(state, choice)
     for i = 1, #state.choices do if state.choices[i] == choice then return true end end
     return false
@@ -284,6 +289,7 @@ function RollSession:Start(itemLink, options)
         choices = sanitizeChoices(options.choices), note = tostring(options.note or ""),
         participants = {}, participantSequences = {}, rollAssignments = {}, sequence = 0,
         lootQueueID = options.lootQueueID, lootSlot = tonumber(options.lootSlot), lootGeneration = tonumber(options.lootGeneration),
+        awardLimit = sanitizeAwardLimit(options.awardLimit), awards = {}, awardedPlayers = {},
     }
     self.sessions[state.id] = state
     self.activeID = state.id
@@ -442,11 +448,20 @@ function RollSession:Award(sessionID, winner, choice, roll, note)
         return nil, "only the session authority may award an item"
     end
     if type(winner) ~= "string" or winner == "" then return nil, "winner is required" end
-    local existing = state.participants[baseName(winner)]
+    state.awards, state.awardedPlayers = state.awards or {}, state.awardedPlayers or {}
+    local awardLimit = sanitizeAwardLimit(state.awardLimit)
+    if #state.awards >= awardLimit then return nil, "all available copies have already been awarded" end
+    local winnerKey = baseName(winner)
+    if state.awardedPlayers[winnerKey] then return nil, "this player has already received a copy from this roll" end
+    local awardIndex = #state.awards + 1
+    local existing = state.participants[winnerKey]
     local result = { sessionID = state.id, winner = winner, choice = choice or (existing and existing.choice) or "",
         roll = tonumber(roll) or (existing and existing.roll) or 0, note = tostring(note or ""),
-        itemLink = state.itemLink, awardedAt = TimeSafe(), lootQueueID = state.lootQueueID,
-        lootSlot = state.lootSlot, lootGeneration = state.lootGeneration }
+        itemLink = state.itemLink, awardedAt = TimeSafe(), awardIndex = awardIndex,
+        awardLimit = awardLimit, awardsRemaining = awardLimit - awardIndex,
+        lootQueueID = awardIndex == 1 and state.lootQueueID or nil,
+        lootSlot = awardIndex == 1 and state.lootSlot or nil,
+        lootGeneration = awardIndex == 1 and state.lootGeneration or nil }
     local previousSequence, previousAuthoritySequence = state.sequence, state.authoritySequence
     local seq = nextSequence(state)
     state.authoritySequence = seq
@@ -456,10 +471,17 @@ function RollSession:Award(sessionID, winner, choice, roll, note)
         state.sequence, state.authoritySequence = previousSequence, previousAuthoritySequence
         return nil, err
     end
-    state.result, state.status, state.endedAt = result, "AWARDED", GetTimeSafe()
+    state.awards[#state.awards + 1] = result
+    state.awardedPlayers[winnerKey] = result
+    state.result, state.status, state.endedAt = result,
+        result.awardsRemaining > 0 and "STOPPED" or "AWARDED", GetTimeSafe()
     if self.activeID == state.id then self.activeID = nil end
     emit("GA_ROLL_RESULT", result, state)
-    emit("GA_ROLL_SESSION_ENDED", state, "AWARDED")
+    if result.awardsRemaining > 0 then
+        emit("GA_ROLL_SESSION_UPDATED", state, "AWARD_PARTIAL", result)
+    else
+        emit("GA_ROLL_SESSION_ENDED", state, "AWARDED")
+    end
     self:PersistActive()
     return result
 end

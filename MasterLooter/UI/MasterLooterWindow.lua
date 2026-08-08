@@ -14,6 +14,11 @@ GA.UI.MasterLooterWindow = MasterLooterWindow
 
 local ROWS = MasterLooterWindow.VISIBLE_ROWS
 
+local function baseName(name)
+    if type(name) ~= "string" then return "" end
+    return string.lower((string.match(name, "^[^-]+") or name))
+end
+
 local function field(source, ...)
     if type(source) ~= "table" then return nil end
     for i = 1, select("#", ...) do
@@ -49,6 +54,7 @@ end
 
 local function getRolls(session)
     local rolls = field(session, "participants", "rolls", "responses", "entries") or {}
+    local awardedPlayers = field(session, "awardedPlayers") or {}
     local result = {}
     for key, roll in pairs(rolls) do
         if type(roll) == "table" then
@@ -58,6 +64,7 @@ local function getRolls(session)
                 choice = choice,
                 roll = tonumber(field(roll, "roll", "value", "number")) or 0,
                 effectiveRoll = tonumber(field(roll, "effectiveRoll")) or tonumber(field(roll, "roll", "value", "number")) or 0,
+                awarded = awardedPlayers[baseName(field(roll, "player", "name", "playerName") or (type(key) == "string" and key) or "?")] ~= nil,
                 raw = roll,
             }) end
         else
@@ -87,7 +94,7 @@ end
 local function rollSignature(rolls)
     local parts = {}
     for index, roll in ipairs(rolls or {}) do
-        parts[index] = table.concat({ tostring(roll.player), tostring(roll.choice), tostring(roll.roll) }, "\031")
+        parts[index] = table.concat({ tostring(roll.player), tostring(roll.choice), tostring(roll.roll), tostring(roll.awarded) }, "\031")
     end
     return table.concat(parts, "\030")
 end
@@ -515,6 +522,10 @@ function MasterLooterWindow:StartSession()
     self:RefreshInputState(false)
     self:SetStatus("Session wird an die Gruppe gesendet …", Theme.colors.gold)
     local profile = GA.DB and GA.DB:GetProfile()
+    local awardLimit = 1
+    if self.sourceLoot and GA.Loot and type(GA.Loot.CountAvailable) == "function" then
+        awardLimit = math.max(1, GA.Loot:CountAvailable(itemLink))
+    end
     local ok, result, errorMessage = pcall(method, manager, itemLink, {
         duration = duration,
         note = note,
@@ -523,6 +534,7 @@ function MasterLooterWindow:StartSession()
         lootQueueID = self.sourceLoot and self.sourceLoot.queueID,
         lootSlot = self.sourceLoot and self.sourceLoot.slot,
         lootGeneration = self.sourceLoot and self.sourceLoot.generation,
+        awardLimit = awardLimit,
     })
     if not ok or result == nil or result == false then
         self.sessionStarting = false
@@ -608,7 +620,7 @@ function MasterLooterWindow:RefreshRows()
         if roll then
             row.absoluteIndex = absoluteIndex
             row.data = roll
-            row.player:SetText(roll.player)
+            row.player:SetText(roll.player .. (roll.awarded and " |cff66cc66[vergeben]|r" or ""))
             row.choice:SetText(roll.choice)
             if roll.effectiveRoll and roll.effectiveRoll ~= roll.roll then
                 row.roll:SetText(tostring(roll.roll) .. "→" .. tostring(roll.effectiveRoll))
@@ -618,7 +630,10 @@ function MasterLooterWindow:RefreshRows()
             local counts = roll.itemCounts or {}
             row.items:SetText(string.format("%d/%d/%d · +%d", tonumber(counts.total) or 0,
                 tonumber(counts.MS) or 0, tonumber(counts.OS) or 0, tonumber(roll.plusOne) or 0))
-            if self.selected == roll then
+            if roll.awarded then
+                if type(row.UnlockHighlight) == "function" then row:UnlockHighlight() end
+                row.player:SetTextColor(unpack(Theme.colors.muted))
+            elseif self.selected == roll then
                 if type(row.LockHighlight) == "function" then row:LockHighlight() end
                 row.player:SetTextColor(unpack(Theme.colors.gold))
             else
@@ -648,7 +663,7 @@ function MasterLooterWindow:RestoreSelection(player)
     self:ClearSelection()
     if player then
         for index, roll in ipairs(self.rolls or {}) do
-            if roll.player == player and roll.choice ~= "PASS" then
+            if roll.player == player and roll.choice ~= "PASS" and not roll.awarded and not self.awardPending then
                 self.selected = roll
                 if self.winnerLabel then self.winnerLabel:SetText("Gewinner: " .. roll.player .. " (" .. roll.choice .. ")") end
                 if self.awardButton and type(self.awardButton.Enable) == "function" then self.awardButton:Enable() end
@@ -663,6 +678,14 @@ end
 function MasterLooterWindow:SelectRow(index)
     local selected = index and self.rolls and self.rolls[index]
     if not selected then return end
+    if self.awardPending then
+        self:SetStatus("Die vorherige Vergabe wird noch vom Lootfenster bestätigt.", Theme.colors.gold)
+        return
+    end
+    if selected.awarded then
+        self:SetStatus(selected.player .. " hat aus dieser Rollrunde bereits ein Exemplar erhalten.", Theme.colors.muted)
+        return
+    end
     self.selected = selected
     if self.winnerLabel then self.winnerLabel:SetText("Gewinner: " .. selected.player .. " (" .. selected.choice .. ")") end
     if self.awardButton then
@@ -693,24 +716,52 @@ function MasterLooterWindow:AddPlusOne(index)
 end
 
 function MasterLooterWindow:AwardSelected()
-    if not self.selected then return end
+    if not self.selected or self.selected.awarded or self.awardPending then return end
+    local target = self.selected
     local manager = GA.RollSession
     local method = manager and (manager.Award or manager.AwardItem or manager.SelectWinner)
     if type(method) ~= "function" then
         self:SetStatus("Award-Funktion ist nicht verfügbar.", Theme.colors.red)
         return
     end
-    local ok, result, errorMessage = pcall(method, manager, self.sessionId, self.selected.player, self.selected.choice, self.selected.roll)
+    local ok, result, errorMessage = pcall(method, manager, self.sessionId, target.player, target.choice, target.roll)
     if ok and result ~= nil and result ~= false then
+        local remaining = tonumber(result.awardsRemaining) or 0
+        self.awardPending = remaining > 0
+        self.pendingAwardSlot = self.awardPending and tonumber(result.lootSlot) or nil
+        local state = manager and type(manager.GetState) == "function" and manager:GetState(self.sessionId) or self.session
+        if state then self:UpdateSession(state) end
+        self:ClearSelection()
         self:RefreshRows()
-        self:SetStatus("Vergabe an " .. self.selected.player .. " gestartet.", Theme.colors.green)
-        if GA.Trace then GA:Trace("ACTION", "ITEM_AWARDED_BY_CLICK", self.selected.player, self.selected.choice, self.sessionId) end
-        self.sourceLoot, self.sourceInventory = nil, nil
+        if remaining > 0 then
+            self:SetStatus("Exemplar " .. tostring(result.awardIndex or 1) .. "/" .. tostring(result.awardLimit or 1) ..
+                " an " .. target.player .. " vergeben. Warte auf Loot-Bestätigung.", Theme.colors.gold)
+        else
+            self:SetStatus("Vergabe an " .. target.player .. " gestartet. Alle Exemplare sind vergeben.", Theme.colors.green)
+            self.sourceLoot, self.sourceInventory = nil, nil
+        end
+        if GA.Trace then GA:Trace("ACTION", "ITEM_AWARDED_BY_CLICK", target.player, target.choice, self.sessionId, result.awardIndex, result.awardLimit) end
         self.awardButton:Disable()
     else
         local reason = ok and errorMessage or result
         self:SetStatus("Item konnte nicht vergeben werden" .. (reason and (": " .. tostring(reason)) or "."), Theme.colors.red)
     end
+end
+
+function MasterLooterWindow:OnLootSlotCleared(record)
+    if not self.awardPending then return false end
+    local clearedSlot = type(record) == "table" and tonumber(record.slot) or tonumber(record)
+    if self.pendingAwardSlot and clearedSlot and self.pendingAwardSlot ~= clearedSlot then return false end
+    self.awardPending, self.pendingAwardSlot = false, nil
+    local manager = GA.RollSession
+    local state = manager and type(manager.GetState) == "function" and manager:GetState(self.sessionId) or self.session
+    if state then self:UpdateSession(state) end
+    self:ClearSelection()
+    local awarded = state and state.awards and #state.awards or 0
+    local limit = state and tonumber(state.awardLimit) or awarded + 1
+    self:SetStatus(tostring(awarded) .. "/" .. tostring(limit) ..
+        " Exemplaren vergeben. Bitte den nächsten Gewinner anklicken.", Theme.colors.green)
+    return true
 end
 
 function MasterLooterWindow:Show()
@@ -754,7 +805,14 @@ function MasterLooterWindow:Initialize()
     end
     registerMessage("GA_ROLL_SESSION_STOPPED", stopped)
     registerMessage("GA_ROLL_SESSION_ENDED", stopped)
-    registerMessage("GA_ROLL_RESULT", stopped)
+    registerMessage("GA_ROLL_RESULT", function(...)
+        local result = eventArgument("GA_ROLL_RESULT", ...)
+        local state = result and GA.RollSession and type(GA.RollSession.GetState) == "function" and GA.RollSession:GetState(result.sessionID)
+        if state then MasterLooterWindow:UpdateSession(state) end
+    end)
+    registerMessage("GA_LOOT_SLOT_CLEARED", function(...)
+        MasterLooterWindow:OnLootSlotCleared(eventArgument("GA_LOOT_SLOT_CLEARED", ...))
+    end)
 end
 
 

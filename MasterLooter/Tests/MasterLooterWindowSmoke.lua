@@ -312,6 +312,44 @@ expect(string.find(window.status:GetText(), "Vergabe an " .. repeatedPlayer .. "
 expect(window.sourceLoot == nil, "successful award clears the consumed loot source")
 expect(not window.awardButton.enabled, "successful award cannot be submitted twice")
 
+-- Two identical drops use one roll table and two deliberate winner clicks.
+local multiState = { id = "multi-copy-session", itemLink = item, status = "STOPPED", awardLimit = 2,
+    awards = {}, awardedPlayers = {}, participants = {
+        markus = { name = "Markus", choice = "MS", roll = 100 },
+        gragu = { name = "Gragu", choice = "MS", roll = 98 },
+    } }
+GA.RollSession = {
+    GetState = function() return multiState end,
+    Award = function(_, _, player, choice, roll)
+        local index = #multiState.awards + 1
+        local result = { sessionID = multiState.id, winner = player, choice = choice, roll = roll,
+            awardIndex = index, awardLimit = 2, awardsRemaining = 2 - index, lootSlot = index == 1 and 1 or 2 }
+        multiState.awards[index] = result
+        multiState.awardedPlayers[string.lower(player)] = result
+        multiState.status = result.awardsRemaining > 0 and "STOPPED" or "AWARDED"
+        return result
+    end,
+}
+window.sourceLoot = { slot = 1, generation = 10, itemLink = item }
+window:UpdateSession(multiState)
+window:SelectRow(1)
+local firstWinner = window.selected.player
+window:AwardSelected()
+expect(window.awardPending, "first identical copy waits for native loot-slot confirmation")
+expect(window.sourceLoot ~= nil, "first copy keeps the original roll workflow open")
+expect(window.rolls[1].awarded or window.rolls[2].awarded, "first winner is marked as already awarded")
+window:SelectRow(2)
+expect(window.selected == nil, "second winner cannot be submitted before the first loot slot clears")
+expect(window:OnLootSlotCleared({ slot = 1 }), "native slot confirmation unlocks the next copy")
+expect(not window.awardPending, "second winner selection unlocks after confirmation")
+local nextIndex
+for index, response in ipairs(window.rolls) do if response.player ~= firstWinner then nextIndex = index; break end end
+window:SelectRow(nextIndex)
+expect(window.awardButton.enabled, "the next-best player can be selected from the unchanged roll table")
+window:AwardSelected()
+same(#multiState.awards, 2, "two separate clicks award both copies from one roll session")
+expect(window.sourceLoot == nil, "the source clears only after every identical copy is awarded")
+
 -- Trade assistant regression: pending work may refresh its data, but must not
 -- force a second modal window into the loot master's face.
 GA.Trade = {

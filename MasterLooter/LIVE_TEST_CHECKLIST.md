@@ -7,7 +7,7 @@ Der automatisierte Harness prüft die Lua- und Mehrclient-Logik außerhalb des S
 3. Lootmaster: `/ml`, je ein echtes Item aus Tasche und geöffnetem Lootfenster auf die Item-Ablagefläche ziehen, 15 Sekunden wählen und starten.
 4. Teilnehmer: kontrollieren, dass Item, Timer und MS/OS/Pass automatisch erscheinen; einmal klicken.
 5. Lootmaster: prüfen, dass nur eine hostgenerierte Wurfzahl erscheint; Gewinner vergeben.
-6. Mit offenem Lootfenster direkte Vergabe prüfen. Zwei identische Drops nacheinander über das Lootmaster-Fenster an unterschiedliche Spieler vergeben. Danach einen absichtlich nicht direkt vergebbaren Fall testen und die Trade-Warteschlange kontrollieren.
+6. Mit offenem Lootfenster direkte Vergabe prüfen. Zwei identische Drops einmal ausrollen, danach in derselben Rolltabelle erst den besten und nach bestätigter Slotleerung den zweitbesten Spieler anklicken und vergeben. Danach einen absichtlich nicht direkt vergebbaren Fall testen und die Trade-Warteschlange kontrollieren.
 7. Trade abschließen und prüfen, dass erst die Ascension-Erfolgsmeldung den Eintrag als zugestellt markiert.
 8. SoftRes/HardRes, Priorität und Boost setzen; bei einer Vergabe `+1 = 0`, bei einer zweiten bewusst `+1 = 1` wählen und die Rangfolge mit mindestens drei Spielern prüfen.
 9. Im Raid Master Looter zuweisen, die einmalige Befehlsnachricht prüfen und von einem zweiten Client `!SR` sowie `!SL` ausschließlich per Whisper senden; Antworten dürfen weder im Raid- noch im Gruppenchat erscheinen.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.3-beta
+
+- Eine Rollrunde kann jetzt mehrere identische Exemplare im selben Lootfenster nacheinander vergeben
+- Die Anzahl identischer Lootslots wird beim Start erfasst und als Zahl der möglichen Einzelvergaben gespeichert
+- Nach der ersten Vergabe bleiben alle ursprünglichen Würfe im Lootmaster-Fenster erhalten
+- Bereits bedachte Spieler werden in der Rolltabelle als vergeben markiert und können in derselben Runde nicht doppelt ausgewählt werden
+- Die nächste Gewinnerauswahl wird erst nach der nativen Bestätigung der vorherigen Slotleerung freigeschaltet
+- Das zweite und jedes weitere Exemplar wird automatisch aus dem verbleibenden identischen Blizzard-Lootslot vergeben
+- Historie, Handelsfallback und Zustellidentitäten unterscheiden jede Einzelvergabe derselben Rollrunde
+- Integrations- und UI-Simulationen prüfen zwei getrennte Gewinner aus einer einzigen Rollrunde
+
 ## 0.16.2-beta
 
 - Vergabe mehrerer identischer Drops aus dem Lootmaster-Fenster korrigiert

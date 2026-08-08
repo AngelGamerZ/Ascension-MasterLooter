@@ -136,6 +136,17 @@ function Loot:FindSlot(item)
     end
 end
 
+function Loot:CountAvailable(item)
+    local wanted = GA.Compat:GetItemID(item)
+    if not wanted then return 0 end
+    local count = 0
+    for index = 1, #self.order do
+        local record = self.slots[self.order[index]]
+        if record and not record.cleared and record.itemID == wanted then count = count + 1 end
+    end
+    return count
+end
+
 function Loot:Refresh(reason, silent)
     if type(GetNumLootItems) ~= "function" then return self:GetSnapshot() end
     local count = GetNumLootItems() or 0

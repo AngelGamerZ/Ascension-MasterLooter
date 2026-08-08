@@ -140,6 +140,7 @@ local function loadAddon(client)
     loadFile(client, "Modules/BagInspector.lua")
     loadFile(client, "Modules/RollSession.lua")
     loadFile(client, "Modules/ChatRolls.lua")
+    loadFile(client, "Modules/Loot.lua")
     loadFile(client, "Modules/Trade.lua")
     loadFile(client, "Modules/Award.lua")
     loadFile(client, "Modules/SoftRes.lua")
@@ -483,6 +484,48 @@ same(duplicateFallbacks, 0, "missing explicit queue never falls back to an ident
 table.remove(aliceGA.Award.deferred)
 aliceGA.Loot = savedLoot
 
+-- One roll session can award every identical copy in the same loot window.
+-- The original rolls stay intact and each copy requires a separate winner click.
+local lootCopies = 2
+alice.env.GetNumLootItems = function() return lootCopies end
+alice.env.GetLootSlotLink = function(slot) return slot >= 1 and slot <= lootCopies and itemLink or nil end
+alice.env.GetLootSlotInfo = function(slot)
+    if slot >= 1 and slot <= lootCopies then return "icon", "Ascension Test Item", 1, 4, false, false, nil, false end
+end
+alice.env.LootSlotHasItem = function(slot) return slot >= 1 and slot <= lootCopies end
+alice.env.GetMasterLootCandidate = function(index)
+    if index == 1 then return "Bob" end
+    if index == 2 then return "Alice" end
+end
+alice.env.GiveMasterLoot = function(slot, candidate) alice.lastGive = { slot = slot, candidate = candidate } end
+fire(alice, "LOOT_OPENED", false)
+same(aliceGA.Loot:CountAvailable(itemLink), 2, "loot capture counts two identical awardable copies")
+local multiQueue = aliceGA.Loot:QueueSlot(1, "MULTI_AWARD_TEST")
+local multiSession = aliceGA.RollSession:Start(itemLink, {
+    duration = 30, lootSlot = 1, lootQueueID = multiQueue.id,
+    lootGeneration = aliceGA.Loot.generation, awardLimit = aliceGA.Loot:CountAvailable(itemLink),
+})
+local firstCopy = aliceGA.RollSession:Award(multiSession.id, "Bob", "MS", 99)
+same(firstCopy.awardIndex, 1, "first click awards the first identical copy")
+same(firstCopy.awardsRemaining, 1, "first award leaves one copy in the same session")
+same(multiSession.status, "STOPPED", "roll collection stays closed while another copy remains")
+same(alice.lastGive.slot, 1, "first copy uses the explicitly selected native loot slot")
+lootCopies = 1
+fire(alice, "LOOT_SLOT_CLEARED", 1)
+same(aliceGA.Loot:CountAvailable(itemLink), 1, "loot refresh sees the compacted second copy")
+local secondCopy = aliceGA.RollSession:Award(multiSession.id, "Alice", "MS", 97)
+same(secondCopy.awardIndex, 2, "second click awards from the original roll session")
+same(secondCopy.sessionID, firstCopy.sessionID, "both identical copies share one roll session")
+same(secondCopy.awardsRemaining, 0, "second award completes the configured copy count")
+same(#multiSession.awards, 2, "both sequential winners remain recorded on the session")
+same(multiSession.status, "AWARDED", "session completes only after every identical copy is awarded")
+expect(aliceGA.RollSession:Award(multiSession.id, "Bob", "MS", 99) == nil,
+    "a completed multi-copy session rejects an extra award")
+lootCopies = 0
+fire(alice, "LOOT_SLOT_CLEARED", 1)
+
+lootCopies = 2
+fire(alice, "LOOT_OPENED", false)
 local timeoutSession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
 expect(aliceGA.RollSession:Award(timeoutSession.id, "Bob", "MS", 92) ~= nil, "unconfirmed masterloot award starts")
 same(aliceGA.DB.data.history.awards[#aliceGA.DB.data.history.awards].delivery, "GIVING", "unconfirmed award waits for the server")
@@ -492,8 +535,10 @@ same(aliceGA.Trade.pending[#aliceGA.Trade.pending].winner, "Bob", "timeout creat
 
 -- A closed roll remains awardable, and an inventory item awarded to the loot
 -- master is complete immediately instead of creating an impossible self-trade.
+lootCopies = 0
 alice.env.GetNumLootItems = function() return 0 end
 alice.env.GetLootSlotLink = function() return nil end
+fire(alice, "LOOT_CLOSED")
 local selfTradeCount, selfLedgerBefore = #aliceGA.Trade.pending, aliceGA.PlusOnes:GetStats("Alice").total
 local selfInventorySession = aliceGA.RollSession:Start(itemLink, { duration = 30 })
 expect(aliceGA.RollSession:Stop(selfInventorySession.id, "TIMEOUT"), "inventory roll closes before winner selection")

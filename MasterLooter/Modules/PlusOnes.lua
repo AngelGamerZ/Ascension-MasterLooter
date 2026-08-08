@@ -138,7 +138,11 @@ function PlusOnes:OnInitialize()
     local profile = GA.DB:GetProfile()
     profile.autoPlusOneMS, profile.autoPlusOneOS, profile.autoPlusOneOther = false, false, false
     GA.Events:On("GA_AWARD_DELIVERY_CHANGED", function(_, _, result, delivery)
-        if delivery == "GIVEN" then PlusOnes:RecordConfirmed(result, result and result.sessionID, "DIRECT_LOOT") end
+        if delivery == "GIVEN" then
+            local identity = result and result.sessionID
+            if identity then identity = identity .. ":" .. tostring(result.awardIndex or 1) end
+            PlusOnes:RecordConfirmed(result, identity, "DIRECT_LOOT")
+        end
     end, self)
     GA.Events:On("GA_TRADE_PENDING_UPDATED", function(_, _, entry)
         if type(entry) == "table" and entry.status == "DELIVERED" and entry.id then
