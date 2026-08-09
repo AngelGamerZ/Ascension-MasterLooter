@@ -3,12 +3,17 @@ local function expect(value, message) assertions = assertions + 1; if not value 
 local function same(actual, expected, message) expect(actual == expected, message .. " (expected " .. tostring(expected) .. ", got " .. tostring(actual) .. ")") end
 
 function time() return 1700000000 end
+function UnitName(unit) return unit == "player" and "Driomodo" or nil end
+function UnitClass(unit) return unit == "player" and "Barbarian" or nil end
 local listeners = {}
 local GA = {
     modules = {}, UI = {},
     DB = { data = { priorities = {}, softRes = { reservations = {}, hardReserved = {} } } },
     Events = {},
-    Compat = { GetItemID = function(_, value) return tonumber(tostring(value or ""):match("item:(%d+)")) or tonumber(value) end },
+    Compat = {
+        GetItemID = function(_, value) return tonumber(tostring(value or ""):match("item:(%d+)")) or tonumber(value) end,
+        GetItemInfo = function(_, value) return nil, nil end,
+    },
 }
 function GA:RegisterModule(name, module) self.modules[name] = module end
 function GA.Events:Emit(event, ...) listeners[#listeners + 1] = { event, ... } end
@@ -31,6 +36,30 @@ same(GA.SoftRes:GetEntry("Alice-Realm", 1985).amount, 2, "duplicate BISBEARD pic
 expect(GA.SoftRes:IsHardReserved(3000), "BISBEARD hard reserve is imported")
 local bad, badMessage = GA.ExternalImports:ImportBisBeard("not base64!")
 expect(bad == false and type(badMessage) == "string", "invalid BISBEARD paste fails safely")
+
+local userExport = "eyJtZXRhZGF0YSI6eyJpZCI6ImN6d2swVCIsImluc3RhbmNlIjowLCJpbnN0YW5jZXMiOlsiWnVsJ0d1cnViIl0sIm9yaWdpbiI6InJhaWRyZXMifSwic29mdHJlc2VydmVzIjpbeyJuYW1lIjoiRHJpb21vZG8iLCJpdGVtcyI6W3siaWQiOjMxNDU1NSwicXVhbGl0eSI6NH0seyJpZCI6MzE5OTEwLCJxdWFsaXR5Ijo0fV19XSwiaGFyZHJlc2VydmVzIjpbXX0="
+imported, rejected = GA.SoftRes:Import(userExport)
+same(imported, 2, "Soft Reserve direct import accepts the provided BISBEARD export")
+same(rejected, 0, "provided BISBEARD export has no rejected records")
+same(GA.SoftRes:GetEntry("Driomodo", 314555).amount, 1, "first provided reservation is stored")
+same(GA.SoftRes:GetEntry("Driomodo", 319910).amount, 1, "second provided reservation is stored")
+local allReservations = GA.SoftRes:GetAllReservations()
+local foundFirst, foundSecond, foundClass = false, false, false
+for _, entry in ipairs(allReservations) do
+    if entry.player == "Driomodo" and entry.itemID == 314555 then foundFirst = true; foundClass = entry.className == "Barbarian" end
+    if entry.player == "Driomodo" and entry.itemID == 319910 then foundSecond = true end
+end
+expect(foundFirst and foundSecond, "both provided BISBEARD reservations are available to the overview")
+expect(foundClass, "the visible reservation retains the current player's Ascension class")
+GA.UI.Theme = nil
+load("UI/SoftResWindow.lua")
+local overviewPlayer, overviewClass, firstOverviewItem, overviewAmount = GA.UI.SoftResWindow:DescribeOverviewEntry({
+    player = "Driomodo", className = "Barbarian", itemID = 314555, amount = 1,
+})
+same(overviewPlayer, "Driomodo", "Soft Reserve overview shows the original player spelling")
+same(overviewClass, "Barbarian", "Soft Reserve overview shows the Ascension class")
+same(firstOverviewItem, "Item 314555", "Soft Reserve overview shows the first item ID when uncached")
+same(overviewAmount, "1", "Soft Reserve overview shows the reservation amount")
 
 local rrobin = '{"reserves":[{"character":"Bob","itemid":1985,"priority":7}]}'
 imported, rejected = GA.ExternalImports:ImportRRobin(rrobin)

@@ -184,6 +184,15 @@ local raw = {
     ["Falscher Handelspartner."] = "Wrong trade partner.",
     ["Trade-Slot-API ist nicht verfügbar."] = "The trade-slot API is unavailable.",
     ["Keine handelsbereiten Items."] = "No trade-ready items.",
+    ["Addon-Nachrichten müssen Zeichenketten mit höchstens 255 Bytes sein"] = "Addon messages must be strings of at most 255 bytes",
+    ["Längenmarkierung fehlt"] = "missing length marker",
+    ["Ungültige Feldlänge"] = "invalid field length",
+    ["Feld ist zu groß"] = "field too large",
+    ["Abgeschnittenes Feld"] = "truncated field",
+    ["Ungültiger Nachrichtentyp"] = "invalid message type",
+    ["Kodierte Nutzlast überschreitet das Transportlimit"] = "encoded payload exceeds transport limit",
+    ["Kodierte Nutzlast hat zu viele Fragmente"] = "encoded payload has too many fragments",
+    ["Kodierter Frame überschreitet 255 Bytes"] = "encoded frame exceeds 255 bytes",
 }
 
 for source, english in pairs(raw) do

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1-beta
+- Fixed settings startup caused by legacy dropdown menus
+- Fixed mixed German and English interface text
+- Fixed overlapping and clipped English window text
+- Fixed BISBeard Soft Reserve imports and overview
+- Fixed the minimap tooltip error
+
 ## 0.17.0-beta
 
 - Added complete German and English localization for the interface, dynamic status text, tooltips, key bindings, and minimap actions

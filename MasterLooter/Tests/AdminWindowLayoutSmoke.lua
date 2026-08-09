@@ -91,12 +91,18 @@ local function vertical(lower, upper, message) expect(rect(lower).top <= rect(up
 
 local GA = { UI = {}, modules = {}, Compat = {}, Events = { On = function() end, RegisterGameEvent = function() end } }
 function GA:RegisterModule(name, module) self.modules[name] = module end
+function GA:Localize(text)
+    if text == "+1 wird nur über den Zeilenbutton im Lootmaster gebucht" then
+        return "+1 is added only through the row button in the loot master window"
+    end
+    return text
+end
 local colors = { gold = { 1, 1, 0 }, text = { 1, 1, 1 }, muted = { .5, .5, .5 }, green = { 0, 1, 0 }, red = { 1, 0, 0 } }
 GA.UI.Theme = { colors = colors }
 local Theme = GA.UI.Theme
 function Theme:ApplyPanel() end
 function Theme:ApplyInset() end
-function Theme:CreateLabel(parent, text, size) local v = parent:CreateFontString(); v:SetText(text); v.width = math.max(1, #tostring(text or "") * ((size or 11) * .55)); v.height = (size or 11) + 3; return v end
+function Theme:CreateLabel(parent, text, size) local v = parent:CreateFontString(); v:SetText(GA:Localize(text)); v.width = math.max(1, #tostring(v:GetText() or "") * ((size or 11) * .55)); v.height = (size or 11) + 3; return v end
 function Theme:CreateButton(parent, text, width, height) local v = widget("Button", parent); v.width, v.height = width, height; v:SetText(text); return v end
 function Theme:CreateEditBox(parent, width, height) local v = widget("EditBox", parent); v.width, v.height = width, height; return v end
 function Theme:AddTitle() end
@@ -115,6 +121,8 @@ trade:EnsureFrame(); rules:EnsureFrame(); gdkp:EnsureFrame(); lootLedger:EnsureF
 for _, window in ipairs({ trade, rules, gdkp }) do expect(window.frame.toplevel, "administrative window is top-level"); inside(window.resetButton or window.clearButton, window.frame, "reset control stays inside its window") end
 horizontal(rules.itemSummary, rules.resetButton, "rules summary does not run underneath reset button")
 horizontal(rules.resetButton, rules.refreshButton, "rules reset and refresh buttons are separate")
+vertical(rules.hardCheck, rules.manualPlusOne, "English +1 note stays above the loot-rule controls")
+expect(rules.manualPlusOne:GetText() == "+1 is added only through the row button in the loot master window", "rules side note is rendered in English")
 horizontal(gdkp.playersLabel, gdkp.resetButton, "GDKP player count does not run underneath reset button")
 vertical(trade.clearButton, trade.list, "trade reset button does not cover the task list")
 for _, row in ipairs(rules.rows) do

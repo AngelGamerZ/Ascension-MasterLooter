@@ -129,6 +129,13 @@ local function diagnosticCall(callback, fallback)
     return fallback, tostring(result)
 end
 
+local function clientBuildText()
+    if type(GetBuildInfo) ~= "function" then return "API nicht verfügbar" end
+    local ok, version, build, date, toc = pcall(GetBuildInfo)
+    if not ok then return "FEHLER: " .. tostring(version) end
+    return table.concat({ tostring(version or "?"), tostring(build or "?"), tostring(date or "?"), "TOC " .. tostring(toc or "?") }, " | ")
+end
+
 function GA:GetFullDiagnosticText()
     local tocVersion = type(GetAddOnMetadata) == "function" and GetAddOnMetadata("MasterLooter", "Version") or "API nicht verfügbar"
     local lines = {
@@ -138,6 +145,9 @@ function GA:GetFullDiagnosticText()
         "Protokoll: " .. tostring(self.PROTOCOL_VERSION),
         "Realm: " .. tostring(type(GetRealmName) == "function" and GetRealmName() or "unbekannt"),
         "Locale: " .. tostring(type(GetLocale) == "function" and GetLocale() or "unbekannt"),
+        "Lua: " .. tostring(_VERSION or "unbekannt"),
+        "Client: " .. clientBuildText(),
+        "Debug-Modus: " .. (self:IsDebugMode() and "AN (2000 Trace-Einträge + Fehlerstacks)" or "AUS (500 Trace-Einträge)"),
         "Zeit: " .. tostring(type(GetTime) == "function" and GetTime() or 0),
         "",
         "MODULE",
@@ -154,7 +164,17 @@ function GA:GetFullDiagnosticText()
     if #(self.errors or {}) == 0 then lines[#lines + 1] = "keine" end
     for _, entry in ipairs(self.errors or {}) do
         lines[#lines + 1] = table.concat({ tostring(entry.time or 0), tostring(entry.context or "?"), tostring(entry.message or ""):gsub("[\r\n\t]", " ") }, " | ")
+        if entry.stack and entry.stack ~= "" then lines[#lines + 1] = "Stack: " .. tostring(entry.stack):gsub("[\r\n]+", " <- ") end
     end
+
+    lines[#lines + 1] = ""; lines[#lines + 1] = "KOMPATIBILITÄT"
+    local capabilities = self.Compat and type(self.Compat.GetCapabilities) == "function" and self.Compat:GetCapabilities() or {}
+    for _, key in ipairs({ "legacyGroupAPI", "modernGroupAPI", "legacyContainerAPI", "modernContainerAPI", "legacyAddonMessages", "modernAddonMessages", "itemGUID" }) do
+        lines[#lines + 1] = tostring(key) .. "=" .. tostring(capabilities[key] and true or false)
+    end
+    local settings = self.UI and self.UI.SettingsWindow
+    lines[#lines + 1] = "Settings: Frame=" .. tostring(settings and settings.frame ~= nil) .. ", vollständig=" .. tostring(settings and settings.buildComplete and true or false) ..
+        ", Generation=" .. tostring(settings and settings.buildGeneration or 0) .. ", Fehler=" .. tostring(settings and settings.buildError or "keiner")
 
     lines[#lines + 1] = ""; lines[#lines + 1] = "ZUSTAND"
     local rollState, rollError = diagnosticCall(function()
@@ -301,7 +321,14 @@ function Commands:Handle(message)
         if window and type(window.Show) == "function" then window:Show()
         else GA:Print(GA:L("command.comm_debug_missing")) end
     elseif command == "debug" then
-        if string.lower(rest or "") == "clear" then
+        local debugAction = string.lower(trim(rest or ""))
+        if debugAction == "on" then
+            GA:SetDebugMode(true); GA:Print(GA:L("command.debug_enabled")); return
+        elseif debugAction == "off" then
+            GA:SetDebugMode(false); GA:Print(GA:L("command.debug_disabled")); return
+        elseif debugAction == "status" then
+            GA:Print(GA:L(GA:IsDebugMode() and "command.debug_status_on" or "command.debug_status_off")); return
+        elseif debugAction == "clear" then
             if GA.ClearDebugTrace then GA:ClearDebugTrace() end
             if GA.Comm and type(GA.Comm.ClearTrace) == "function" then GA.Comm:ClearTrace() end
             if GA.TooltipDebug and type(GA.TooltipDebug.Clear) == "function" then GA.TooltipDebug:Clear() end

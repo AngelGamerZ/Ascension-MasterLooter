@@ -16,7 +16,15 @@ function WelcomeWindow:EnsureFrame()
     local heading = Theme:CreateLabel(frame, "Willkommen bei MasterLooter", 14, Theme.colors.gold); heading:SetPoint("TOPLEFT", frame, "TOPLEFT", 28, -58)
     local text = Theme:CreateLabel(frame, "Dieses Addon wurde speziell für Project Ascension und den 3.3.5a-Client entwickelt.", 12); text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -14); text:SetPoint("RIGHT", frame, "RIGHT", -28, 0)
     local previous = text
-    for _, note in ipairs(NOTES) do local line = Theme:CreateLabel(frame, "• " .. note, 11, Theme.colors.muted); line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -12); line:SetPoint("RIGHT", frame, "RIGHT", -28, 0); previous = line end
+    self.noteLabels = {}
+    for _, note in ipairs(NOTES) do
+        local localizedNote = type(GA.Localize) == "function" and GA:Localize(note) or note
+        local line = Theme:CreateLabel(frame, "• " .. localizedNote, 11, Theme.colors.muted)
+        line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -12)
+        line:SetPoint("RIGHT", frame, "RIGHT", -28, 0)
+        self.noteLabels[#self.noteLabels + 1] = line
+        previous = line
+    end
     local settings = Theme:CreateButton(frame, "Einstellungen öffnen", 170, 28); settings:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 28, 28); settings:SetScript("OnClick", function() WelcomeWindow:Hide(); if GA.UI.SettingsWindow then GA.UI.SettingsWindow:Show() end end)
     local close = Theme:CreateButton(frame, "Verstanden", 110, 28); close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 28); close:SetScript("OnClick", function() WelcomeWindow:Hide() end)
     return frame

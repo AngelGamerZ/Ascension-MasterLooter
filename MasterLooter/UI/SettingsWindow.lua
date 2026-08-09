@@ -25,8 +25,11 @@ local function localized(key, fallback)
     return fallback or key
 end
 
-local function createDropdown(parent, width, options, onSelected)
-    local dropdown = CreateFrame("Frame", nil, parent, "UIDropDownMenuTemplate")
+local function createDropdown(parent, name, width, options, onSelected)
+    -- 3.3.5a SharedXML resolves the template children through
+    -- frame:GetName() .. "Middle/Text/Button". Anonymous dropdowns therefore
+    -- crash in UIDropDownMenu_SetWidth and can make template children collide.
+    local dropdown = CreateFrame("Frame", name, parent, "UIDropDownMenuTemplate")
     dropdown.options, dropdown.selectedValue = options, nil
     function dropdown:SetValue(value)
         self.selectedValue = value
@@ -36,7 +39,8 @@ local function createDropdown(parent, width, options, onSelected)
         if type(UIDropDownMenu_SetText) == "function" then UIDropDownMenu_SetText(self, label) elseif type(self.SetText) == "function" then self:SetText(label) end
     end
     function dropdown:GetValue() return self.selectedValue end
-    if type(UIDropDownMenu_SetWidth) == "function" then UIDropDownMenu_SetWidth(dropdown, width) else dropdown:SetWidth(width) end
+    -- Explicit zero padding keeps the requested content width on 3.3.5a.
+    if type(UIDropDownMenu_SetWidth) == "function" then UIDropDownMenu_SetWidth(dropdown, width, 0) else dropdown:SetWidth(width) end
     if type(UIDropDownMenu_Initialize) == "function" then
         UIDropDownMenu_Initialize(dropdown, function()
             for _, option in ipairs(dropdown.options or {}) do
@@ -121,6 +125,7 @@ function SettingsWindow:CreateSection(id, title, description)
     local text = Theme:CreateLabel(section, description or "", 11, Theme.colors.muted)
     text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8); text:SetPoint("RIGHT", section, "RIGHT", -20, 0)
     text:SetJustifyH("LEFT")
+    section.heading, section.description = heading, text
     self.sectionFrames[id] = section
     return section
 end
@@ -166,12 +171,13 @@ function SettingsWindow:BuildGeneral()
 
     local languageLabel = Theme:CreateLabel(section, localized("SETTINGS_LANGUAGE", "Sprache / Language"), 12)
     languageLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -240)
+    self.languageLabel = languageLabel
     local languageOptions = {
         { value = "AUTO", label = localized("SETTINGS_LANGUAGE_AUTO", "Automatisch (Client)") },
         { value = "deDE", label = localized("SETTINGS_LANGUAGE_GERMAN", "Deutsch") },
         { value = "enUS", label = localized("SETTINGS_LANGUAGE_ENGLISH", "English") },
     }
-    self.languageDropdown = createDropdown(section, 180, languageOptions, function(value)
+    self.languageDropdown = createDropdown(section, self:BuildName("LanguageDropdown"), 180, languageOptions, function(value)
         local ok
         if GA.Localization and type(GA.Localization.SetLanguage) == "function" then ok = GA.Localization:SetLanguage(value)
         else profile().language, ok = value, true end
@@ -181,12 +187,12 @@ function SettingsWindow:BuildGeneral()
     end)
     self.languageDropdown:SetPoint("LEFT", languageLabel, "RIGHT", 20, -2)
 
-    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -292)
-    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -322)
+    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -292); self.profileTitle = profileTitle
+    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -322); self.profileLabel = profileLabel
     self.profileEdit = Theme:CreateEditBox(section, 190, 24); self.profileEdit:SetPoint("LEFT", profileLabel, "RIGHT", 20, 0)
-    local switchProfile = Theme:CreateButton(section, "Wechseln", 90, 24); switchProfile:SetPoint("LEFT", self.profileEdit, "RIGHT", 8, 0)
+    local switchProfile = Theme:CreateButton(section, "Wechseln", 90, 24); switchProfile:SetPoint("LEFT", self.profileEdit, "RIGHT", 8, 0); self.switchProfileButton = switchProfile
     switchProfile:SetScript("OnClick", function() SettingsWindow:SwitchProfile() end)
-    local manageProfiles = Theme:CreateButton(section, "Profile verwalten", 145, 24); manageProfiles:SetPoint("LEFT", switchProfile, "RIGHT", 8, 0)
+    local manageProfiles = Theme:CreateButton(section, "Profile verwalten", 145, 24); manageProfiles:SetPoint("LEFT", switchProfile, "RIGHT", 8, 0); self.manageProfilesButton = manageProfiles
     manageProfiles:SetScript("OnClick", function() openWindow("ProfileWindow") end)
 end
 
@@ -208,7 +214,7 @@ function SettingsWindow:BuildLoot()
     local channelOptions = {}
     local available = GA.Announcements and type(GA.Announcements.GetChannelOptions) == "function" and GA.Announcements:GetChannelOptions() or { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" }
     for _, value in ipairs(available) do channelOptions[#channelOptions + 1] = { value = value, label = channelNames[value] or value } end
-    self.channelDropdown = createDropdown(section, 175, channelOptions, function(value)
+    self.channelDropdown = createDropdown(section, self:BuildName("AnnouncementChannelDropdown"), 175, channelOptions, function(value)
         local ok, err = GA.Announcements:SetOption("channel", value)
         SettingsWindow:SetStatus(ok and localized("CHANNEL_SAVED", "Ansagekanal gespeichert.") or tostring(err), ok and Theme.colors.green or Theme.colors.red)
     end)
@@ -254,11 +260,27 @@ function SettingsWindow:BuildData()
     local factory = Theme:CreateButton(section, "Gesamtes Addon zurücksetzen", 210, 26); factory:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -344); factory:SetScript("OnClick", function() SettingsWindow:RequestFactoryReset() end); self.factoryResetButton = factory
 end
 
-function SettingsWindow:EnsureFrame()
-    if self.frame and self.buildComplete and self:ControlsReady() then return self.frame end
-    if self.frame then return nil, self.buildError or "Einstellungsfenster ist unvollständig aufgebaut." end
-    if not Theme then return nil end
-    local frame = CreateFrame("Frame", "MasterLooterSettingsWindow", UIParent)
+function SettingsWindow:BuildName(suffix)
+    local generation = tonumber(self.buildGeneration) or 1
+    return "MasterLooterSettings" .. tostring(suffix or "Frame") .. (generation > 1 and tostring(generation) or "")
+end
+
+function SettingsWindow:ResetIncompleteBuild()
+    if self.frame and type(self.frame.Hide) == "function" then self.frame:Hide() end
+    self.frame, self.sidebar, self.content = nil, nil, nil
+    self.sectionFrames, self.navButtons = {}, {}
+    self.autoOpen, self.autoGive, self.sound, self.minimap, self.bagShare = nil, nil, nil, nil, nil
+    self.announce, self.channelDropdown, self.languageDropdown = nil, nil, nil
+    self.durationEdit, self.scaleEdit, self.profileEdit = nil, nil, nil
+    self.muleTargetEdit, self.muleQualityEdit, self.status = nil, nil, nil
+    self.factoryResetButton, self.buildComplete = nil, false
+    self.languageLabel, self.profileTitle, self.profileLabel = nil, nil, nil
+    self.switchProfileButton, self.manageProfilesButton = nil, nil
+end
+
+function SettingsWindow:BuildFrame()
+    self.buildGeneration = (tonumber(self.buildGeneration) or 0) + 1
+    local frame = CreateFrame("Frame", self:BuildName("Window"), UIParent)
     frame:SetWidth(self.WIDTH); frame:SetHeight(self.HEIGHT); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
     Theme:ApplyPanel(frame); Theme:AddTitle(frame, "MasterLooter " .. tostring(GA.VERSION or "") .. " – Einstellungen")
     Theme:MakeMovable(frame, "settingsHubV2"); Theme:RestorePosition(frame, "settingsHubV2", "CENTER", 0, 15); Theme:RegisterForEscape(frame)
@@ -277,8 +299,20 @@ function SettingsWindow:EnsureFrame()
     self:BuildHome(); self:BuildGeneral(); self:BuildLoot(); self:BuildPackMule(); self:BuildData()
     local status = Theme:CreateLabel(frame, "", 11, Theme.colors.muted); status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 20); status:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 20); status:SetJustifyH("RIGHT"); self.status = status
     self.buildComplete = self:ControlsReady() and true or false
-    if not self.buildComplete then self.buildError = "Bedienelemente konnten nicht vollständig erstellt werden."; return nil, self.buildError end
+    if not self.buildComplete then error("Bedienelemente konnten nicht vollständig erstellt werden.", 0) end
     return frame
+end
+
+function SettingsWindow:EnsureFrame()
+    if self.frame and self.buildComplete and self:ControlsReady() then return self.frame end
+    if not Theme then return nil, "Theme-Modul ist nicht verfügbar." end
+    if self.frame then self:ResetIncompleteBuild() end
+    local ok, frameOrError = pcall(self.BuildFrame, self)
+    if ok then self.buildError = nil; return frameOrError end
+    self.buildError = tostring(frameOrError or "unbekannter Aufbaufehler")
+    if GA.ReportError then GA.ReportError("SettingsWindow.BuildFrame", self.buildError) end
+    self:ResetIncompleteBuild()
+    return nil, self.buildError
 end
 
 function SettingsWindow:ShowSection(id)
@@ -365,7 +399,15 @@ function SettingsWindow:Show(section)
     self:ShowSection(section or profile().settingsSection or self.DEFAULT_SECTION); frame:Show(); return true
 end
 function SettingsWindow:Hide() if self.frame then self.frame:Hide() end end
-function SettingsWindow:Toggle(section) local frame = self:EnsureFrame(); if frame:IsShown() then self:Hide() else self:Show(section) end end
+function SettingsWindow:Toggle(section)
+    local frame, err = self:EnsureFrame()
+    if not frame then
+        if GA.Print then GA:Print("Einstellungen konnten nicht geöffnet werden: " .. tostring(err or "unbekannter Fehler")) end
+        return false
+    end
+    if frame:IsShown() then self:Hide() else return self:Show(section) end
+    return true
+end
 
 function SettingsWindow:RegisterInterfaceOptions()
     if self.optionsPanel or type(InterfaceOptions_AddCategory) ~= "function" then return end

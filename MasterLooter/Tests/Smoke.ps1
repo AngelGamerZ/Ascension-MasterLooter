@@ -9,6 +9,7 @@ $tests = @(
     "MasterLooter/Tests/WhisperQueriesSmoke.lua",
     "MasterLooter/Tests/LocalizationChannelsSmoke.lua",
     "MasterLooter/Tests/ErrorLocalizationSmoke.lua",
+    "MasterLooter/Tests/NonUILocalizationSmoke.lua",
     "MasterLooter/Tests/UILocalizationSmoke.lua",
     "MasterLooter/Tests/AdminGDKPSmoke.lua",
     "MasterLooter/Tests/GDKPAdvancedSmoke.lua",
@@ -38,6 +39,8 @@ try {
         if ($exitCode -ne 0 -or -not $passed) { throw "Smoke test failed: $test" }
     }
 
+    & "MasterLooter/Tests/EnglishLocalizationAudit.ps1" -AddonRoot (Resolve-Path "MasterLooter").Path
+
     $tocVersions = @{}
     foreach ($toc in @("MasterLooter/MasterLooter.toc", "MasterLooter_ItemData/MasterLooter_ItemData.toc")) {
         $content = Get-Content -LiteralPath $toc
@@ -58,6 +61,25 @@ try {
     $forbidden = rg -n --glob '*.lua' --glob '!**/Core/Compat.lua' 'C_Timer|C_Container|C_AddOns|ScrollBox|BackdropTemplate|math\.mod' MasterLooter MasterLooter_ItemData
     if ($LASTEXITCODE -eq 0) { throw "API incompatible with 3.3.5a found:`n$forbidden" }
     if ($LASTEXITCODE -gt 1) { throw "API scan could not run" }
+
+    $anonymousDropdown = rg -n --glob '*.lua' --glob '!**/Tests/**' 'CreateFrame\([^\r\n]*,\s*nil\s*,[^\r\n]*UIDropDownMenuTemplate' MasterLooter
+    if ($LASTEXITCODE -eq 0) { throw "3.3.5a UIDropDownMenuTemplate frames must be named:`n$anonymousDropdown" }
+    if ($LASTEXITCODE -gt 1) { throw "Legacy dropdown naming scan could not run" }
+
+    $forbiddenLuaSyntax = rg -n --glob '*.lua' --glob '!**/Tests/**' '\btable\.(pack|unpack)\b|\brawlen\b|\b_ENV\b|::[A-Za-z_][A-Za-z0-9_]*::|\bgoto\s+[A-Za-z_]' MasterLooter MasterLooter_ItemData
+    if ($LASTEXITCODE -eq 0) { throw "Lua feature newer than the 3.3.5a Lua 5.1 runtime found:`n$forbiddenLuaSyntax" }
+    if ($LASTEXITCODE -gt 1) { throw "Lua 5.1 compatibility scan could not run" }
+
+    $directModernAPI = rg -n --glob '*.lua' --glob '!**/Tests/**' --glob '!**/Core/Compat.lua' '_G\.(GetNumGroupMembers|IsInGroup|IsInRaid)|\bC_[A-Za-z0-9_]+\.' MasterLooter MasterLooter_ItemData
+    if ($LASTEXITCODE -eq 0) { throw "Modern API bypasses the 3.3.5a compatibility layer:`n$directModernAPI" }
+    if ($LASTEXITCODE -gt 1) { throw "Direct modern API scan could not run" }
+
+    foreach ($uiFile in Get-ChildItem -LiteralPath "MasterLooter/UI" -Filter "*.lua") {
+        $source = Get-Content -LiteralPath $uiFile.FullName -Raw
+        if ($source -match '\bTheme:' -and $uiFile.Name -ne 'Theme.lua' -and $source -notmatch 'local\s+Theme\b[^\r\n]*=\s*GA\.UI\.Theme') {
+            throw "UI file uses an unresolved global Theme value: $($uiFile.FullName)"
+        }
+    }
 
     $forbiddenGlobalInput = rg -n --glob '*.lua' --glob '!**/Tests/**' 'GetMouseFocus|IsMouseButtonDown|HandleGlobalModifiedClick|PollGlobalInput' MasterLooter
     if ($LASTEXITCODE -eq 0) { throw "Forbidden global inventory/loot input integration found:`n$forbiddenGlobalInput" }

@@ -16,6 +16,7 @@ local DEFAULTS = {
         defaultRollDuration = 30,
         osRollMaximum = 99,
         sound = true,
+        debugMode = true,
     },
     profiles = {},
     profileAssignments = {},

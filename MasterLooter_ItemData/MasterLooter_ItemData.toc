@@ -3,7 +3,7 @@
 ## Notes: Sparse Ascension item index for MasterLooter.
 ## Notes-deDE: Kompakter Ascension-Gegenstandsindex für MasterLooter.
 ## Author: MasterLooter Team
-## Version: 0.17.0-beta
+## Version: 0.17.1-beta
 ## Dependencies: MasterLooter
 ## LoadOnDemand: 1
 ## SavedVariables: MasterLooterItemDB

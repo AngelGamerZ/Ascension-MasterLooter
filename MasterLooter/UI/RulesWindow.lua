@@ -12,10 +12,10 @@ end
 local function parseInteger(text, minimum, maximum, label)
     local value = tonumber(text)
     if not value or value ~= math.floor(value) then
-        return nil, label .. " muss eine ganze Zahl sein."
+        return nil, GA:L("ui.rules.integer", label)
     end
     if value < minimum or value > maximum then
-        return nil, string.format("%s muss zwischen %d und %d liegen.", label, minimum, maximum)
+        return nil, GA:L("ui.rules.range", label, minimum, maximum)
     end
     return value
 end
@@ -79,6 +79,7 @@ function RulesWindow:EnsureFrame()
     local selectButton = Theme:CreateButton(frame, "Item laden", 100, 24)
     selectButton:SetPoint("LEFT", itemInput, "RIGHT", 8, 0)
     selectButton:SetScript("OnClick", function() RulesWindow:SelectItem(itemInput:GetText()) end)
+    self.selectButton = selectButton
 
     local hardCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
     hardCheck:SetPoint("LEFT", selectButton, "RIGHT", 14, 0)
@@ -86,6 +87,7 @@ function RulesWindow:EnsureFrame()
     hardCheck:SetHeight(24)
     local hardLabel = Theme:CreateLabel(frame, "Hard Reserve", 11)
     hardLabel:SetPoint("LEFT", hardCheck, "RIGHT", 1, 0)
+    self.hardLabel = hardLabel
     hardCheck:SetScript("OnClick", function(button)
         if not RulesWindow.currentItem or not GA.SoftRes then
             button:SetChecked(false)
@@ -101,7 +103,13 @@ function RulesWindow:EnsureFrame()
     self.hardCheck = hardCheck
 
     local manualPlusOne = Theme:CreateLabel(frame, "+1 wird nur über den Zeilenbutton im Lootmaster gebucht", 11, Theme.colors.muted)
-    manualPlusOne:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -73)
+    -- The English sentence is substantially wider than the German source.
+    -- Keep it on its own line above the item controls so it cannot cover the
+    -- Hard Reserve control or the player-values list.
+    manualPlusOne:SetWidth(390)
+    manualPlusOne:SetJustifyH("RIGHT")
+    manualPlusOne:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -47)
+    self.manualPlusOne = manualPlusOne
 
     local refreshButton = Theme:CreateButton(frame, "Gruppe neu laden", 125, 24)
     refreshButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -108)

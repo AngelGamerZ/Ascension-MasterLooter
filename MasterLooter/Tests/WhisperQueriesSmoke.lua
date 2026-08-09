@@ -3,6 +3,7 @@ local function expect(value, message) assertions = assertions + 1; if not value 
 local function same(actual, expected, message) expect(actual == expected, message .. " (expected " .. tostring(expected) .. ", got " .. tostring(actual) .. ")") end
 
 local now, raidMaster = 100, 1
+local profile = { language = "enUS" }
 local sent, callbacks, registered = {}, {}, {}
 function GetTime() return now end
 function UnitName(unit)
@@ -18,7 +19,7 @@ function SendChatMessage(message, channel, _, target) sent[#sent + 1] = { messag
 
 local GA = {
     modules = {},
-    DB = { data = { softRes = { reservations = { ["1985"] = { alice = 2 }, ["2000"] = { bob = 1 } } } } },
+    DB = { data = { softRes = { reservations = { ["1985"] = { alice = 2 }, ["2000"] = { bob = 1 } } } }, GetProfile = function() return profile end },
     Events = {},
     PlusOnes = { Get = function(_, player) return string.lower(tostring(player)):find("alice", 1, true) and 3 or 0 end },
     Announcements = { ResolveChannel = function() return "RAID_WARNING" end },
@@ -28,6 +29,9 @@ function GA.Events:On(event, callback) callbacks[event] = callback end
 function GA.Events:RegisterGameEvent(event) registered[event] = true end
 function GA.Events:Emit() end
 
+assert(loadfile("MasterLooter/Core/Localization.lua"))("MasterLooter", GA)
+assert(loadfile("MasterLooter/Locales/enUS.lua"))("MasterLooter", GA)
+assert(loadfile("MasterLooter/Locales/deDE.lua"))("MasterLooter", GA)
 assert(loadfile("MasterLooter/Modules/WhisperQueries.lua"))("MasterLooter", GA)
 GA.WhisperQueries:OnInitialize()
 same(sent[1].channel, "RAID_WARNING", "becoming raid master looter announces through raid warning")
@@ -40,11 +44,22 @@ same(callbacks.CHAT_MSG_WHISPER(nil, nil, "SR", "Alice-Realm"), nil, "event call
 same(sent[#sent].channel, "WHISPER", "soft-reserve response is private")
 same(sent[#sent].target, "Alice-Realm", "soft-reserve response targets its requester")
 expect(sent[#sent].message:find("Item 1985", 1, true) and sent[#sent].message:find("x2", 1, true), "soft-reserve response includes item and duplicate amount")
+expect(sent[#sent].message:find("Your SoftRes", 1, true), "English SoftRes whisper is fully localized")
 
 now = now + 1
 expect(GA.WhisperQueries:HandleWhisper("  sl  ", "Alice-Realm"), "strich-list query is case-insensitive and whitespace tolerant")
 expect(sent[#sent].message:find("3", 1, true), "strich-list response includes current manual plus-one value")
 same(sent[#sent].channel, "WHISPER", "strich-list response is private")
+expect(sent[#sent].message:find("Your current +1 count", 1, true), "English +1 whisper is fully localized")
+
+profile.language = "deDE"
+now = now + 1
+expect(GA.WhisperQueries:HandleWhisper("SR", "Alice"), "German SoftRes query is accepted")
+expect(sent[#sent].message:find("Deine SoftRes", 1, true), "German SoftRes whisper is fully localized")
+now = now + 1
+expect(GA.WhisperQueries:HandleWhisper("SL", "Alice"), "German +1 query is accepted")
+expect(sent[#sent].message:find("Dein aktueller Strichstand", 1, true), "German +1 whisper is fully localized")
+profile.language = "enUS"
 
 local before = #sent
 now = now + 1

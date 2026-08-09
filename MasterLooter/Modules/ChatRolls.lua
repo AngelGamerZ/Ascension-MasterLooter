@@ -105,24 +105,30 @@ end
 function ChatRolls:GetDiagnosticText()
     local diagnostics = self.diagnostics or {}
     local state = GA.RollSession and GA.RollSession:GetState()
+    local function L(key, fallback, ...)
+        if type(GA.L) == "function" then return GA:L(key, ...) end
+        if select("#", ...) > 0 then return string.format(fallback, ...) end
+        return fallback
+    end
+    local none = L("diagnostic.none", "keine")
     return table.concat({
-        "MasterLooter Roll-Diagnose",
-        "Version: " .. tostring(GA.VERSION),
-        "Protokoll: " .. tostring(GA.PROTOCOL_VERSION),
-        "Tracker vorhanden: ja",
-        "Tracker initialisiert: " .. tostring(self.captureInitialized == true),
-        "Direkter Eventframe: " .. tostring(self.frame ~= nil),
-        "Chatfilter: " .. tostring(self.chatFilter ~= nil),
-        "Chat-Handler-Hook: " .. tostring(self.handlerHooked == true),
-        "Aktive Sitzung: " .. tostring(state and state.id or "keine"),
-        "Sitzungsstatus: " .. tostring(state and state.status or "keiner"),
-        "Empfangene Systemereignisse: " .. tostring(diagnostics.received or 0),
-        "Letzte Rollmeldung: " .. tostring(diagnostics.raw or "keine"),
-        "Letzte ignorierte Systemmeldung: " .. tostring(diagnostics.lastIgnored or "keine"),
-        "Spieler: " .. tostring(diagnostics.player or "keiner"),
-        "Wurf: " .. tostring(diagnostics.roll or "keiner"),
-        "Bereich: " .. tostring(diagnostics.minimum or "?") .. "-" .. tostring(diagnostics.maximum or "?"),
-        "Ergebnis: " .. tostring(diagnostics.status or "keine Diagnose"),
+        L("diagnostic.roll.title", "MasterLooter Roll-Diagnose"),
+        L("diagnostic.version", "Version: %s", tostring(GA.VERSION)),
+        L("diagnostic.protocol", "Protokoll: %s", tostring(GA.PROTOCOL_VERSION)),
+        L("diagnostic.tracker_available", "Tracker vorhanden: ja"),
+        L("diagnostic.tracker_initialized", "Tracker initialisiert: %s", tostring(self.captureInitialized == true)),
+        L("diagnostic.direct_event_frame", "Direkter Eventframe: %s", tostring(self.frame ~= nil)),
+        L("diagnostic.chat_filter", "Chatfilter: %s", tostring(self.chatFilter ~= nil)),
+        L("diagnostic.chat_handler_hook", "Chat-Handler-Hook: %s", tostring(self.handlerHooked == true)),
+        L("diagnostic.active_session", "Aktive Sitzung: %s", tostring(state and state.id or none)),
+        L("diagnostic.session_status", "Sitzungsstatus: %s", tostring(state and state.status or L("diagnostic.no_session_status", "keiner"))),
+        L("diagnostic.system_events", "Empfangene Systemereignisse: %s", tostring(diagnostics.received or 0)),
+        L("diagnostic.last_roll_message", "Letzte Rollmeldung: %s", tostring(diagnostics.raw or none)),
+        L("diagnostic.last_ignored_message", "Letzte ignorierte Systemmeldung: %s", tostring(diagnostics.lastIgnored or none)),
+        L("diagnostic.player", "Spieler: %s", tostring(diagnostics.player or none)),
+        L("diagnostic.roll", "Wurf: %s", tostring(diagnostics.roll or none)),
+        L("diagnostic.range", "Bereich: %s-%s", tostring(diagnostics.minimum or "?"), tostring(diagnostics.maximum or "?")),
+        L("diagnostic.result", "Ergebnis: %s", type(GA.Localize) == "function" and GA:Localize(diagnostics.status or L("diagnostic.no_result", "keine Diagnose")) or tostring(diagnostics.status or "keine Diagnose")),
     }, "\n")
 end
 

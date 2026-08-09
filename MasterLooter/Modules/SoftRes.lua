@@ -5,6 +5,24 @@ GA.SoftRes = SoftRes
 
 local function key(name) return string.lower(string.match(tostring(name or ""), "^[^-]+") or "") end
 
+local function playerIdentity(name)
+    local wanted = key(name)
+    if wanted == "" or type(UnitName) ~= "function" then return tostring(name or ""), nil, nil end
+    local units = { "player" }
+    if GA.Compat and type(GA.Compat.IterateGroupUnits) == "function" then
+        for unit in GA.Compat:IterateGroupUnits() do units[#units + 1] = unit end
+    end
+    for _, unit in ipairs(units) do
+        local unitName = UnitName(unit)
+        if key(unitName) == wanted then
+            local className, classFile
+            if type(UnitClass) == "function" then className, classFile = UnitClass(unit) end
+            return tostring(unitName or name), className, classFile
+        end
+    end
+    return tostring(name or ""), nil, nil
+end
+
 local function ensureExtendedStore()
     local store = GA.DB.data.softRes
     store.details = type(store.details) == "table" and store.details or {}
@@ -31,6 +49,25 @@ function SoftRes:GetReservations(item)
     return id and GA.DB.data.softRes.reservations[tostring(id)] or nil
 end
 
+function SoftRes:GetAllReservations()
+    local store, result = ensureExtendedStore(), {}
+    for itemID, bucket in pairs(store.reservations or {}) do
+        local id = tonumber(itemID)
+        for playerID, amount in pairs(type(bucket) == "table" and bucket or {}) do
+            local detail = store.details[itemID] and store.details[itemID][playerID] or {}
+            result[#result + 1] = {
+                itemID = id, player = detail.player or playerID, amount = tonumber(amount) or 1,
+                note = detail.note or "", className = detail.className, classFile = detail.classFile,
+            }
+        end
+    end
+    table.sort(result, function(a, b)
+        if tostring(a.player) ~= tostring(b.player) then return tostring(a.player) < tostring(b.player) end
+        return (tonumber(a.itemID) or 0) < (tonumber(b.itemID) or 0)
+    end)
+    return result
+end
+
 function SoftRes:Reserve(player, item, amount, note)
     local id = GA.Compat:GetItemID(item)
     if not id then return false, "Ungültiges Item" end
@@ -47,7 +84,11 @@ function SoftRes:Reserve(player, item, amount, note)
     reservations[tostring(id)] = bucket
     bucket[playerID] = amount
     store.details[tostring(id)] = store.details[tostring(id)] or {}
-    store.details[tostring(id)][playerID] = { note = tostring(note or ""):gsub("[%c]", " "):sub(1, 160), updatedAt = (time and time()) or 0 }
+    local displayName, className, classFile = playerIdentity(player)
+    store.details[tostring(id)][playerID] = {
+        player = displayName, className = className, classFile = classFile,
+        note = tostring(note or ""):gsub("[%c]", " "):sub(1, 160), updatedAt = (time and time()) or 0,
+    }
     GA.Events:Emit("GA_SOFTRES_CHANGED", id, player, bucket[playerID])
     return true
 end
@@ -109,8 +150,16 @@ function SoftRes:Reset()
 end
 
 function SoftRes:Import(text)
+    text = tostring(text or "")
+    -- The dedicated Soft Reserve window is also a valid entry point for the
+    -- BISBeard/RollFor share string. Both import screens therefore write to
+    -- this module's single reservation store.
+    if GA.ExternalImports and type(GA.ExternalImports.ValidateBisBeard) == "function" then
+        local valid = GA.ExternalImports:ValidateBisBeard(text)
+        if valid then return GA.ExternalImports:ImportBisBeard(text) end
+    end
     local imported, rejected = 0, 0
-    for line in string.gmatch((text or "") .. "\n", "([^\r\n]*)[\r\n]") do
+    for line in string.gmatch(text .. "\n", "([^\r\n]*)[\r\n]") do
         if line ~= "" then
             local player, item, amount = string.match(line, "^%s*([^,;\t]+)%s*[,;\t]%s*(%-?%d+)%s*[,;\t]?%s*(%d*)")
             if player and item and self:Reserve(player, item, tonumber(amount) or 1) then imported = imported + 1 else rejected = rejected + 1 end

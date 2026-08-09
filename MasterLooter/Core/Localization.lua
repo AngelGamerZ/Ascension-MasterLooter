@@ -69,6 +69,19 @@ local function escapeReplacement(value)
     return (string.gsub(value, "%%", "%%%%"))
 end
 
+local function protectHyperlinks(value)
+    local links = {}
+    value = string.gsub(value, "(|c%x+|H.-|h.-|h|r)", function(link)
+        links[#links + 1] = link
+        return "\001MLLINK" .. tostring(#links) .. "\002"
+    end)
+    return value, links
+end
+
+local function restoreHyperlinks(value, links)
+    return (string.gsub(value, "\001MLLINK(%d+)\002", function(index) return links[tonumber(index)] or "" end))
+end
+
 function Locale:GetLanguageMode()
     if self.pendingMode then return self.pendingMode end
     if GA.DB and type(GA.DB.GetProfile) == "function" and GA.DB.data then
@@ -127,10 +140,12 @@ function Locale:Translate(text, ...)
         local phrases = locale == "enUS" and self.phrases or self.phrasesReverse
         local translated = dictionary[text]
         if not translated then
-            translated = text
+            local links
+            translated, links = protectHyperlinks(text)
             for _, phrase in ipairs(phrases) do
                 translated = string.gsub(translated, escapePattern(phrase[1]), escapeReplacement(phrase[2]))
             end
+            translated = restoreHyperlinks(translated, links)
         end
         if select("#", ...) > 0 then
             local ok, formatted = pcall(string.format, translated, ...)

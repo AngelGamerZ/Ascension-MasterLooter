@@ -175,7 +175,10 @@ function MasterLooterWindow:EnsureFrame()
 
     local itemHelp = Theme:CreateLabel(frame, "Ziehen · Rechtsklick entfernt", 10, Theme.colors.muted)
     itemHelp:SetPoint("TOPLEFT", item, "BOTTOMLEFT", 2, -2)
-    itemHelp:SetPoint("RIGHT", item, "RIGHT", 0, 0)
+    -- Help text changes with the selected item and the English variant is much
+    -- longer. Use the complete row instead of clipping it to the drop target.
+    itemHelp:SetWidth(self.WIDTH - 92)
+    itemHelp:SetWordWrap(false)
     self.itemHelp = itemHelp
 
     local durationLabel = Theme:CreateLabel(frame, "TIMER", 11, Theme.colors.muted)

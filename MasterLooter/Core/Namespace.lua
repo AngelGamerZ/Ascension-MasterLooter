@@ -5,7 +5,7 @@ local ADDON_NAME, ns = ...
 ns = ns or {}
 
 ns.ADDON_NAME = ADDON_NAME or "MasterLooter"
-ns.VERSION = "0.17.0-beta"
+ns.VERSION = "0.17.1-beta"
 ns.PROTOCOL_VERSION = 3
 ns.DB_SCHEMA = 1
 ns.modules = ns.modules or {}
@@ -13,6 +13,7 @@ ns.moduleOrder = ns.moduleOrder or {}
 ns.errors = ns.errors or {}
 ns.debugTrace = ns.debugTrace or {}
 ns.debugSequence = tonumber(ns.debugSequence) or 0
+ns.debugMode = ns.debugMode ~= false
 
 -- One documented public root is useful for optional integrations and debugging.
 -- Addon files should continue to use the private table passed through `...`.
@@ -44,17 +45,33 @@ function ns:Trace(category, action, ...)
             category = tostring(category or "GENERAL"), action = tostring(action or ""),
             detail = table.concat(details, " | "),
         }
-        while #self.debugTrace > 500 do table.remove(self.debugTrace, 1) end
+        local maximum = self.debugMode and 2000 or 500
+        while #self.debugTrace > maximum do table.remove(self.debugTrace, 1) end
     end)
     return ok
 end
 
 function ns:GetDebugTrace() return self.debugTrace end
 function ns:ClearDebugTrace() self.debugTrace = {}; self:Trace("SYSTEM", "TRACE_CLEARED") end
+function ns:IsDebugMode() return self.debugMode and true or false end
+function ns:SetDebugMode(enabled, persist)
+    self.debugMode = enabled and true or false
+    if persist ~= false and self.DB and self.DB.data and type(self.DB.GetProfile) == "function" then
+        local ok, profile = pcall(self.DB.GetProfile, self.DB)
+        if ok and type(profile) == "table" then profile.debugMode = self.debugMode end
+    end
+    self:Trace("SYSTEM", "DEBUG_MODE", self.debugMode and "ON" or "OFF")
+    return self.debugMode
+end
 
 local function reportError(context, message)
     if type(ns.Localize) == "function" then message = ns:Localize(message) end
-    ns.errors[#ns.errors + 1] = { time = (time and time()) or 0, context = tostring(context), message = tostring(message) }
+    local stack
+    if ns.debugMode and type(debugstack) == "function" then
+        local ok, value = pcall(debugstack, 3, 16, 16)
+        if ok and value then stack = string.sub(tostring(value), 1, 3000) end
+    end
+    ns.errors[#ns.errors + 1] = { time = (time and time()) or 0, context = tostring(context), message = tostring(message), stack = stack }
     while #ns.errors > 100 do table.remove(ns.errors, 1) end
     ns:Trace("ERROR", context, message)
     local text = string.format("|cffff4040MasterLooter|r [%s]: %s", tostring(context), tostring(message))

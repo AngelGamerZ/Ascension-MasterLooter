@@ -1,6 +1,7 @@
 local _, GA = ...
 
 GA.UI = GA.UI or {}
+local Theme = GA.UI.Theme
 local Launcher = {}
 GA.UI.Launcher = Launcher
 
@@ -40,8 +41,9 @@ function Launcher:OpenWindow(names)
     for _, name in ipairs(names or {}) do
         local window = GA.UI[name]
         if window and type(window.Show) == "function" then
-            window:Show()
-            return true
+            local ok, result = pcall(window.Show, window)
+            if ok and result ~= false then return true end
+            if GA.ReportError then GA.ReportError("Launcher.OpenWindow." .. tostring(name), ok and "Window reported an open failure." or result) end
         end
     end
     GA:Print(GA:L("command.feature_unavailable"))
@@ -60,6 +62,18 @@ function Launcher:HandleClick(mouseButton, shiftDown)
     return self:OpenWindow(self:GetClickAction(mouseButton, shiftDown))
 end
 
+function Launcher:ShowTooltip(owner)
+    if not Theme or type(Theme.ShowTextTooltip) ~= "function" then return false end
+    return Theme:ShowTextTooltip(owner, {
+        { "MasterLooter", 1, 0.82, 0.2 },
+        GA:L("launcher.left"),
+        GA:L("launcher.right"),
+        GA:L("launcher.middle"),
+        GA:L("launcher.shift_left"),
+        GA:L("launcher.shift_right"),
+    }, "ANCHOR_LEFT")
+end
+
 function Launcher:EnsureButton()
     if self.button then return self.button end
     local button = CreateFrame("Button", "MasterLooterMinimapButton", Minimap)
@@ -73,16 +87,7 @@ function Launcher:EnsureButton()
     button:SetScript("OnClick", function(_, mouseButton)
         Launcher:HandleClick(mouseButton, type(IsShiftKeyDown) == "function" and IsShiftKeyDown())
     end)
-    button:SetScript("OnEnter", function(self)
-        Theme:ShowTextTooltip(self, {
-            { "MasterLooter", 1, 0.82, 0.2 },
-            GA:L("launcher.left"),
-            GA:L("launcher.right"),
-            GA:L("launcher.middle"),
-            GA:L("launcher.shift_left"),
-            GA:L("launcher.shift_right"),
-        }, "ANCHOR_LEFT")
-    end)
+    button:SetScript("OnEnter", function(self) Launcher:ShowTooltip(self) end)
     button:SetScript("OnLeave", function(self) if GA.UI.Theme then GA.UI.Theme:HideOwnedTooltip(self) end end)
     button:SetScript("OnDragStart", function(self) self.dragging = true; self:SetScript("OnUpdate", function() Launcher:OnDrag() end) end)
     button:SetScript("OnDragStop", function(self) self.dragging = nil; self:SetScript("OnUpdate", nil) end)

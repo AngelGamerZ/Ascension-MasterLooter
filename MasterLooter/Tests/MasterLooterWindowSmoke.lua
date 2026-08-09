@@ -178,6 +178,14 @@ local GA = {
 }
 function GA:RegisterModule(name, module) self.modules[name] = module end
 function GA:Trace() end
+function GA:Localize(text)
+    local english = {
+        ["Ziehen · Rechtsklick entfernt"] = "Drag · right-click removes",
+        ["Aus Tasche oder Lootfenster ziehen · Rechtsklick entfernt"] = "Drag from bags or loot window · right-click removes",
+        ["Ausgewählt · Rechtsklick entfernt · Tooltip beim Darüberfahren"] = "Selected · right-click removes · hover for tooltip",
+    }
+    return english[text] or text
+end
 
 local colors = {
     panel = { 0, 0, 0, 1 }, panelLight = { 0, 0, 0, 1 }, border = { 1, 1, 1, 1 },
@@ -190,8 +198,10 @@ function Theme:ApplyPanel() end
 function Theme:ApplyInset() end
 function Theme:CreateLabel(parent, text, fontSize)
     local value = parent:CreateFontString()
+    local nativeSetText = value.SetText
+    value.SetText = function(self, nextText) nativeSetText(self, GA:Localize(nextText)) end
     value:SetText(text)
-    value.width = math.max(1, string.len(tostring(text or "")) * ((fontSize or 12) * 0.55))
+    value.width = math.max(1, string.len(tostring(value:GetText() or "")) * ((fontSize or 12) * 0.55))
     value.height = (fontSize or 12) + 3
     return value
 end
@@ -239,6 +249,8 @@ end
 separated(window.itemDrop, window.startButton, "item drop target does not overlap the start button")
 separated(window.startButton, window.stopButton, "start and stop buttons do not overlap")
 separated(window.durationEdit, window.osMaximumEdit, "timer and OS maximum inputs remain visually separate")
+inside(window.itemHelp, frame, "English item help remains inside the loot-master window")
+expect(rect(window.itemHelp).width >= 420, "item help reserves the full row width for English text")
 inside(window.previousButton, frame, "previous-page button is visible")
 inside(window.nextButton, frame, "next-page button is visible")
 for _, row in ipairs(window.rows) do
@@ -252,6 +264,7 @@ expect(not window.awardButton.enabled, "award is disabled without a selected win
 local item = "|cffa335ee|Hitem:1985:0:0:0|h[Kam's Buckler]|h|r"
 window:SetItem(item)
 expect(window.startButton.enabled, "a valid item enables roll start")
+same(window.itemHelp:GetText(), "Selected · right-click removes · hover for tooltip", "selected-item help is completely rendered in English")
 window.osMaximumEdit:SetText("1")
 window:RefreshInputState(true)
 expect(not window.startButton.enabled, "invalid OS maximum disables roll start")

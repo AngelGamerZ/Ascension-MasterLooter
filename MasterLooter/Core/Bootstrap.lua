@@ -28,6 +28,8 @@ function Bootstrap:Initialize()
     self.loaded = true
     if ns.Trace then ns:Trace("BOOT", "INITIALIZE_BEGIN", ADDON_NAME) end
     ns.DB:Initialize(_G.MasterLooterDB)
+    local profile = ns.DB:GetProfile()
+    if ns.SetDebugMode then ns:SetDebugMode(profile.debugMode ~= false, false) end
     initializeModules()
     if ns.Trace then ns:Trace("BOOT", "INITIALIZE_OK", #ns.moduleOrder) end
 end

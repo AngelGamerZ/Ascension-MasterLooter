@@ -17,6 +17,15 @@ local function sortedReservations(reservations)
     return result
 end
 
+local function allReservations()
+    return GA.SoftRes and type(GA.SoftRes.GetAllReservations) == "function" and GA.SoftRes:GetAllReservations() or {}
+end
+
+function SoftResWindow:DescribeOverviewEntry(entry)
+    local name, link = GA.Compat:GetItemInfo(entry.itemID)
+    return tostring(entry.player), tostring(entry.className or ""), tostring(link or name or ("Item " .. tostring(entry.itemID))), tostring(entry.amount or 1)
+end
+
 function SoftResWindow:EnsureFrame()
     if self.frame then return self.frame end
     if not Theme then return nil end
@@ -116,10 +125,14 @@ function SoftResWindow:EnsureFrame()
     Theme:ApplyInset(list)
     local playerHead = Theme:CreateLabel(list, "Spieler", 11, Theme.colors.gold)
     playerHead:SetPoint("TOPLEFT", list, "TOPLEFT", 12, -9)
+    local classHead = Theme:CreateLabel(list, "Klasse", 11, Theme.colors.gold)
+    classHead:SetPoint("TOPLEFT", list, "TOPLEFT", 158, -9)
+    local itemHead = Theme:CreateLabel(list, "Item", 11, Theme.colors.gold)
+    itemHead:SetPoint("TOPLEFT", list, "TOPLEFT", 274, -9)
     local amountHead = Theme:CreateLabel(list, "Anzahl", 11, Theme.colors.gold)
     amountHead:SetPoint("TOPRIGHT", list, "TOPRIGHT", -14, -9)
     local previous = Theme:CreateButton(list, "<", 28, 20)
-    previous:SetPoint("TOP", list, "TOP", -34, -4)
+    previous:SetPoint("TOPRIGHT", list, "TOPRIGHT", -108, -4)
     previous:SetScript("OnClick", function()
         SoftResWindow.page = math.max(1, SoftResWindow.page - 1)
         SoftResWindow:Refresh()
@@ -144,6 +157,16 @@ function SoftResWindow:EnsureFrame()
         row:SetHeight(18)
         row.player = Theme:CreateLabel(row, "", 11)
         row.player:SetPoint("LEFT", row, "LEFT", 2, 0)
+        row.player:SetWidth(138)
+        row.player:SetJustifyH("LEFT")
+        row.class = Theme:CreateLabel(row, "", 11)
+        row.class:SetPoint("LEFT", row, "LEFT", 148, 0)
+        row.class:SetWidth(108)
+        row.class:SetJustifyH("LEFT")
+        row.item = Theme:CreateLabel(row, "", 11)
+        row.item:SetPoint("LEFT", row, "LEFT", 264, 0)
+        row.item:SetWidth(168)
+        row.item:SetJustifyH("LEFT")
         row.amount = Theme:CreateLabel(row, "", 11)
         row.amount:SetPoint("RIGHT", row, "RIGHT", -4, 0)
         row.amount:SetJustifyH("RIGHT")
@@ -177,7 +200,7 @@ end
 function SoftResWindow:Refresh()
     if not self.frame then return end
     local reservations = self.currentItem and GA.SoftRes and GA.SoftRes:GetReservations(self.currentItem) or nil
-    local entries = sortedReservations(reservations)
+    local entries = self.currentItem and sortedReservations(reservations) or allReservations()
     self.totalPages = math.max(1, math.ceil(#entries / #self.rows))
     self.page = math.max(1, math.min(self.page or 1, self.totalPages))
     local offset = (self.page - 1) * #self.rows
@@ -189,13 +212,24 @@ function SoftResWindow:Refresh()
         self.hardCheck:SetChecked(GA.SoftRes:IsHardReserved(self.currentItem))
         self.hardCheck:Enable()
     else
+        self.itemLabel:SetText(string.format("Alle Reservierungen — %d Eintrag/Einträge", #entries))
+        self.itemLabel:SetTextColor(unpack(Theme.colors.text))
         self.hardCheck:SetChecked(false)
         self.hardCheck:Disable()
     end
     for index = 1, #self.rows do
         local row, entry = self.rows[index], entries[offset + index]
         if entry then
-            row.player:SetText(entry.player)
+            if self.currentItem then
+                row.player:SetText(entry.player)
+                row.class:SetText("")
+                row.item:SetText("")
+            else
+                local player, className, itemText = self:DescribeOverviewEntry(entry)
+                row.player:SetText(player)
+                row.class:SetText(className)
+                row.item:SetText(itemText)
+            end
             row.amount:SetText(tostring(entry.amount))
             row:Show()
         else
@@ -229,7 +263,10 @@ function SoftResWindow:Initialize()
     if self.initialized then return true end
     self:EnsureFrame()
     GA.Events:On("GA_SOFTRES_CHANGED", function(_, event, itemID)
-        if SoftResWindow.currentItem == tonumber(itemID) then SoftResWindow:Refresh() end
+        if not SoftResWindow.currentItem or SoftResWindow.currentItem == tonumber(itemID) then SoftResWindow:Refresh() end
+    end, self)
+    GA.Events:On("GA_EXTERNAL_IMPORT_COMPLETED", function(_, event, format)
+        if format == "BISBEARD" then SoftResWindow.currentItem = nil; SoftResWindow.page = 1; SoftResWindow:Refresh() end
     end, self)
     self.initialized = true
     return true

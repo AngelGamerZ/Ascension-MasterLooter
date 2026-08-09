@@ -190,6 +190,8 @@ expect(string.find(fullDiagnostic, "MasterLooter – Gesamtdiagnose", 1, true), 
 expect(string.find(fullDiagnostic, "TEST/FULL_DIAGNOSTIC", 1, true), "whole-addon diagnostic contains explicit actions")
 expect(string.find(fullDiagnostic, "EVENT/GA_DIAGNOSTIC_TEST", 1, true), "whole-addon diagnostic contains internal events")
 expect(string.find(fullDiagnostic, "MODULE", 1, true) and string.find(fullDiagnostic, "Comm", 1, true), "whole-addon diagnostic contains module state")
+expect(string.find(fullDiagnostic, "KOMPATIBILITÄT", 1, true), "whole-addon diagnostic contains client API capabilities")
+expect(string.find(fullDiagnostic, "Debug-Modus: AN", 1, true), "full debug mode is enabled by default for beta diagnostics")
 local savedDiagnosticTradePending = aliceGA.Trade.GetPending
 aliceGA.Trade.GetPending = function() error("simulated broken trade diagnostics") end
 local degradedDiagnostic = aliceGA:GetFullDiagnosticText()
@@ -862,11 +864,25 @@ same(settingsWindow:GetSections()[3].id, "LOOT", "loot settings remain available
 
 loadFile(alice, "UI/Launcher.lua")
 local launcher = aliceGA.UI.Launcher
+local launcherTooltipCalls = 0
+local originalShowTextTooltip = aliceGA.UI.Theme.ShowTextTooltip
+aliceGA.UI.Theme.ShowTextTooltip = function(_, owner, lines, anchor)
+    launcherTooltipCalls = launcherTooltipCalls + 1
+    expect(owner ~= nil and type(lines) == "table" and anchor == "ANCHOR_LEFT", "launcher tooltip receives its expected arguments")
+    return true
+end
+launcher:ShowTooltip({})
+same(launcherTooltipCalls, 1, "minimap hover resolves the local UI theme without a global Theme variable")
+aliceGA.UI.Theme.ShowTextTooltip = originalShowTextTooltip
 same(launcher:GetClickAction("LeftButton", false), "SettingsWindow", "minimap left-click opens the independent settings hub")
 same(launcher:GetClickAction("RightButton", false), "ImportExportWindow", "minimap right-click opens import and export directly")
 same(launcher:GetClickAction("MiddleButton", false), "HistoryWindow", "minimap middle-click opens history directly")
 same(launcher:GetClickAction("LeftButton", true), "SoftResWindow", "shift-left-click opens SoftRes directly")
 same(launcher:GetClickAction("RightButton", true), "MasterLooterWindow", "shift-right-click opens the loot-master workflow directly")
+local errorsBeforeBrokenWindow = #aliceGA.errors
+aliceGA.UI.BrokenWindow = { Show = function() error("simulated UI open failure") end }
+expect(not launcher:OpenWindow("BrokenWindow"), "launcher contains a broken tool window instead of propagating its Lua error")
+expect(#aliceGA.errors == errorsBeforeBrokenWindow + 1, "contained launcher failures are added to whole-addon diagnostics")
 
 local commands = aliceGA:GetModule("Commands")
 local settingsShows, masterShows = 0, 0
@@ -877,5 +893,9 @@ same(settingsShows, 1, "/ml opens the independent overview")
 same(masterShows, 0, "/ml no longer forces the loot-master dialog open")
 commands:Handle("master")
 same(masterShows, 1, "/ml master still opens the loot-master workflow directly")
+commands:Handle("debug off")
+expect(not aliceGA:IsDebugMode() and aliceGA.DB:GetProfile().debugMode == false, "/ml debug off disables and persists full tracing")
+commands:Handle("debug on")
+expect(aliceGA:IsDebugMode() and aliceGA.DB:GetProfile().debugMode == true, "/ml debug on enables and persists full tracing")
 
 print(string.format("PASS: %d assertions; two clients; Comm; rolls; rules; GDKP; items", assertions))
