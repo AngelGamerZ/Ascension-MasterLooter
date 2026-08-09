@@ -38,13 +38,6 @@ Screenshots will be added here soon.
 |---|---|
 | _Screenshot coming soon_ | _Screenshot coming soon_ |
 
-Prepared image locations:
-
-- `assets/screenshots/loot-master-window.png`
-- `assets/screenshots/participant-roll-window.png`
-- `assets/screenshots/settings-and-tools.png`
-- `assets/screenshots/trade-and-history.png`
-
 ## How a roll works
 
 1. The loot master drags an item into MasterLooter or uses **CTRL + right-click** on a supported bag or loot slot.
