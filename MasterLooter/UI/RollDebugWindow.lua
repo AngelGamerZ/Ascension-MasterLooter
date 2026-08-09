@@ -8,16 +8,18 @@ GA.UI.RollDebugWindow = RollDebugWindow
 function RollDebugWindow:GetText()
     local tracker = GA.ChatRolls
     if tracker and type(tracker.GetDiagnosticText) == "function" then
-        return tracker:GetDiagnosticText()
+        local text = tracker:GetDiagnosticText()
+        return type(GA.Localize) == "function" and GA:Localize(text) or text
     end
     local state = GA.RollSession and GA.RollSession:GetState()
-    return table.concat({
+    local text = table.concat({
         "MasterLooter Roll-Diagnose",
         "Version: " .. tostring(GA.VERSION),
         "Tracker vorhanden: nein",
         "Aktive Sitzung: " .. tostring(state and state.id or "keine"),
         "Hinweis: Modules\\ChatRolls.lua wurde nicht geladen.",
     }, "\n")
+    return type(GA.Localize) == "function" and GA:Localize(text) or text
 end
 
 function RollDebugWindow:EnsureFrame()
@@ -110,7 +112,8 @@ function RollDebugWindow:ShowText(text, title, selectText)
     local frame = self:EnsureFrame()
     if not frame then return false end
     if self.title then self.title:SetText(title or "MasterLooter – Diagnose") end
-    self.edit:SetText(tostring(text or ""))
+    text = tostring(text or "")
+    self.edit:SetText(type(GA.Localize) == "function" and GA:Localize(text) or text)
     if selectText ~= false then self.edit:SetFocus(); self.edit:HighlightText() end
     frame:Show()
     return true

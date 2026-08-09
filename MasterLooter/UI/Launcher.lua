@@ -44,7 +44,7 @@ function Launcher:OpenWindow(names)
             return true
         end
     end
-    GA:Print("Dieses Fenster ist noch nicht verfügbar.")
+    GA:Print(GA:L("command.feature_unavailable"))
     return false
 end
 
@@ -76,11 +76,11 @@ function Launcher:EnsureButton()
     button:SetScript("OnEnter", function(self)
         Theme:ShowTextTooltip(self, {
             { "MasterLooter", 1, 0.82, 0.2 },
-            "Linksklick: Übersicht & Einstellungen",
-            "Rechtsklick: Import / Export",
-            "Mittelklick: Historie",
-            "Umschalt + Linksklick: SoftRes",
-            "Umschalt + Rechtsklick: Lootmaster",
+            GA:L("launcher.left"),
+            GA:L("launcher.right"),
+            GA:L("launcher.middle"),
+            GA:L("launcher.shift_left"),
+            GA:L("launcher.shift_right"),
         }, "ANCHOR_LEFT")
     end)
     button:SetScript("OnLeave", function(self) if GA.UI.Theme then GA.UI.Theme:HideOwnedTooltip(self) end end)
@@ -110,10 +110,10 @@ function Launcher:OnInitialize() self:EnsureButton(); self:Refresh(); return tru
 GA:RegisterModule("Launcher", Launcher)
 
 BINDING_HEADER_MASTERLOOTER = "MasterLooter"
-BINDING_NAME_MASTERLOOTER_SETTINGS = "Einstellungen öffnen"
-BINDING_NAME_MASTERLOOTER_LOOTMASTER = "Lootmaster öffnen"
-BINDING_NAME_MASTERLOOTER_HISTORY = "Historie öffnen"
-BINDING_NAME_MASTERLOOTER_TRADE = "Handelsassistent öffnen"
+BINDING_NAME_MASTERLOOTER_SETTINGS = GA:L("binding.settings")
+BINDING_NAME_MASTERLOOTER_LOOTMASTER = GA:L("binding.lootmaster")
+BINDING_NAME_MASTERLOOTER_HISTORY = GA:L("binding.history")
+BINDING_NAME_MASTERLOOTER_TRADE = GA:L("binding.trade")
 function MasterLooter_ToggleSettings() if GA.UI.SettingsWindow then GA.UI.SettingsWindow:Toggle() end end
 function MasterLooter_ToggleLootmaster() if GA.UI.MasterLooterWindow then GA.UI.MasterLooterWindow:Toggle() end end
 function MasterLooter_ToggleHistory() if GA.UI.HistoryWindow then GA.UI.HistoryWindow:Toggle() end end

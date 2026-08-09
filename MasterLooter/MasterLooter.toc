@@ -1,14 +1,20 @@
 ## Interface: 30300
 ## Title: MasterLooter
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
+## Notes-deDE: Beuteverteilung und Raidwerkzeuge für Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.16.8-beta
+## Version: 0.17.0-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
 Core\Namespace.lua
 Core\Compat.lua
 Core\Events.lua
+Core\Localization.lua
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\UI.lua
+Locales\Errors.lua
 Core\DB.lua
 Core\Bootstrap.lua
 

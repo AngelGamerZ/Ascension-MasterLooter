@@ -43,12 +43,29 @@ InterfaceOptionsFramePanelContainer = widget("InterfaceOptionsFramePanelContaine
 local registeredOptionsPanel
 function InterfaceOptions_AddCategory(panel) registeredOptionsPanel = panel end
 function CreateFrame(_, name) return widget(name) end
+local dropdownButtons = {}
+function UIDropDownMenu_Initialize(dropdown, callback) dropdown.initialize = callback end
+function UIDropDownMenu_CreateInfo() return {} end
+function UIDropDownMenu_AddButton(info) dropdownButtons[#dropdownButtons + 1] = info end
+function UIDropDownMenu_SetWidth(dropdown, width) dropdown.width = width end
+function UIDropDownMenu_SetSelectedValue(dropdown, value) dropdown.selectedValue = value end
+function UIDropDownMenu_SetText(dropdown, text) dropdown.text = text end
+function CloseDropDownMenus() end
 
-local profile = { minimap = {}, defaultRollDuration = 30 }
+local profile = { minimap = {}, defaultRollDuration = 30, language = "AUTO" }
+local selectedChannel, selectedLanguage
 local GA = {
     VERSION = "build-smoke", UI = {}, modules = {},
     DB = { data = { activeProfile = "Default" }, GetProfile = function() return profile end },
-    Announcements = { GetConfig = function() return { enabled = true, channel = "AUTO" } end },
+    Announcements = {
+        GetConfig = function() return { enabled = true, channel = "AUTO" } end,
+        GetChannelOptions = function() return { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" } end,
+        SetOption = function(_, key, value) if key == "channel" then selectedChannel = value end; return true end,
+    },
+    Localization = {
+        GetLanguageMode = function() return profile.language end,
+        SetLanguage = function(_, value) profile.language, selectedLanguage = value, value; return true end,
+    },
     PackMule = { GetTarget = function() return nil end, GetRules = function() return { minimumQuality = 2 } end },
 }
 function GA:RegisterModule(name, module) self.modules[name] = module end
@@ -81,6 +98,19 @@ expect(frame ~= nil, buildError or "complete settings frame builds")
 expect(settings:ControlsReady(), "all controls required by Refresh exist")
 expect(settings.buildComplete, "settings construction is marked complete")
 expect(settings:Refresh(), "a complete settings frame refreshes safely")
+same(settings.languageDropdown:GetValue(), "AUTO", "language dropdown reflects automatic client selection")
+same(settings.channelDropdown:GetValue(), "AUTO", "announcement dropdown reflects the saved channel")
+same(#settings.channelDropdown.options, 8, "announcement dropdown exposes all supported channels")
+dropdownButtons = {}; settings.channelDropdown.initialize()
+for _, info in ipairs(dropdownButtons) do
+    info.func()
+    same(selectedChannel, info.value, "each announcement callback persists its own channel: " .. tostring(info.value))
+end
+dropdownButtons = {}; settings.languageDropdown.initialize()
+for _, info in ipairs(dropdownButtons) do
+    info.func()
+    same(selectedLanguage, info.value, "each language callback persists its own mode: " .. tostring(info.value))
+end
 same(#settings:GetSections(), 5, "all navigation sections survive complete construction")
 expect(settings:Show("LOOT"), "settings can open a requested section")
 same(settings.activeSection, "LOOT", "requested section becomes active")

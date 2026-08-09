@@ -93,7 +93,7 @@ same(#gives, givesBeforeFallback + 1, "self-take invokes GiveMasterLoot once")
 same(#whispers, 1, "fallback immediately whispers an addonless winner")
 same(whispers[1][2], "WHISPER", "fallback notice is a private message")
 same(whispers[1][3], "Alice", "fallback notice targets the winner")
-expect(string.find(whispers[1][1], "Direktvergabe war nicht möglich", 1, true), "fallback notice explains why trade is needed")
+expect(string.find(whispers[1][1], "nicht direkt vergeben", 1, true), "fallback notice explains why trade is needed")
 same(tradeWindowShows, 0, "award fallback never opens the optional trade assistant")
 expect(tradeWindowRefreshes > 0, "award fallback still refreshes an already open trade assistant")
 

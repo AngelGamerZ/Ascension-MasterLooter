@@ -17,7 +17,8 @@ function CommDebugWindow:GetText()
         lines[#lines + 1] = table.concat({ tostring(entry.time or 0), tostring(entry.context or "?"),
             tostring(entry.message or ""):gsub("[\r\n\t]", " ") }, "\t")
     end
-    return table.concat(lines, "\n")
+    local text = table.concat(lines, "\n")
+    return type(GA.Localize) == "function" and GA:Localize(text) or text
 end
 
 function CommDebugWindow:EnsureFrame()

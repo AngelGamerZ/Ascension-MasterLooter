@@ -17,6 +17,45 @@ GA.UI.SettingsWindow = SettingsWindow
 
 local function profile() return GA.DB:GetProfile() end
 
+local function localized(key, fallback)
+    if type(GA.L) == "function" then
+        local ok, value = pcall(GA.L, GA, key)
+        if ok and type(value) == "string" and value ~= "" and value ~= key then return value end
+    end
+    return fallback or key
+end
+
+local function createDropdown(parent, width, options, onSelected)
+    local dropdown = CreateFrame("Frame", nil, parent, "UIDropDownMenuTemplate")
+    dropdown.options, dropdown.selectedValue = options, nil
+    function dropdown:SetValue(value)
+        self.selectedValue = value
+        if type(UIDropDownMenu_SetSelectedValue) == "function" then UIDropDownMenu_SetSelectedValue(self, value) end
+        local label = tostring(value or "")
+        for _, option in ipairs(self.options or {}) do if option.value == value then label = option.label; break end end
+        if type(UIDropDownMenu_SetText) == "function" then UIDropDownMenu_SetText(self, label) elseif type(self.SetText) == "function" then self:SetText(label) end
+    end
+    function dropdown:GetValue() return self.selectedValue end
+    if type(UIDropDownMenu_SetWidth) == "function" then UIDropDownMenu_SetWidth(dropdown, width) else dropdown:SetWidth(width) end
+    if type(UIDropDownMenu_Initialize) == "function" then
+        UIDropDownMenu_Initialize(dropdown, function()
+            for _, option in ipairs(dropdown.options or {}) do
+                local selectedOption = option
+                local info = type(UIDropDownMenu_CreateInfo) == "function" and UIDropDownMenu_CreateInfo() or {}
+                info.text, info.value = selectedOption.label, selectedOption.value
+                info.checked = dropdown.selectedValue == selectedOption.value
+                info.func = function()
+                    dropdown:SetValue(selectedOption.value)
+                    if type(CloseDropDownMenus) == "function" then CloseDropDownMenus() end
+                    if onSelected then onSelected(selectedOption.value) end
+                end
+                if type(UIDropDownMenu_AddButton) == "function" then UIDropDownMenu_AddButton(info) end
+            end
+        end)
+    end
+    return dropdown
+end
+
 local function openWindow(name)
     return SettingsWindow:OpenTool(name)
 end
@@ -44,7 +83,7 @@ function SettingsWindow:GetSections() return self.SECTIONS end
 
 function SettingsWindow:ControlsReady()
     return self.autoOpen and self.autoGive and self.sound and self.minimap and self.bagShare and
-        self.announce and self.channelEdit and self.durationEdit and self.scaleEdit and self.profileEdit and
+        self.announce and self.channelDropdown and self.languageDropdown and self.durationEdit and self.scaleEdit and self.profileEdit and
         self.muleTargetEdit and self.muleQualityEdit and self.status
 end
 
@@ -125,8 +164,25 @@ function SettingsWindow:BuildGeneral()
         SettingsWindow:SetStatus("Taschenfreigabe gespeichert.", Theme.colors.green)
     end)
 
-    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -252)
-    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -282)
+    local languageLabel = Theme:CreateLabel(section, localized("SETTINGS_LANGUAGE", "Sprache / Language"), 12)
+    languageLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -240)
+    local languageOptions = {
+        { value = "AUTO", label = localized("SETTINGS_LANGUAGE_AUTO", "Automatisch (Client)") },
+        { value = "deDE", label = localized("SETTINGS_LANGUAGE_GERMAN", "Deutsch") },
+        { value = "enUS", label = localized("SETTINGS_LANGUAGE_ENGLISH", "English") },
+    }
+    self.languageDropdown = createDropdown(section, 180, languageOptions, function(value)
+        local ok
+        if GA.Localization and type(GA.Localization.SetLanguage) == "function" then ok = GA.Localization:SetLanguage(value)
+        else profile().language, ok = value, true end
+        if not ok then SettingsWindow:SetStatus(localized("LANGUAGE_INVALID", "Ungültige Sprache."), Theme.colors.red); return end
+        SettingsWindow:SetStatus(localized("LANGUAGE_SAVED", "Sprache gespeichert. Oberfläche wird neu geladen."), Theme.colors.green)
+        if type(ReloadUI) == "function" then ReloadUI() end
+    end)
+    self.languageDropdown:SetPoint("LEFT", languageLabel, "RIGHT", 20, -2)
+
+    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -292)
+    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -322)
     self.profileEdit = Theme:CreateEditBox(section, 190, 24); self.profileEdit:SetPoint("LEFT", profileLabel, "RIGHT", 20, 0)
     local switchProfile = Theme:CreateButton(section, "Wechseln", 90, 24); switchProfile:SetPoint("LEFT", self.profileEdit, "RIGHT", 8, 0)
     switchProfile:SetScript("OnClick", function() SettingsWindow:SwitchProfile() end)
@@ -142,13 +198,21 @@ function SettingsWindow:BuildLoot()
         if GA.Announcements then GA.Announcements:SetOption("enabled", self:GetChecked() and true or false) end
         SettingsWindow:SetStatus("Ansageeinstellung gespeichert.", Theme.colors.green)
     end)
-    local channelLabel = Theme:CreateLabel(section, "Ansagekanal", 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -178)
-    self.channelEdit = Theme:CreateEditBox(section, 110, 24); self.channelEdit:SetPoint("LEFT", channelLabel, "RIGHT", 24, 0)
-    local channelSave = Theme:CreateButton(section, "Setzen", 70, 24); channelSave:SetPoint("LEFT", self.channelEdit, "RIGHT", 8, 0)
-    channelSave:SetScript("OnClick", function()
-        local ok, err = GA.Announcements:SetOption("channel", SettingsWindow.channelEdit:GetText())
-        SettingsWindow:SetStatus(ok and "Ansagekanal gespeichert." or tostring(err), ok and Theme.colors.green or Theme.colors.red)
+    local channelLabel = Theme:CreateLabel(section, localized("SETTINGS_ANNOUNCEMENT_CHANNEL", "Ansagekanal"), 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -178)
+    local channelNames = {
+        AUTO = localized("CHANNEL_AUTO", "Automatisch"), RAID_WARNING = localized("CHANNEL_RAID_WARNING", "Raid-Warnung"),
+        RAID = localized("CHANNEL_RAID", "Raid"), PARTY = localized("CHANNEL_PARTY", "Gruppe"),
+        SAY = localized("CHANNEL_SAY", "Sagen"), YELL = localized("CHANNEL_YELL", "Schreien"),
+        GUILD = localized("CHANNEL_GUILD", "Gilde"), OFFICER = localized("CHANNEL_OFFICER", "Offizier"),
+    }
+    local channelOptions = {}
+    local available = GA.Announcements and type(GA.Announcements.GetChannelOptions) == "function" and GA.Announcements:GetChannelOptions() or { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" }
+    for _, value in ipairs(available) do channelOptions[#channelOptions + 1] = { value = value, label = channelNames[value] or value } end
+    self.channelDropdown = createDropdown(section, 175, channelOptions, function(value)
+        local ok, err = GA.Announcements:SetOption("channel", value)
+        SettingsWindow:SetStatus(ok and localized("CHANNEL_SAVED", "Ansagekanal gespeichert.") or tostring(err), ok and Theme.colors.green or Theme.colors.red)
     end)
+    self.channelDropdown:SetPoint("LEFT", channelLabel, "RIGHT", 24, -2)
     local durationLabel = Theme:CreateLabel(section, "Standarddauer", 12); durationLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -222)
     self.durationEdit = Theme:CreateEditBox(section, 60, 24, true); self.durationEdit:SetPoint("LEFT", durationLabel, "RIGHT", 24, 0)
     local seconds = Theme:CreateLabel(section, "Sekunden", 12, Theme.colors.muted); seconds:SetPoint("LEFT", self.durationEdit, "RIGHT", 8, 0)
@@ -286,7 +350,9 @@ function SettingsWindow:Refresh()
     self.sound:SetChecked(current.sound ~= false); self.minimap:SetChecked(current.minimap.hide ~= true)
     local config = GA.Announcements and GA.Announcements:GetConfig() or current.announcements or {}
     self.announce:SetChecked(config.enabled ~= false); self.bagShare:SetChecked(current.bagInspectorShare ~= false)
-    self.channelEdit:SetText(tostring(config.channel or "AUTO")); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
+    self.channelDropdown:SetValue(tostring(config.channel or "AUTO")); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
+    local languageMode = GA.Localization and type(GA.Localization.GetLanguageMode) == "function" and GA.Localization:GetLanguageMode() or current.language or "AUTO"
+    self.languageDropdown:SetValue(languageMode)
     self.scaleEdit:SetText(string.format("%.2f", tonumber(current.uiScale) or 1)); self.profileEdit:SetText(tostring(GA.DB.data.activeProfile or "Default"))
     if GA.PackMule then self.muleTargetEdit:SetText(tostring(GA.PackMule:GetTarget() or "")); self.muleQualityEdit:SetText(tostring((GA.PackMule:GetRules() or {}).minimumQuality or 2)) end
     return true

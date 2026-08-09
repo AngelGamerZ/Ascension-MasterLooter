@@ -96,7 +96,8 @@ function TooltipDebug:GetText()
         lines[#lines + 1] = string.format("[%08.3f] %s | %s", tonumber(entry.at) or 0, entry.kind, entry.detail)
         if entry.stack and entry.stack ~= "" then lines[#lines + 1] = "  Stack: " .. entry.stack end
     end
-    return table.concat(lines, "\n")
+    local text = table.concat(lines, "\n")
+    return type(GA.Localize) == "function" and GA:Localize(text) or text
 end
 
 function TooltipDebug:Clear() self.entries = {}; self:Log("RESET", "Diagnoseprotokoll geleert") end
@@ -212,7 +213,8 @@ function GA:GetFullDiagnosticText()
         lines[#lines + 1] = string.format("#%d [%08.3f] %s/%s | %s", tonumber(entry.sequence) or 0, tonumber(entry.at) or 0,
             tostring(entry.category or "?"), tostring(entry.action or "?"), tostring(entry.detail or ""))
     end
-    return table.concat(lines, "\n")
+    local text = table.concat(lines, "\n")
+    return type(self.Localize) == "function" and self:Localize(text) or text
 end
 
 local function trim(value) return string.match(value or "", "^%s*(.-)%s*$") end
@@ -236,12 +238,12 @@ local function showWindow(key)
 end
 
 function Commands:Help()
-    GA:Print("/ml – Übersicht & Einstellungen | /ml master oder /lootmaster – Lootmaster-Fenster")
-    GA:Print("/ml roll <Itemlink> [Sekunden]")
-    GA:Print("/ml sr <Spieler> <Item-ID> | /ml plus <Spieler> [Wert] | /ml sync <Spieler>")
-    GA:Print("/ml trust <Spieler> on|off – Regel-Snapshots dieses Senders erlauben/sperren")
-    GA:Print("/ml gdkp start|sale|finish | /ml version | /ml debug | /ml rolldebug | /ml commdebug | /ml tooltipdebug")
-    GA:Print("/ml master|loot|trade|softres|rules|gdkpui|auction|raid|version|bags|history|settings|io")
+    GA:Print(GA:L("command.help.overview"))
+    GA:Print(GA:L("command.help.roll"))
+    GA:Print(GA:L("command.help.rules"))
+    GA:Print(GA:L("command.help.trust"))
+    GA:Print(GA:L("command.help.debug"))
+    GA:Print(GA:L("command.help.windows"))
 end
 
 function Commands:Handle(message)
@@ -249,7 +251,7 @@ function Commands:Handle(message)
     if command == "" or command == "show" then
         if GA.UI and GA.UI.SettingsWindow then GA.UI.SettingsWindow:Show() end
     elseif WINDOWS[command] then
-        if not showWindow(command) then GA:Print("Fenster ist nicht verfügbar: " .. command) end
+        if not showWindow(command) then GA:Print(GA:L("command.window_unavailable", command)) end
     elseif command == "roll" then
         local link = string.match(rest, "(|c%x+|Hitem:.-|h.-|h|r)") or string.match(rest, "(|Hitem:.-|h.-|h)")
         local seconds = tonumber(string.match(rest, "(%d+)%s*$")) or 30
@@ -257,10 +259,10 @@ function Commands:Handle(message)
         if not state then GA:Print(err) end
     elseif command == "sr" then
         local player, id = string.match(rest, "^(%S+)%s+(%-?%d+)")
-        if not player or not id then GA:Print("Verwendung: /ml sr <Spieler> <Item-ID>")
+        if not player or not id then GA:Print(GA:L("command.usage.sr"))
         else
             local ok, err = GA.SoftRes:Reserve(player, id)
-            GA:Print(ok and (player .. " reserviert Item " .. id) or err)
+            GA:Print(ok and GA:L("command.sr_added", player, id) or err)
         end
     elseif command == "plus" then
         local player, value = string.match(rest, "^(%S+)%s*(%d*)")
@@ -268,14 +270,14 @@ function Commands:Handle(message)
     elseif command == "sync" then
         local player = string.match(rest or "", "^(%S+)")
         local packet, err = GA.RuleSync and GA.RuleSync:Request(player)
-        GA:Print(packet and ("Regelstand bei " .. player .. " angefragt.") or tostring(err or "RuleSync ist nicht verfügbar."))
+        GA:Print(packet and GA:L("command.rules_requested", player) or tostring(err or GA:L("command.rules_unavailable")))
     elseif command == "trust" then
         local player, state = string.match(rest or "", "^(%S+)%s+(%S+)")
         state = string.lower(state or "")
-        if not player or (state ~= "on" and state ~= "off") then GA:Print("Verwendung: /ml trust <Spieler> on|off")
+        if not player or (state ~= "on" and state ~= "off") then GA:Print(GA:L("command.usage.trust"))
         else
             local ok, err = GA.RuleSync and GA.RuleSync:SetTrusted(player, state == "on")
-            GA:Print(ok and (player .. (state == "on" and " ist für Regel-Sync vertrauenswürdig." or " wurde aus der Vertrauensliste entfernt.")) or tostring(err))
+            GA:Print(ok and GA:L(state == "on" and "command.trusted" or "command.untrusted", player) or tostring(err))
         end
     elseif command == "gdkp" then
         local sub, args = split(rest)
@@ -285,32 +287,32 @@ function Commands:Handle(message)
             local buyer, amount = string.match(args, "%s([^%s]+)%s+(%d+)%s*$")
             local sale, err = GA.GDKP:AddSale(link, buyer, amount); if not sale then GA:Print(err) end
         elseif sub == "finish" then GA.GDKP:Finish()
-        else GA:Print("gdkp start <Name> | sale <Link> <Käufer> <Gold> | finish") end
-    elseif command == "version" then GA:Print("Version " .. GA.VERSION .. ", Protokoll " .. GA.PROTOCOL_VERSION)
+        else GA:Print(GA:L("command.gdkp_usage")) end
+    elseif command == "version" then GA:Print(GA:L("command.version", GA.VERSION, GA.PROTOCOL_VERSION))
     elseif command == "rolldebug" then
         local window = GA.UI and GA.UI.RollDebugWindow
         if window and type(window.Show) == "function" then window:Show()
         else
             local tracker = GA.ChatRolls
-            GA:Print(tracker and tracker:GetDiagnosticText() or "Rolltracker ist nicht geladen.")
+            GA:Print(tracker and tracker:GetDiagnosticText() or GA:L("command.rolltracker_missing"))
         end
     elseif command == "commdebug" then
         local window = GA.UI and GA.UI.CommDebugWindow
         if window and type(window.Show) == "function" then window:Show()
-        else GA:Print("Kommunikationsdiagnose ist nicht verfügbar.") end
+        else GA:Print(GA:L("command.comm_debug_missing")) end
     elseif command == "debug" then
         if string.lower(rest or "") == "clear" then
             if GA.ClearDebugTrace then GA:ClearDebugTrace() end
             if GA.Comm and type(GA.Comm.ClearTrace) == "function" then GA.Comm:ClearTrace() end
             if GA.TooltipDebug and type(GA.TooltipDebug.Clear) == "function" then GA.TooltipDebug:Clear() end
-            GA:Print("Gesamtdiagnose wurde geleert. Gespeicherte Vergaben und Historie bleiben erhalten.")
+            GA:Print(GA:L("command.debug_cleared"))
         end
         local window = GA.UI and GA.UI.AddonDebugWindow
         if window and type(window.Show) == "function" then window:Show()
         else
             local fallback = GA.UI and GA.UI.RollDebugWindow
             if fallback and type(fallback.ShowText) == "function" then fallback:ShowText(GA:GetFullDiagnosticText())
-            else GA:Print("Gesamtdiagnose konnte nicht geöffnet werden.") end
+            else GA:Print(GA:L("command.debug_open_failed")) end
         end
     elseif command == "tooltipdebug" then
         local window = GA.UI and GA.UI.TooltipDebugWindow
@@ -327,7 +329,7 @@ function Commands:Handle(message)
                 ("MasterLooter Tooltip-Diagnose\nDiagnosemodul oder Fenster konnte nicht geladen werden.\nLua-Version: " .. tostring(GA.VERSION) .. "\nTOC-Version: " .. tostring(tocVersion))
             if fallback and type(fallback.ShowText) == "function" then opened = fallback:ShowText(text) end
         end
-        if not opened then GA:Print("Tooltip-Diagnose konnte nicht geöffnet werden. /ml rolldebug verwenden.") end
+        if not opened then GA:Print(GA:L("command.tooltip_debug_failed")) end
     else self:Help() end
 end
 
@@ -338,7 +340,7 @@ function Commands:OnInitialize()
     SLASH_MASTERLOOTERDIRECT1 = "/lootmaster"
     SLASH_MASTERLOOTERDIRECT2 = "/mlmaster"
     SlashCmdList.MASTERLOOTERDIRECT = function()
-        if not showWindow("master") then GA:Print("Lootmaster-Fenster ist nicht verfügbar.") end
+        if not showWindow("master") then GA:Print(GA:L("command.master_window_missing")) end
     end
     return true
 end

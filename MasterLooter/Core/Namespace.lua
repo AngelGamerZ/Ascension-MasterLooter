@@ -5,7 +5,7 @@ local ADDON_NAME, ns = ...
 ns = ns or {}
 
 ns.ADDON_NAME = ADDON_NAME or "MasterLooter"
-ns.VERSION = "0.16.8-beta"
+ns.VERSION = "0.17.0-beta"
 ns.PROTOCOL_VERSION = 3
 ns.DB_SCHEMA = 1
 ns.modules = ns.modules or {}
@@ -53,6 +53,7 @@ function ns:GetDebugTrace() return self.debugTrace end
 function ns:ClearDebugTrace() self.debugTrace = {}; self:Trace("SYSTEM", "TRACE_CLEARED") end
 
 local function reportError(context, message)
+    if type(ns.Localize) == "function" then message = ns:Localize(message) end
     ns.errors[#ns.errors + 1] = { time = (time and time()) or 0, context = tostring(context), message = tostring(message) }
     while #ns.errors > 100 do table.remove(ns.errors, 1) end
     ns:Trace("ERROR", context, message)
@@ -71,6 +72,7 @@ end
 ns.ReportError = reportError
 
 function ns:Print(message)
+    if type(self.Localize) == "function" then message = self:Localize(message) end
     local text = "|cff33ff99MasterLooter|r: " .. tostring(message)
     if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
         DEFAULT_CHAT_FRAME:AddMessage(text)

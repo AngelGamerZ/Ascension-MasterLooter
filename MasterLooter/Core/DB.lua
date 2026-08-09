@@ -9,6 +9,7 @@ local DEFAULTS = {
         minimap = { hide = false, angle = 220 },
         rollWindow = { scale = 1, point = "CENTER", x = 0, y = 0 },
         masterLooterWindow = { scale = 1, point = "CENTER", x = 0, y = 120 },
+        language = "AUTO",
         announceChannel = "RAID_WARNING",
         autoOpenRollWindow = true,
         autoGiveAwards = true,

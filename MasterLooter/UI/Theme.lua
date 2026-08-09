@@ -51,6 +51,10 @@ end
 
 function Theme:CreateLabel(parent, text, size, color)
     local label = parent:CreateFontString(nil, "OVERLAY", size and size >= 14 and "GameFontNormalLarge" or "GameFontNormal")
+    local nativeSetText = label.SetText
+    label.SetText = function(self, value)
+        return nativeSetText(self, type(GA.Localize) == "function" and GA:Localize(value or "") or (value or ""))
+    end
     label:SetText(text or "")
     label:SetTextColor(unpack(color or self.colors.text))
     label:SetJustifyH("LEFT")
@@ -61,6 +65,10 @@ function Theme:CreateButton(parent, text, width, height)
     local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     button:SetWidth(width or 90)
     button:SetHeight(height or 24)
+    local nativeSetText = button.SetText
+    button.SetText = function(self, value)
+        return nativeSetText(self, type(GA.Localize) == "function" and GA:Localize(value or "") or (value or ""))
+    end
     button:SetText(text or "")
     return button
 end
@@ -227,9 +235,9 @@ function Theme:ShowTextTooltip(owner, lines, anchor)
     for index = 1, #(lines or {}) do
         local line = lines[index]
         if type(line) == "table" then
-            tooltip:AddLine(tostring(line[1] or ""), line[2] or 1, line[3] or 1, line[4] or 1)
+            tooltip:AddLine(tostring(type(GA.Localize) == "function" and GA:Localize(line[1] or "") or (line[1] or "")), line[2] or 1, line[3] or 1, line[4] or 1)
         else
-            tooltip:AddLine(tostring(line), 1, 1, 1)
+            tooltip:AddLine(tostring(type(GA.Localize) == "function" and GA:Localize(line) or line), 1, 1, 1)
         end
     end
     tooltip:Show()

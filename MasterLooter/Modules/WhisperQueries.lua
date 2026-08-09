@@ -6,6 +6,11 @@ local _, GA = ...
 local WhisperQueries = { lastRequest = {}, wasMasterLooter = false }
 GA.WhisperQueries = WhisperQueries
 
+local function L(key, fallback, ...)
+    if type(GA.L) == "function" then return GA:L(key, ...) end
+    return select("#", ...) > 0 and string.format(fallback, ...) or fallback
+end
+
 local COMMANDS = {
     SR = "SR", ["#SR"] = "SR", ["?SR"] = "SR", ["!SR"] = "SR", MLSR = "SR", ["ML SR"] = "SR",
     SL = "SL", ["#SL"] = "SL", ["?SL"] = "SL", ["!SL"] = "SL", MLSL = "SL", ["ML SL"] = "SL",
@@ -73,7 +78,7 @@ local function itemLabel(itemID)
         if type(link) == "string" and link ~= "" then return link end
         if type(name) == "string" and name ~= "" then return "[" .. name .. "]" end
     end
-    return "[Item #" .. tostring(itemID) .. "]"
+    return L("whisper.item_number", "[Item #%s]", tostring(itemID))
 end
 
 function WhisperQueries:GetSoftResEntries(player)
@@ -89,13 +94,14 @@ end
 
 function WhisperQueries:ReplySoftRes(sender)
     local entries = self:GetSoftResEntries(sender)
-    if #entries == 0 then return self:SendWhisper(sender, "MasterLooter: Du hast aktuell keine SoftRes.") end
-    local prefix, line = "MasterLooter: Deine SoftRes: ", "MasterLooter: Deine SoftRes: "
+    if #entries == 0 then return self:SendWhisper(sender, L("whisper.softres.none", "MasterLooter: Du hast aktuell keine SoftRes.")) end
+    local prefix = L("whisper.softres.header", "MasterLooter: Deine SoftRes: ")
+    local line = prefix
     for index, entry in ipairs(entries) do
         local value = itemLabel(entry.itemID) .. (entry.amount > 1 and (" x" .. tostring(entry.amount)) or "")
         local separator = line == prefix and "" or ", "
         if #line + #separator + #value > 235 then
-            self:SendWhisper(sender, line); line = "MasterLooter: Weitere SoftRes: " .. value
+            self:SendWhisper(sender, line); line = L("whisper.softres.more", "MasterLooter: Weitere SoftRes: ") .. value
         else line = line .. separator .. value end
     end
     return self:SendWhisper(sender, line)
@@ -103,7 +109,7 @@ end
 
 function WhisperQueries:ReplyStreakList(sender)
     local value = GA.PlusOnes and type(GA.PlusOnes.Get) == "function" and GA.PlusOnes:Get(sender) or 0
-    return self:SendWhisper(sender, "MasterLooter: Dein aktueller Strichstand: " .. tostring(tonumber(value) or 0) .. ".")
+    return self:SendWhisper(sender, L("whisper.plusones", "MasterLooter: Dein aktueller Strichstand: %d.", tonumber(value) or 0))
 end
 
 function WhisperQueries:HandleWhisper(message, sender)
@@ -126,7 +132,7 @@ function WhisperQueries:AnnounceCommands()
     if GA.Announcements and type(GA.Announcements.ResolveChannel) == "function" then
         channel = GA.Announcements:ResolveChannel("RAID_WARNING") or channel
     end
-    local message = "MasterLooter aktiv. Per Whisper: SR = eigene SoftRes prüfen, SL = eigenen Strichstand prüfen."
+    local message = L("whisper.commands", "MasterLooter aktiv. Per Whisper: SR = eigene SoftRes prüfen, SL = eigenen Strichstand prüfen.")
     local ok = pcall(SendChatMessage, message, channel)
     if ok then GA.Events:Emit("GA_WHISPER_COMMANDS_ANNOUNCED", channel) end
     return ok

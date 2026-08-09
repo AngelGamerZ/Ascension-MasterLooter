@@ -80,6 +80,7 @@ local function makeClient(name, savedDB)
     env.CreateFrame = function() return makeFrame(client) end
     env.GetTime = function() return client.now end
     env.time = function() return 1700000000 + math.floor(client.now) end
+    env.GetLocale = function() return "deDE" end
     env.UnitName = function(unit)
         if unit == "player" then return client.name end
         if unit == "raid1" then return "Alice" end
@@ -134,6 +135,9 @@ local function loadAddon(client)
     -- Namespace.lua uses the supplied table in place, so retain the same root.
     loadFile(client, "Core/Compat.lua")
     loadFile(client, "Core/Events.lua")
+    loadFile(client, "Core/Localization.lua")
+    loadFile(client, "Locales/enUS.lua")
+    loadFile(client, "Locales/deDE.lua")
     loadFile(client, "Core/DB.lua")
     loadFile(client, "Core/Bootstrap.lua")
     loadFile(client, "Modules/Comm.lua")
@@ -400,9 +404,9 @@ for index = chatStart + 1, #alice.chatMessages do
         instructionsSeen = true
         raidWarningSeen = alice.chatMessages[index].channel == "RAID_WARNING"
     end
-    if string.find(message, "Noch 50 Sekunden", 1, true) then intervalSeen = true end
-    if string.find(message, "Noch 10 Sekunden", 1, true) then countdownSeen = true end
-    if string.find(message, "Noch 1 Sekunde", 1, true) then finalSecondSeen = true end
+    if string.find(message, "50 Sekunden", 1, true) then intervalSeen = true end
+    if string.find(message, "10 Sekunden", 1, true) then countdownSeen = true end
+    if string.find(message, "1 Sekunde", 1, true) then finalSecondSeen = true end
     if string.find(message, "abgelaufen", 1, true) then timeoutSeen = true end
 end
 expect(instructionsSeen, "roll start announcement names the public MS and configured OS commands")

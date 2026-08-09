@@ -4,6 +4,14 @@ local _, GA = ...
 local Announcements = { lastSent = -1000, minimumInterval = 0.5 }
 GA.Announcements = Announcements
 local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, countdown = true, award = true, channel = "RAID_WARNING" }
+local CHANNEL_OPTIONS = { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" }
+local CHANNELS = {}
+for _, channel in ipairs(CHANNEL_OPTIONS) do CHANNELS[channel] = true end
+
+local function L(key, fallback, ...)
+    if type(GA.L) == "function" then return GA:L(key, ...) end
+    return select("#", ...) > 0 and string.format(fallback, ...) or fallback
+end
 
 local function baseName(name)
     return type(name) == "string" and string.lower(string.match(name, "^[^-]+") or name) or ""
@@ -36,32 +44,63 @@ function Announcements:GetConfig()
         if profile.announcements[key] == nil then profile.announcements[key] = value end
     end
     if not profile.announcements.raidWarningDefaultV1 then
-        profile.announcements.channel = "RAID_WARNING"
+        profile.announcements.channel = self:NormalizeChannel(profile.announcements.channel or profile.announceChannel) or "RAID_WARNING"
         profile.announcements.raidWarningDefaultV1 = true
     end
+    profile.announcements.channel = self:NormalizeChannel(profile.announcements.channel) or DEFAULTS.channel
     return profile.announcements
+end
+
+function Announcements:GetChannelOptions()
+    local result = {}
+    for index, channel in ipairs(CHANNEL_OPTIONS) do result[index] = channel end
+    return result
+end
+
+function Announcements:NormalizeChannel(value)
+    value = string.upper(tostring(value or "AUTO"))
+    value = string.gsub(value, "[%s%-]+", "_")
+    local aliases = {
+        GROUP = "PARTY", GROUP_CHAT = "PARTY", PARTY_CHAT = "PARTY",
+        RAIDWARNING = "RAID_WARNING", RW = "RAID_WARNING",
+    }
+    value = aliases[value] or value
+    return CHANNELS[value] and value or nil
 end
 
 function Announcements:SetOption(key, value)
     if DEFAULTS[key] == nil then return false, "unknown announcement option" end
     if key == "channel" then
-        value = string.upper(tostring(value or "AUTO"))
-        if value ~= "AUTO" and value ~= "RAID" and value ~= "PARTY" and value ~= "RAID_WARNING" then
-            return false, "invalid announcement channel"
-        end
+        value = self:NormalizeChannel(value)
+        if not value then return false, "invalid announcement channel" end
     else value = value and true or false end
     self:GetConfig()[key] = value
     return true
 end
 
 function Announcements:ResolveChannel(requested)
-    if not GA.Compat:IsInGroup() then return nil end
-    requested = string.upper(requested or self:GetConfig().channel or "AUTO")
-    if GA.Compat:IsInRaid() then
-        if (requested == "AUTO" or requested == "RAID_WARNING") and canRaidWarn() then return "RAID_WARNING" end
-        return "RAID"
+    requested = self:NormalizeChannel(requested or self:GetConfig().channel) or "AUTO"
+    local inRaid = GA.Compat:IsInRaid()
+    local inGroup = GA.Compat:IsInGroup()
+    if requested == "SAY" or requested == "YELL" then return requested end
+    if requested == "GUILD" or requested == "OFFICER" then
+        if type(IsInGuild) == "function" and not IsInGuild() then return nil end
+        return requested
     end
-    return "PARTY"
+    if requested == "AUTO" then
+        if inRaid then return canRaidWarn() and "RAID_WARNING" or "RAID" end
+        return inGroup and "PARTY" or nil
+    end
+    if requested == "RAID_WARNING" then
+        if inRaid then return canRaidWarn() and "RAID_WARNING" or "RAID" end
+        return inGroup and "PARTY" or nil
+    end
+    if requested == "RAID" then
+        if inRaid then return "RAID" end
+        return inGroup and "PARTY" or nil
+    end
+    if requested == "PARTY" then return inGroup and "PARTY" or nil end
+    return nil
 end
 
 local function utf8Truncate(value, limit)
@@ -73,10 +112,10 @@ end
 
 local function itemDescription(state)
     local link = state and state.itemLink
-    if type(link) ~= "string" then return "unbekanntes Item" end
+    if type(link) ~= "string" then return L("announcement.unknown_item", "unbekanntes Item") end
     if #link <= 180 then return link end
     local name = type(GetItemInfo) == "function" and GetItemInfo(link)
-    return name or ("Item #" .. tostring(GA.Compat:GetItemID(link) or "?"))
+    return name or L("announcement.item_number", "Item #%s", tostring(GA.Compat:GetItemID(link) or "?"))
 end
 
 function Announcements:Send(message, channel)
@@ -97,16 +136,13 @@ function Announcements:Send(message, channel)
     return true
 end
 
-local STOP_REASON = {
-    TIMEOUT = "Die Rollzeit ist abgelaufen.", STOPPED = "Die Verteilung wurde beendet.",
-    CANCELLED = "Die Verteilung wurde abgebrochen.", AWARDED = "Die Verteilung ist abgeschlossen.",
-}
+local STOP_REASON = { TIMEOUT = "timeout", STOPPED = "stopped", CANCELLED = "cancelled", AWARDED = "awarded" }
 
 function Announcements:OnRollStarted(state)
     local config = self:GetConfig()
     if config.rollStart and isOwner(state) then
-        self:Send("Roll für " .. itemDescription(state) .. " gestartet - " .. tostring(state.duration or 30) ..
-            " Sekunden. /roll 100 für MS. /roll " .. tostring(state.osRollMaximum or 99) .. " für OS.")
+        self:Send(L("announcement.roll_started", "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS.",
+            itemDescription(state), tonumber(state.duration) or 30, tonumber(state.osRollMaximum) or 99))
     end
     if isOwner(state) then
         self.activeRoll = state
@@ -117,7 +153,9 @@ end
 function Announcements:OnRollEnded(state, reason)
     local config = self:GetConfig()
     if config.rollStop and isOwner(state) and reason ~= "AWARDED" then
-        self:Send(STOP_REASON[reason] or ("Die Verteilung wurde beendet: " .. tostring(reason or "unbekannt")))
+        local reasonKey = STOP_REASON[reason]
+        self:Send(reasonKey and L("announcement." .. reasonKey, "Die Verteilung wurde beendet.") or
+            L("announcement.ended_reason", "Die Verteilung wurde beendet: %s", tostring(reason or "unbekannt")))
     end
     if self.activeRoll and state and self.activeRoll.id == state.id then
         self.activeRoll, self.lastCountdownSecond = nil, nil
@@ -139,19 +177,21 @@ function Announcements:Tick()
     if remaining == self.lastCountdownSecond then return end
     self.lastCountdownSecond = remaining
     if shouldAnnounceSecond(remaining) then
-        self:Send("Noch " .. tostring(remaining) .. " Sekunde" .. (remaining == 1 and "" or "n") ..
-            " für " .. itemDescription(state) .. ".")
+        local key = remaining == 1 and "announcement.countdown.one" or "announcement.countdown.many"
+        self:Send(L(key, remaining == 1 and "Noch %d Sekunde für %s." or "Noch %d Sekunden für %s.",
+            remaining, itemDescription(state)))
     end
 end
 
 function Announcements:OnAward(result, state)
     local config = self:GetConfig()
     if config.award and isOwner(state) and type(result) == "table" then
-        local item = result.itemLink or (state and state.itemLink) or "das Item"
+        local item = result.itemLink or (state and state.itemLink) or L("announcement.default_item", "das Item")
         local description = #item <= 180 and item or itemDescription(state)
         local suffix = result.choice and result.choice ~= "" and (" (" .. result.choice ..
             ((tonumber(result.roll) or 0) > 0 and (", " .. tostring(result.roll)) or "") .. ")") or ""
-        self:Send(description .. " geht an " .. tostring(result.winner or "unbekannt") .. suffix .. ".")
+        self:Send(L("announcement.award", "%s geht an %s%s.", description,
+            tostring(result.winner or L("announcement.unknown_player", "unbekannt")), suffix))
     end
 end
 

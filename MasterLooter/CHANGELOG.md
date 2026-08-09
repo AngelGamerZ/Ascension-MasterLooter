@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.17.0-beta
+
+- Added complete German and English localization for the interface, dynamic status text, tooltips, key bindings, and minimap actions
+- Added automatic client-language detection with English fallback for unsupported client locales
+- Added a profile-specific language selector for Automatic, Deutsch, and English with a clean UI reload after changes
+- Localized roll announcements, countdowns, awards, SR/SL replies, trade whispers, broadcast messages, and slash-command output
+- Added bidirectional translations for more than 150 actionable errors from loot, awards, rolls, SoftRes, GDKP, imports, raid management, and trades
+- Replaced the free-text announcement channel field with a native dropdown
+- Added Automatic, Raid Warning, Raid, Group, Say, Yell, Guild, and Officer channel choices with safe group and permission fallbacks
+- Preserved technical identifiers, player names, item links, and import/export payloads without translation
+- Added dedicated localization, announcement-channel, UI-coverage, and module-error regression suites
+- Reworked the GitHub front page for players with a clearer feature overview, installation guide, usage flow, and screenshot placeholders
+
 ## 0.16.8-beta
 
 - Item im Teilnehmer-Rollfenster als vollständige interaktive Hover- und Klickfläche umgesetzt

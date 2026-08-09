@@ -3,7 +3,10 @@
 -- repeated here and checked against the TOCs by the release build.
 local files = {
     "MasterLooter/Core/Namespace.lua", "MasterLooter/Core/Compat.lua",
-    "MasterLooter/Core/Events.lua", "MasterLooter/Core/DB.lua", "MasterLooter/Core/Bootstrap.lua",
+    "MasterLooter/Core/Events.lua", "MasterLooter/Core/Localization.lua",
+    "MasterLooter/Locales/enUS.lua", "MasterLooter/Locales/deDE.lua",
+    "MasterLooter/Locales/UI.lua", "MasterLooter/Locales/Errors.lua",
+    "MasterLooter/Core/DB.lua", "MasterLooter/Core/Bootstrap.lua",
     "MasterLooter/Modules/Comm.lua", "MasterLooter/Modules/BagInspector.lua",
     "MasterLooter/Modules/RollSession.lua", "MasterLooter/Modules/ChatRolls.lua",
     "MasterLooter/Modules/Loot.lua", "MasterLooter/Modules/LootLedger.lua", "MasterLooter/Modules/PackMule.lua", "MasterLooter/Modules/Trade.lua",

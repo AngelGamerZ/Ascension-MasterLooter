@@ -1,8 +1,9 @@
 ## Interface: 30300
 ## Title: MasterLooter Item Data
 ## Notes: Sparse Ascension item index for MasterLooter.
+## Notes-deDE: Kompakter Ascension-Gegenstandsindex für MasterLooter.
 ## Author: MasterLooter Team
-## Version: 0.16.8-beta
+## Version: 0.17.0-beta
 ## Dependencies: MasterLooter
 ## LoadOnDemand: 1
 ## SavedVariables: MasterLooterItemDB

@@ -10,6 +10,11 @@ local Trade = {
 }
 GA.Trade = Trade
 
+local function L(key, fallback, ...)
+    if type(GA.L) == "function" then return GA:L(key, ...) end
+    return select("#", ...) > 0 and string.format(fallback, ...) or fallback
+end
+
 local function timestamp()
     return (time and time()) or 0
 end
@@ -79,8 +84,8 @@ function Trade:RemindWinner(entry, force)
     local last = math.max(tonumber(entry.lastReminderAt) or 0, tonumber(reminder.last) or 0)
     if not force and (count >= self.REMINDER_LIMIT or timestamp() - last < self.REMINDER_COOLDOWN) then return false end
     if type(SendChatMessage) ~= "function" then return false end
-    local message = "MasterLooter: Du hast " .. tostring(entry.itemLink or "ein Item") .. " gewonnen. Bitte handle " ..
-        tostring((UnitName and UnitName("player")) or "den Lootmaster") .. " an, um es zu erhalten."
+    local message = L("trade.reminder", "MasterLooter: Du hast %s gewonnen. Bitte handle %s an, damit das Item übergeben werden kann.",
+        tostring(entry.itemLink or "ein Item"), tostring((UnitName and UnitName("player")) or "den Lootmaster"))
     local ok = pcall(SendChatMessage, message, "WHISPER", nil, entry.winner)
     if not ok then return false end
     entry.reminderCount, entry.lastReminderAt = count + 1, timestamp()
@@ -104,9 +109,8 @@ function Trade:NotifyAwardFallback(result)
         string.lower(baseName(result.winner) or result.winner)
     if self.fallbackNotices[key] then return false end
     local lootmaster = (UnitName and UnitName("player")) or "den Lootmaster"
-    local message = "MasterLooter: Du hast " .. tostring(result.itemLink or "ein Item") ..
-        " gewonnen. Direktvergabe war nicht möglich; ich nehme es an mich. Bitte handle " ..
-        tostring(lootmaster) .. " an, sobald wir in Reichweite sind."
+    local message = L("trade.fallback", "MasterLooter: %s konnte nicht direkt vergeben werden. Bitte handle %s für die Übergabe an.",
+        tostring(result.itemLink or "ein Item"), tostring(lootmaster))
     local ok = pcall(SendChatMessage, message, "WHISPER", nil, result.winner)
     if not ok then return false end
     self.fallbackNotices[key] = timestamp()
@@ -266,8 +270,9 @@ function Trade:WarnExpiring(entry)
             end
             local minutes = math.max(1, math.ceil(remaining / 60))
             if type(SendChatMessage) == "function" and entry.winner and not sameName(entry.winner, UnitName and UnitName("player")) then
-                pcall(SendChatMessage, "MasterLooter: Die geschaetzte Handelsfrist fuer " .. tostring(entry.itemLink or "dein Item") ..
-                    " endet in etwa " .. tostring(minutes) .. " Min. Bitte handle den Lootmaster an.", "WHISPER", nil, entry.winner)
+                pcall(SendChatMessage, L("trade.expiring",
+                    "MasterLooter: Die geschätzte Handelsfrist für %s endet in etwa %d Min. Bitte handle den Lootmaster an.",
+                    tostring(entry.itemLink or "dein Item"), minutes), "WHISPER", nil, entry.winner)
             end
             GA.Events:Emit("GA_TRADE_EXPIRY_WARNING", entry, remaining, threshold)
             return true
@@ -278,17 +283,23 @@ end
 
 function Trade:BroadcastPending()
     local groups = self:GetGroups()
-    if #groups == 0 then return nil, "Keine offenen Handelsitems." end
-    if type(SendChatMessage) ~= "function" then return nil, "Chat-API ist nicht verfuegbar." end
+    if #groups == 0 then return nil, L("trade.none", "Keine offenen Handelsitems.") end
+    if type(SendChatMessage) ~= "function" then return nil, L("trade.chat_unavailable", "Chat-API ist nicht verfügbar.") end
     local channel = "SAY"
     if type(GetNumRaidMembers) == "function" and (GetNumRaidMembers() or 0) > 0 then channel = "RAID_WARNING"
     elseif type(GetNumPartyMembers) == "function" and (GetNumPartyMembers() or 0) > 0 then channel = "PARTY" end
     local sent = 0
-    pcall(SendChatMessage, "MasterLooter: Offene Handelsitems (Fristen sind 3.3.5a-Schaetzungen):", channel)
+    pcall(SendChatMessage, L("trade.list.header", "MasterLooter: Offene Handelsitems (Fristen sind unter 3.3.5a Schätzungen):"), channel)
     for _, group in ipairs(groups) do
         local left = group.tradeExpiresAt and math.max(0, group.tradeExpiresAt - timestamp()) or nil
-        local text = tostring(group.winner or "?") .. ": " .. tostring(group.quantity or #group.entries) ..
-            " Item(s)" .. (left and (", ca. " .. tostring(math.ceil(left / 60)) .. " Min.") or "")
+        local text
+        if left then
+            text = L("trade.list.row", "%s: %d Item(s), noch ungefähr %d Min.", tostring(group.winner or "?"),
+                tonumber(group.quantity or #group.entries) or 0, math.ceil(left / 60))
+        else
+            text = L("trade.list.row_without_deadline", "%s: %d Item(s)", tostring(group.winner or "?"),
+                tonumber(group.quantity or #group.entries) or 0)
+        end
         if pcall(SendChatMessage, text, channel) then sent = sent + 1 end
     end
     return sent
