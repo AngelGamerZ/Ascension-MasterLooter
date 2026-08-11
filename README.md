@@ -36,8 +36,7 @@ Screenshots will be added here soon.
 
 | Settings and tools | Trade assistant and history |
 |---|---|
-| <img width="300" height="300" alt="Screenshot 2026-08-11 225032" src="https://github.com/user-attachments/assets/88797ee1-1989-4411-b4db-ecd0738c6ba6" /> | <img width="300" height="300" alt="Screenshot 2026-08-11 225044" src="https://github.com/user-attachments/assets/f6752ff2-6b98-445c-95da-23fb93f76be6" />
- |
+| <img width="300" height="300" alt="Screenshot 2026-08-11 225032" src="https://github.com/user-attachments/assets/88797ee1-1989-4411-b4db-ecd0738c6ba6" /> | <img width="300" height="300" alt="Screenshot 2026-08-11 225044" src="https://github.com/user-attachments/assets/f6752ff2-6b98-445c-95da-23fb93f76be6" /> |
 
 ## How a roll works
 
