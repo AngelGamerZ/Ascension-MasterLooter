@@ -113,9 +113,9 @@ end
 local function itemDescription(state)
     local link = state and state.itemLink
     if type(link) ~= "string" then return L("announcement.unknown_item", "unbekanntes Item") end
-    if #link <= 180 then return link end
+    if #link <= 100 then return link end
     local name = type(GetItemInfo) == "function" and GetItemInfo(link)
-    return name or L("announcement.item_number", "Item #%s", tostring(GA.Compat:GetItemID(link) or "?"))
+    return name and utf8Truncate(name, 80) or L("announcement.item_number", "Item #%s", tostring(GA.Compat:GetItemID(link) or "?"))
 end
 
 function Announcements:Send(message, channel)
@@ -141,7 +141,7 @@ local STOP_REASON = { TIMEOUT = "timeout", STOPPED = "stopped", CANCELLED = "can
 function Announcements:OnRollStarted(state)
     local config = self:GetConfig()
     if config.rollStart and isOwner(state) then
-        self:Send(L("announcement.roll_started", "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS.",
+        self:Send(L("announcement.roll_started", "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS. /roll 50 für Transmog.",
             itemDescription(state), tonumber(state.duration) or 30, tonumber(state.osRollMaximum) or 99))
     end
     if isOwner(state) then

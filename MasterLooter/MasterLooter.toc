@@ -3,7 +3,7 @@
 ## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
 ## Notes-deDE: Beuteverteilung und Raidwerkzeuge für Ascension WoW 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.17.1-beta
+## Version: 0.17.2-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 

@@ -80,7 +80,7 @@ function ChatRolls:OnSystemMessage(...)
     diagnostics.session = state and state.id or nil
     local choice = state and manager:GetChoiceForMaximum(state, maximum)
     if not state then diagnostics.status = "Roll erkannt, aber keine aktive Sitzung gefunden."; return nil end
-    if not choice or minimum ~= 1 then diagnostics.status = "Roll erkannt, aber der Bereich passt nicht zu MS/OS."; return nil end
+    if not choice or minimum ~= 1 then diagnostics.status = "Roll erkannt, aber der Bereich passt nicht zu MS/OS/Transmog."; return nil end
     local participant = {
         name = player, choice = choice, roll = roll, minimum = minimum, maximum = maximum,
         publicRoll = true, pending = false,

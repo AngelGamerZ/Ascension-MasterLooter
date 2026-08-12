@@ -230,6 +230,7 @@ function Theme:SetItemTooltip(widget, link)
 end
 function Theme:ShowTextTooltip() end
 function Theme:TakeDraggedItem() return nil end
+function Theme:FormatTime(seconds) return tostring(seconds or 0) end
 
 local chunk, loadError = loadfile("MasterLooter/UI/MasterLooterWindow.lua")
 if not chunk then error(loadError) end
@@ -271,6 +272,39 @@ expect(not window.startButton.enabled, "invalid OS maximum disables roll start")
 window:NormalizeOSMaximum()
 same(window.osMaximumEdit:GetText(), "2", "OS maximum is clamped to the documented minimum")
 expect(window.startButton.enabled, "normalized OS maximum restores roll start")
+window.osMaximumEdit:SetText("50")
+window:RefreshInputState(true)
+expect(not window.startButton.enabled, "OS /roll 50 is reserved for Transmog")
+window:NormalizeOSMaximum()
+same(window.osMaximumEdit:GetText(), "49", "reserved OS range normalizes to 49")
+expect(window.startButton.enabled, "safe OS maximum restores roll start")
+
+local rollChunk, rollLoadError = loadfile("MasterLooter/UI/RollWindow.lua")
+if not rollChunk then error(rollLoadError) end
+rollChunk("MasterLooter", GA)
+local rollWindow = GA.UI.RollWindow
+local rollFrame = rollWindow:EnsureFrame()
+expect(rollFrame ~= nil, "participant roll window builds with Transmog support")
+expect(rollWindow.buttons.MS and rollWindow.buttons.OS and rollWindow.buttons.TRANSMOG and rollWindow.buttons.PASS,
+    "participant roll window exposes all four actions")
+for _, button in pairs(rollWindow.buttons) do inside(button, rollFrame, "participant roll action stays inside the compact window") end
+rollWindow:ShowSession({ id = "legacy-ui", itemLink = item, duration = 30, expiresAt = 30, osRollMaximum = 99,
+    choices = { "MS", "OS", "PASS" } })
+expect(not rollWindow.buttons.TRANSMOG.enabled, "a legacy host cannot expose a non-functional Transmog action")
+rollWindow:ShowSession({ id = "transmog-ui", itemLink = item, duration = 30, expiresAt = 30, osRollMaximum = 99,
+    choices = { "MS", "OS", "TRANSMOG", "PASS" } })
+expect(rollWindow.buttons.TRANSMOG.enabled, "a Transmog-capable host enables the new action")
+same(rollWindow.buttons.TRANSMOG:GetText(), "Transmog (/50)", "Transmog button shows its public roll range")
+local randomMinimum, randomMaximum
+RandomRoll = function(minimum, maximum) randomMinimum, randomMaximum = minimum, maximum end
+rollWindow:Submit("TRANSMOG")
+same(randomMinimum, 1, "Transmog button starts a Blizzard roll at one")
+same(randomMaximum, 50, "Transmog button executes /roll 50")
+
+window:UpdateSession({ id = "transmog-master", itemLink = item, status = "ACTIVE", participants = {
+    stylist = { name = "Stylist", choice = "TRANSMOG", roll = 44 },
+} })
+same(window.rows[1].choice:GetText(), "Transmog", "loot-master table displays the Transmog category in full")
 
 -- Winner selection, pagination and manual +1.
 local participants = {}

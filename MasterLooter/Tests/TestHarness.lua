@@ -353,6 +353,21 @@ same(aliceGA.RollSession:GetState(publicOSSession.id).participants.bob.roll, 31,
     "a second public roll cannot replace the first accepted result")
 expect(aliceGA.RollSession:Stop(publicOSSession.id, "TEST"), "public OS session stops")
 
+local publicTransmogSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 42 })
+fire(alice, "CHAT_MSG_SYSTEM", "Stylehunter rolls 27 (1 - 50)")
+local publicTransmog = aliceGA.RollSession:GetState(publicTransmogSession.id).participants.stylehunter
+same(publicTransmog.choice, "TRANSMOG", "/roll 50 is classified as Transmog")
+same(publicTransmog.roll, 27, "public Transmog preserves the exact system-message result")
+same(publicTransmog.maximum, 50, "public Transmog records the reserved range")
+expect(publicTransmog.publicRoll, "a player without the addon can submit a Transmog roll")
+expect(aliceGA.RollSession:Stop(publicTransmogSession.id, "TEST"), "public Transmog session stops")
+
+local reservedRangeSession = aliceGA.RollSession:Start(itemLink, { duration = 30, osRollMaximum = 50 })
+same(reservedRangeSession.osRollMaximum, 49, "OS /roll 50 is remapped so Transmog stays unambiguous")
+same(bobGA.RollSession:GetState(reservedRangeSession.id).osRollMaximum, 49,
+    "the safe OS range is synchronized to addon users")
+expect(aliceGA.RollSession:Stop(reservedRangeSession.id, "TEST"), "reserved-range session stops")
+
 -- Gargul's chat-filter path is required on clients that display a system line
 -- without dispatching the regular event to every addon frame. The roller has
 -- no addon involvement in this scenario; only the loot master's filter runs.
@@ -402,7 +417,7 @@ same(bobGA.RollSession:GetState(countdownSession.id).status, "STOPPED", "timeout
 local intervalSeen, countdownSeen, finalSecondSeen, timeoutSeen, instructionsSeen, raidWarningSeen = false, false, false, false, false, false
 for index = chatStart + 1, #alice.chatMessages do
     local message = alice.chatMessages[index].message
-    if string.find(message, "/roll 100 für MS. /roll 42 für OS.", 1, true) then
+    if string.find(message, "/roll 100 für MS. /roll 42 für OS. /roll 50 für Transmog.", 1, true) then
         instructionsSeen = true
         raidWarningSeen = alice.chatMessages[index].channel == "RAID_WARNING"
     end
@@ -411,7 +426,7 @@ for index = chatStart + 1, #alice.chatMessages do
     if string.find(message, "1 Sekunde", 1, true) then finalSecondSeen = true end
     if string.find(message, "abgelaufen", 1, true) then timeoutSeen = true end
 end
-expect(instructionsSeen, "roll start announcement names the public MS and configured OS commands")
+expect(instructionsSeen, "roll start announcement names the public MS, OS, and Transmog commands")
 expect(raidWarningSeen, "authorized raid announcements use RAID_WARNING")
 expect(intervalSeen, "a 60-second roll posts ten-second interval reminders")
 expect(countdownSeen, "group announcements begin a per-second countdown at ten")
@@ -601,6 +616,7 @@ expect(aliceGA.SoftRes:IsReserved("Bob-Ascension", itemLink), "soft reserve norm
 expect(aliceGA.Priority:Set(itemLink, "Bob", 5), "priority accepts an item link")
 same(aliceGA.PlusOnes:Set("Bob", 2), 2, "+1 value persists")
 same(aliceGA.BoostedRolls:Set("Bob", 10), 10, "boosted roll value persists")
+same(aliceGA.PlusOnes:Set("Charlie", 2), 2, "comparison player can share the same mark count")
 local hardReserveEvents = 0
 aliceGA.Events:On("GA_HARDRES_CHANGED", function() hardReserveEvents = hardReserveEvents + 1 end)
 expect(aliceGA.SoftRes:SetHardReserved(itemLink, true), "hard reserve accepts an item link")
@@ -612,6 +628,23 @@ local rankingSession = { itemLink = itemLink, participants = {
 local ranked = aliceGA.Ranking:GetSorted(rankingSession)
 same(ranked[1].name, "Bob", "soft reserve and priority rank before raw roll")
 same(ranked[1].effectiveRoll, 50, "boosted roll is reflected in effective score")
+
+same(aliceGA.PlusOnes:Set("MarkedMS", 1), 1, "marked MS player receives one manual mark")
+local markPrioritySession = { itemLink = itemLink, participants = {
+    marked = { name = "MarkedMS", choice = "MS", roll = 100 },
+    clean = { name = "CleanTransmog", choice = "TRANSMOG", roll = 1 },
+} }
+same(aliceGA.Ranking:GetSorted(markPrioritySession)[1].name, "CleanTransmog",
+    "the manual mark count ranks before MS, OS, and Transmog")
+local choicePrioritySession = { itemLink = itemLink, participants = {
+    transmog = { name = "Style", choice = "TRANSMOG", roll = 50 },
+    os = { name = "Offspec", choice = "OS", roll = 1 },
+    ms = { name = "Mainspec", choice = "MS", roll = 1 },
+} }
+local choicePriority = aliceGA.Ranking:GetSorted(choicePrioritySession)
+same(choicePriority[1].choice, "MS", "MS ranks above OS when mark counts match")
+same(choicePriority[2].choice, "OS", "OS ranks above Transmog when mark counts match")
+same(choicePriority[3].choice, "TRANSMOG", "Transmog is the lowest awardable roll category")
 
 local gdkp = aliceGA.GDKP:Start("Harness Raid")
 expect(gdkp ~= nil, "GDKP session starts")

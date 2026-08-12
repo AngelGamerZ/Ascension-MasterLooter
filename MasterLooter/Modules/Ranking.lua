@@ -3,7 +3,7 @@ local _, GA = ...
 local Ranking = {}
 GA.Ranking = Ranking
 
-local choiceRank = { MS = 3, OS = 2, PASS = 0 }
+local choiceRank = { MS = 3, OS = 2, TRANSMOG = 1, PASS = 0 }
 
 function Ranking:Score(session, participant)
     local player, item = participant.name, session.itemLink
@@ -21,7 +21,9 @@ function Ranking:Score(session, participant)
         participant.itemCounts = GA.PlusOnes:GetStats(player)
     end
     participant.effectiveRoll = effectiveRoll
-    return { choiceRank[participant.choice] or 0, softRes, priority, -plusOne, effectiveRoll }
+    -- The manually maintained +1/mark count is the first priority. Players
+    -- with fewer marks rank first, followed by MS, OS, and Transmog.
+    return { -plusOne, choiceRank[participant.choice] or 0, softRes, priority, effectiveRoll }
 end
 
 function Ranking:Compare(session, a, b)

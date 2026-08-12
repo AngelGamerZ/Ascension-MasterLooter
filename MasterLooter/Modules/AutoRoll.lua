@@ -5,7 +5,7 @@ local _, GA = ...
 local AutoRoll = { MAX_RULES = 500 }
 GA.AutoRoll = AutoRoll
 
-local VALID_CHOICE = { MS = true, OS = true, PASS = true }
+local VALID_CHOICE = { MS = true, OS = true, TRANSMOG = true, PASS = true }
 local function clean(value, maximum)
     value = tostring(value or ""):gsub("[%c]", " ")
     return string.sub(value, 1, maximum or 160)
@@ -25,7 +25,7 @@ function AutoRoll:Add(rule)
     if type(rule) ~= "table" then return nil, "Regel fehlt" end
     local choice = string.upper(tostring(rule.choice or ""))
     local id = itemID(rule.item)
-    if not VALID_CHOICE[choice] then return nil, "Wahl muss MS, OS oder PASS sein" end
+    if not VALID_CHOICE[choice] then return nil, "Wahl muss MS, OS, TRANSMOG oder PASS sein" end
     if id == nil then return nil, "Ungültiges Item" end
     local store = self:GetStore()
     if #store.rules >= self.MAX_RULES then return nil, "Zu viele AutoRoll-Regeln" end

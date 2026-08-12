@@ -23,7 +23,7 @@ GA.Locale:Register("enUS", {
 
     ["announcement.unknown_item"] = "unknown item",
     ["announcement.item_number"] = "Item #%s",
-    ["announcement.roll_started"] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll %d for OS.",
+    ["announcement.roll_started"] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll %d for OS. /roll 50 for Transmog.",
     ["announcement.timeout"] = "The roll has timed out.",
     ["announcement.stopped"] = "The distribution was stopped.",
     ["announcement.cancelled"] = "The distribution was cancelled.",

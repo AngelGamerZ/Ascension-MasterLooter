@@ -23,7 +23,7 @@ GA.Locale:Register("deDE", {
 
     ["announcement.unknown_item"] = "unbekanntes Item",
     ["announcement.item_number"] = "Item #%s",
-    ["announcement.roll_started"] = "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS.",
+    ["announcement.roll_started"] = "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS. /roll 50 für Transmog.",
     ["announcement.timeout"] = "Die Rollzeit ist abgelaufen.",
     ["announcement.stopped"] = "Die Verteilung wurde beendet.",
     ["announcement.cancelled"] = "Die Verteilung wurde abgebrochen.",

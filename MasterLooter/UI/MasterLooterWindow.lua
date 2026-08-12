@@ -64,6 +64,7 @@ local function getRolls(session)
                 choice = choice,
                 roll = tonumber(field(roll, "roll", "value", "number")) or 0,
                 effectiveRoll = tonumber(field(roll, "effectiveRoll")) or tonumber(field(roll, "roll", "value", "number")) or 0,
+                plusOne = tonumber(field(roll, "plusOne")) or (GA.PlusOnes and GA.PlusOnes:Get(field(roll, "player", "name", "playerName") or key)) or 0,
                 awarded = awardedPlayers[baseName(field(roll, "player", "name", "playerName") or (type(key) == "string" and key) or "?")] ~= nil,
                 raw = roll,
             }) end
@@ -71,11 +72,13 @@ local function getRolls(session)
             table.insert(result, { player = tostring(key), choice = tostring(roll), roll = 0, raw = roll })
         end
     end
-    local priority = { MS = 3, OS = 2, PASS = 1 }
+    local priority = { MS = 3, OS = 2, TRANSMOG = 1, PASS = 0 }
     table.sort(result, function(a, b)
         if GA.Ranking and type(a.raw) == "table" and type(b.raw) == "table" and a.choice ~= "PASS" and b.choice ~= "PASS" then
             return GA.Ranking:Compare(session, a.raw, b.raw)
         end
+        local marksA, marksB = tonumber(a.plusOne) or 0, tonumber(b.plusOne) or 0
+        if marksA ~= marksB then return marksA < marksB end
         local pa, pb = priority[a.choice] or 0, priority[b.choice] or 0
         if pa ~= pb then return pa > pb end
         if a.roll ~= b.roll then return a.roll > b.roll end
@@ -120,7 +123,7 @@ function MasterLooterWindow:ShowParticipantResponse(action, participant)
     if type(participant) ~= "table" or (action ~= "ROLL" and action ~= "PASS") then return end
     local name = field(participant, "name", "player", "playerName") or "Unbekannt"
     local choice = field(participant, "choice", "category") or action
-    local labels = { MS = "MS", OS = "OS", PASS = "Passen" }
+    local labels = { MS = "MS", OS = "OS", TRANSMOG = "Transmog", PASS = "Passen" }
     local roll = tonumber(field(participant, "roll", "value")) or 0
     local suffix = choice ~= "PASS" and roll > 0 and (" – " .. tostring(roll)) or ""
     self:SetStatus(name .. ": " .. (labels[choice] or tostring(choice)) .. suffix, Theme.colors.green)
@@ -251,7 +254,7 @@ function MasterLooterWindow:EnsureFrame()
     self.tableFrame = tableFrame
 
     local headers = {
-        { text = "Spieler", x = 12 }, { text = "Wahl", x = 188 }, { text = "Wurf", x = 241 },
+        { text = "Spieler", x = 12 }, { text = "Wahl", x = 151 }, { text = "Wurf", x = 241 },
         { text = "Bilanz G/MS/OS", x = 288 }, { text = "+1", x = 438 },
     }
     for _, header in ipairs(headers) do
@@ -289,10 +292,10 @@ function MasterLooterWindow:EnsureFrame()
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         row.player = Theme:CreateLabel(row, "", 11)
         row.player:SetPoint("LEFT", row, "LEFT", 5, 0)
-        row.player:SetWidth(166)
+        row.player:SetWidth(132)
         row.choice = Theme:CreateLabel(row, "", 11)
-        row.choice:SetPoint("LEFT", row, "LEFT", 181, 0)
-        row.choice:SetWidth(46)
+        row.choice:SetPoint("LEFT", row, "LEFT", 144, 0)
+        row.choice:SetWidth(82)
         row.roll = Theme:CreateLabel(row, "", 11)
         row.roll:SetPoint("LEFT", row, "LEFT", 234, 0)
         row.roll:SetWidth(50)
@@ -343,8 +346,8 @@ function MasterLooterWindow:GetInputIssue()
         return "DURATION", "Die Rollzeit muss eine ganze Zahl zwischen 5 und 300 Sekunden sein."
     end
     local osMaximum = tonumber(self.osMaximumEdit and self.osMaximumEdit:GetText())
-    if not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 then
-        return "OS_MAXIMUM", "Der Lootmaster muss für OS eine ganze Zahl zwischen 2 und 99 festlegen."
+    if not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 or osMaximum == 50 then
+        return "OS_MAXIMUM", "Der Lootmaster muss für OS eine ganze Zahl zwischen 2 und 99 außer 50 festlegen."
     end
     return nil, nil, duration, osMaximum
 end
@@ -396,6 +399,7 @@ function MasterLooterWindow:NormalizeOSMaximum()
     local profile = GA.DB and GA.DB:GetProfile()
     local maximum = tonumber(self.osMaximumEdit:GetText()) or tonumber(profile and profile.osRollMaximum) or 99
     maximum = math.max(2, math.min(99, math.floor(maximum + 0.5)))
+    if maximum == 50 then maximum = 49 end
     self.osMaximumEdit:SetText(tostring(maximum))
     self:RefreshInputState(false)
 end
@@ -532,7 +536,7 @@ function MasterLooterWindow:StartSession()
     local ok, result, errorMessage = pcall(method, manager, itemLink, {
         duration = duration,
         note = note,
-        choices = { "MS", "OS", "PASS" },
+        choices = { "MS", "OS", "TRANSMOG", "PASS" },
         osRollMaximum = osMaximum,
         lootQueueID = self.sourceLoot and self.sourceLoot.queueID,
         lootSlot = self.sourceLoot and self.sourceLoot.slot,
@@ -624,7 +628,7 @@ function MasterLooterWindow:RefreshRows()
             row.absoluteIndex = absoluteIndex
             row.data = roll
             row.player:SetText(roll.player .. (roll.awarded and " |cff66cc66[vergeben]|r" or ""))
-            row.choice:SetText(roll.choice)
+            row.choice:SetText(roll.choice == "TRANSMOG" and "Transmog" or roll.choice)
             if roll.effectiveRoll and roll.effectiveRoll ~= roll.roll then
                 row.roll:SetText(tostring(roll.roll) .. "→" .. tostring(roll.effectiveRoll))
             else

@@ -97,6 +97,7 @@ $identityUiText = @{
     "MasterLooter" = $true; "SoftRes" = $true; "Hard Reserve" = $true; "GDKP" = $true; "PackMule" = $true
     "Import / Export" = $true; "Profile" = $true; "Item" = $true; "Items" = $true; "MS" = $true; "OS" = $true
     "PASS" = $true; "+1" = $true; "Roll" = $true; "Raid" = $true; "Status" = $true; "IDLE" = $true
+    "Transmog" = $true; "Transmog (/50)" = $true
 }
 
 foreach ($path in $productionFiles) {

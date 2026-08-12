@@ -17,6 +17,7 @@ RollSession.counter = RollSession.counter or 0
 RollSession.handlersBound = RollSession.handlersBound or false
 RollSession.DEFAULT_DURATION = 30
 RollSession.DEFAULT_OS_ROLL_MAXIMUM = 99
+RollSession.TRANSMOG_ROLL_MAXIMUM = 50
 RollSession.CLIENT_TIMEOUT_GRACE = 8
 RollSession.SYNC_INTERVAL = 5
 RollSession.SESSION_TTL = 900
@@ -157,7 +158,7 @@ local function decodeList(value)
 end
 
 local function defaultChoices()
-    return { "MS", "OS", "PASS" }
+    return { "MS", "OS", "TRANSMOG", "PASS" }
 end
 
 local function sanitizeChoices(choices)
@@ -175,7 +176,10 @@ end
 
 local function sanitizeOSMaximum(value)
     value = floor(tonumber(value) or RollSession.DEFAULT_OS_ROLL_MAXIMUM)
-    return math.max(2, math.min(99, value))
+    value = math.max(2, math.min(99, value))
+    -- /roll 50 is reserved for Transmog and must remain unambiguous in
+    -- Blizzard system messages, including rolls from players without the addon.
+    return value == RollSession.TRANSMOG_ROLL_MAXIMUM and 49 or value
 end
 
 local function sanitizeAwardLimit(value)
@@ -390,6 +394,7 @@ function RollSession:GetChoiceForMaximum(sessionID, maximum)
     maximum = tonumber(maximum)
     if not state or not maximum then return nil end
     if maximum == 100 then return "MS" end
+    if maximum == self.TRANSMOG_ROLL_MAXIMUM and hasChoice(state, "TRANSMOG") then return "TRANSMOG" end
     if maximum == sanitizeOSMaximum(state.osRollMaximum) then return "OS" end
     return nil
 end
@@ -587,7 +592,9 @@ local function receiveRoll(fields, sender)
     state.rollAssignments = state.rollAssignments or {}
     local roll = 0
     if choice ~= "PASS" then
-        roll = state.rollAssignments[key] or math.random(1, 100)
+        local maximum = choice == "MS" and 100 or (choice == "OS" and sanitizeOSMaximum(state.osRollMaximum)) or
+            (choice == "TRANSMOG" and RollSession.TRANSMOG_ROLL_MAXIMUM) or 100
+        roll = state.rollAssignments[key] or math.random(1, maximum)
         state.rollAssignments[key] = roll
     end
     local note = string.sub(tostring(fields[5] or ""), 1, 512)

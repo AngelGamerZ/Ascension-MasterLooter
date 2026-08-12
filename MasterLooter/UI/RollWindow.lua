@@ -80,7 +80,7 @@ function RollWindow:EnsureFrame()
 
     local status = Theme:CreateLabel(frame, "Bitte wähle deine Roll-Kategorie.", 10, Theme.colors.muted)
     status:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
-    status:SetWidth(228)
+    status:SetWidth(174)
     status:SetJustifyH("LEFT")
     self.status = status
 
@@ -124,9 +124,10 @@ function RollWindow:EnsureFrame()
     self.timer = timer
 
     local buttons = {
-        { key = "MS", text = "MS", x = 244, width = 86 },
-        { key = "OS", text = "OS", x = 334, width = 86 },
-        { key = "PASS", text = "Passen", x = 424, width = 86 },
+        { key = "MS", text = "MS", x = 188, width = 70 },
+        { key = "OS", text = "OS", x = 262, width = 70 },
+        { key = "TRANSMOG", text = "Transmog", x = 336, width = 98 },
+        { key = "PASS", text = "Passen", x = 438, width = 72 },
     }
     self.buttons = {}
     for _, definition in ipairs(buttons) do
@@ -155,8 +156,8 @@ end
 
 function RollWindow:SetButtonsEnabled(enabled)
     if not self.buttons then return end
-    for _, button in pairs(self.buttons) do
-        if enabled then button:Enable() else button:Disable() end
+    for choice, button in pairs(self.buttons) do
+        if enabled and (not self.availableChoices or self.availableChoices[choice]) then button:Enable() else button:Disable() end
     end
 end
 
@@ -177,8 +178,15 @@ function RollWindow:ShowSession(session)
     self.itemLink = value(session, "itemLink", "link") or value(session.item, "link", "itemLink")
     local duration = tonumber(value(session, "duration", "seconds", "timeout")) or 30
     self.osRollMaximum = math.max(2, math.min(99, math.floor(tonumber(value(session, "osRollMaximum", "osMaximum")) or 99)))
+    if self.osRollMaximum == 50 then self.osRollMaximum = 49 end
+    self.availableChoices = nil
+    if type(session.choices) == "table" then
+        self.availableChoices = {}
+        for _, choice in ipairs(session.choices) do self.availableChoices[tostring(choice)] = true end
+    end
     if self.buttons and self.buttons.MS then self.buttons.MS:SetText("MS (/100)") end
     if self.buttons and self.buttons.OS then self.buttons.OS:SetText("OS (/" .. tostring(self.osRollMaximum) .. ")") end
+    if self.buttons and self.buttons.TRANSMOG then self.buttons.TRANSMOG:SetText("Transmog (/50)") end
     self.endsAt = tonumber(value(session, "endsAt", "endTime", "expiresAt")) or (now() + duration)
     self.elapsed = 0
 
@@ -215,7 +223,8 @@ function RollWindow:Submit(choice)
         end
         return
     end
-    local maximum = choice == "MS" and 100 or (choice == "OS" and self.osRollMaximum)
+    local maximum = choice == "MS" and 100 or (choice == "OS" and self.osRollMaximum) or
+        (choice == "TRANSMOG" and 50)
     if not maximum or type(RandomRoll) ~= "function" then
         self.status:SetText("Die /roll-Funktion ist nicht verfügbar.")
         self.status:SetTextColor(unpack(Theme.colors.red))

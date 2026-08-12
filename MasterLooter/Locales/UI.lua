@@ -4,6 +4,7 @@ local _, GA = ...
 -- counterparts here makes those strings localizable without coupling window
 -- layout code to a specific language. New text should use semantic GA:L keys.
 local raw = {
+    ["Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS. /roll 50 für Transmog."] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll %d for OS. /roll 50 for Transmog.",
     ["Übersicht"] = "Overview",
     ["Einstellungen"] = "Settings",
     ["Einstellungen öffnen"] = "Open settings",
@@ -383,6 +384,8 @@ local raw = {
     ["Noch keine Systemmeldung empfangen."] = "No system message received yet.",
     ["Noch keine /roll-Systemmeldung erkannt."] = "No /roll system message detected yet.",
     ["Roll erkannt, aber der Bereich passt nicht zu MS/OS."] = "Roll detected, but its range does not match MS/OS.",
+    ["Roll erkannt, aber der Bereich passt nicht zu MS/OS/Transmog."] = "Roll detected, but its range does not match MS/OS/Transmog.",
+    ["Der Lootmaster muss für OS eine ganze Zahl zwischen 2 und 99 außer 50 festlegen."] = "The loot master must set OS to a whole number between 2 and 99, excluding 50.",
     ["Erfasst: "] = "Recorded: ", ["Bereits erfasst: "] = "Already recorded: ", ["Nicht übernommen: "] = "Not recorded: ",
     ["keine"] = "none", ["keiner"] = "none", ["keine Diagnose"] = "no diagnostic result",
     ["ID\tZeit\tStatus\tItem\tAnzahl\tSpieler\tBoss\tInstanz\tGenauigkeit\tGrund"] = "ID\tTime\tStatus\tItem\tAmount\tPlayer\tBoss\tInstance\tAccuracy\tReason",

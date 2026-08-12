@@ -5,6 +5,35 @@ local Theme = GA.UI.Theme
 local Launcher = {}
 GA.UI.Launcher = Launcher
 
+local FALLBACK = {
+    ["command.feature_unavailable"] = "This window is not available yet.",
+    ["launcher.left"] = "Left-click: Overview & settings",
+    ["launcher.right"] = "Right-click: Import / Export",
+    ["launcher.middle"] = "Middle-click: History",
+    ["launcher.shift_left"] = "Shift + left-click: SoftRes",
+    ["launcher.shift_right"] = "Shift + right-click: Loot master",
+    ["binding.settings"] = "Open settings",
+    ["binding.lootmaster"] = "Open loot master",
+    ["binding.history"] = "Open history",
+    ["binding.trade"] = "Open trade assistant",
+}
+
+-- The minimap button may be skinned or queried while addon initialization is
+-- still settling. Never require the convenience GA:L method to exist here;
+-- use the localization service directly when available and English otherwise.
+local function L(key)
+    if type(GA.L) == "function" then
+        local ok, value = pcall(GA.L, GA, key)
+        if ok and type(value) == "string" and value ~= "" then return value end
+    end
+    local service = GA.Localization or GA.Locale
+    if type(service) == "table" and type(service.Get) == "function" then
+        local ok, value = pcall(service.Get, service, key)
+        if ok and type(value) == "string" and value ~= "" and value ~= key then return value end
+    end
+    return FALLBACK[key] or tostring(key or "")
+end
+
 Launcher.ACTIONS = {
     CLICK = "SettingsWindow",
     RIGHTCLICK = "ImportExportWindow",
@@ -46,7 +75,7 @@ function Launcher:OpenWindow(names)
             if GA.ReportError then GA.ReportError("Launcher.OpenWindow." .. tostring(name), ok and "Window reported an open failure." or result) end
         end
     end
-    GA:Print(GA:L("command.feature_unavailable"))
+    if type(GA.Print) == "function" then GA:Print(L("command.feature_unavailable")) end
     return false
 end
 
@@ -66,11 +95,11 @@ function Launcher:ShowTooltip(owner)
     if not Theme or type(Theme.ShowTextTooltip) ~= "function" then return false end
     return Theme:ShowTextTooltip(owner, {
         { "MasterLooter", 1, 0.82, 0.2 },
-        GA:L("launcher.left"),
-        GA:L("launcher.right"),
-        GA:L("launcher.middle"),
-        GA:L("launcher.shift_left"),
-        GA:L("launcher.shift_right"),
+        L("launcher.left"),
+        L("launcher.right"),
+        L("launcher.middle"),
+        L("launcher.shift_left"),
+        L("launcher.shift_right"),
     }, "ANCHOR_LEFT")
 end
 
@@ -115,10 +144,10 @@ function Launcher:OnInitialize() self:EnsureButton(); self:Refresh(); return tru
 GA:RegisterModule("Launcher", Launcher)
 
 BINDING_HEADER_MASTERLOOTER = "MasterLooter"
-BINDING_NAME_MASTERLOOTER_SETTINGS = GA:L("binding.settings")
-BINDING_NAME_MASTERLOOTER_LOOTMASTER = GA:L("binding.lootmaster")
-BINDING_NAME_MASTERLOOTER_HISTORY = GA:L("binding.history")
-BINDING_NAME_MASTERLOOTER_TRADE = GA:L("binding.trade")
+BINDING_NAME_MASTERLOOTER_SETTINGS = L("binding.settings")
+BINDING_NAME_MASTERLOOTER_LOOTMASTER = L("binding.lootmaster")
+BINDING_NAME_MASTERLOOTER_HISTORY = L("binding.history")
+BINDING_NAME_MASTERLOOTER_TRADE = L("binding.trade")
 function MasterLooter_ToggleSettings() if GA.UI.SettingsWindow then GA.UI.SettingsWindow:Toggle() end end
 function MasterLooter_ToggleLootmaster() if GA.UI.MasterLooterWindow then GA.UI.MasterLooterWindow:Toggle() end end
 function MasterLooter_ToggleHistory() if GA.UI.HistoryWindow then GA.UI.HistoryWindow:Toggle() end end

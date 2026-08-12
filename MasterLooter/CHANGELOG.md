@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2-beta
+- Fixed minimap tooltip startup when the localization helper is unavailable
+- Added Transmog rolls using `/roll 50`
+- Added the Transmog button, announcements, tracking, and loot-master display
+- Added mark-first ranking followed by MS, OS, and Transmog
+- Reserved `/roll 50` for Transmog to prevent ambiguous OS rolls
+
 ## 0.17.1-beta
 - Fixed settings startup caused by legacy dropdown menus
 - Fixed mixed German and English interface text

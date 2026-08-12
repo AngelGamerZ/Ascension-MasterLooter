@@ -22,6 +22,7 @@ $tests = @(
     "MasterLooter/Tests/ResetWindowsSmoke.lua",
     "MasterLooter/Tests/AdminWindowLayoutSmoke.lua",
     "MasterLooter/Tests/SettingsWindowBuildSmoke.lua",
+    "MasterLooter/Tests/LauncherFallbackSmoke.lua",
     "MasterLooter/Tests/ProfilesItemSearchSmoke.lua",
     "MasterLooter/Tests/TooltipSafetySmoke.lua",
     "MasterLooter/Tests/TooltipDebugSmoke.lua",

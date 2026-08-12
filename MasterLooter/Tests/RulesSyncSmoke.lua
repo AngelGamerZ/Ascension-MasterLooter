@@ -61,17 +61,19 @@ GA.AutoRoll:OnInitialize(); GA.SoftRes:OnInitialize(); GA.RuleSync:OnInitialize(
 -- AutoRoll is recommendation-only and chooses exact/specific rules predictably.
 local wildcard = assert(GA.AutoRoll:Add({ item = "*", choice = "PASS", priority = 1, reason = "Standard passen" }))
 local exact = assert(GA.AutoRoll:Add({ item = 1985, choice = "MS", priority = 0, reason = "Schild für Main-Spec" }))
+local transmogRule = assert(GA.AutoRoll:Add({ item = 3000, choice = "TRANSMOG", priority = 0, reason = "Style" }))
 local preview = GA.AutoRoll:Preview("|Hitem:1985:0:0:0|h[Kam's Buckler]|h", { player = "Lootmaster" })
 expect(preview.matched, "AutoRoll matches a configured item")
 same(preview.choice, "MS", "exact item rule outranks wildcard")
 same(preview.reason, "Schild für Main-Spec", "preview explains the selected rule")
 same(GA.AutoRoll:Preview(9999).choice, "PASS", "wildcard rule covers unmatched items")
+same(GA.AutoRoll:Preview(3000).choice, "TRANSMOG", "AutoRoll accepts the Transmog category")
 expect(not GA.AutoRoll:Add({ item = 1, choice = "NEED" }), "unknown roll action is rejected")
 local autoPaste = GA.AutoRoll:Export()
 expect(string.find(autoPaste, "ItemID\tWahl", 1, true), "AutoRoll exports a paste header")
 GA.DB.data.autoRoll = {}
 local importedAuto, rejectedAuto = GA.AutoRoll:Import(autoPaste)
-same(importedAuto, 2, "AutoRoll paste round-trips all rules")
+same(importedAuto, 3, "AutoRoll paste round-trips all rules")
 same(rejectedAuto, 0, "valid AutoRoll paste has no rejected rows")
 same(GA.AutoRoll:Preview(1985).choice, "MS", "imported AutoRoll rule remains usable")
 

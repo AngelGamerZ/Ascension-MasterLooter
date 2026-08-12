@@ -28,6 +28,7 @@ local raw = {
     -- Auto-roll, SoftRes, +1 and rules
     ["Regel fehlt"] = "Rule is missing",
     ["Wahl muss MS, OS oder PASS sein"] = "Choice must be MS, OS, or PASS",
+    ["Wahl muss MS, OS, TRANSMOG oder PASS sein"] = "Choice must be MS, OS, TRANSMOG, or PASS",
     ["Ungültiges Item"] = "Invalid item",
     ["Zu viele AutoRoll-Regeln"] = "Too many auto-roll rules",
     ["Limit muss zwischen 0 und 100 liegen"] = "The limit must be between 0 and 100",
