@@ -32,7 +32,7 @@ Screenshots will be added here soon.
 
 | Loot-master window | Participant roll window |
 |---|---|
-| <img width="300" height="300" alt="Screenshot 2026-08-10 214210" src="https://github.com/user-attachments/assets/1e5ab36c-3b27-47bf-bf9c-52c5242be652" /> | _Screenshot coming soon_ |
+| <img width="300" height="300" alt="Screenshot 2026-08-10 214210" src="https://github.com/user-attachments/assets/1e5ab36c-3b27-47bf-bf9c-52c5242be652" /> | <img width="929" height="152" alt="Screenshot 2026-08-13 223938" src="https://github.com/user-attachments/assets/a3a8f34a-1858-4466-8f11-7323a223dd25" /> |
 
 | Settings and tools | Trade assistant and history |
 |---|---|
