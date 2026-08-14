@@ -28,15 +28,37 @@ MasterLooter keeps loot distribution clear and visible for the entire group. Pla
 
 ## Screenshots
 
-Screenshots will be added here soon.
+### Loot-master window
 
-| Loot-master window | Participant roll window |
-|---|---|
-| <img width="300" height="300" alt="Screenshot 2026-08-10 214210" src="https://github.com/user-attachments/assets/1e5ab36c-3b27-47bf-bf9c-52c5242be652" /> | <img width="929" height="152" alt="Screenshot 2026-08-13 223938" src="https://github.com/user-attachments/assets/a3a8f34a-1858-4466-8f11-7323a223dd25" /> |
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/1e5ab36c-3b27-47bf-bf9c-52c5242be652">
+    <img src="https://github.com/user-attachments/assets/1e5ab36c-3b27-47bf-bf9c-52c5242be652" alt="Loot-master window with roll results and award controls" width="760">
+  </a>
+</p>
 
-| Settings and tools | Trade assistant and history |
-|---|---|
-| <img width="300" height="300" alt="Screenshot 2026-08-11 225032" src="https://github.com/user-attachments/assets/88797ee1-1989-4411-b4db-ecd0738c6ba6" /> | <img width="300" height="300" alt="Screenshot 2026-08-11 225044" src="https://github.com/user-attachments/assets/f6752ff2-6b98-445c-95da-23fb93f76be6" /> |
+### Participant roll window
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/a3a8f34a-1858-4466-8f11-7323a223dd25">
+    <img src="https://github.com/user-attachments/assets/a3a8f34a-1858-4466-8f11-7323a223dd25" alt="Participant roll window with MS, OS, and Transmog choices" width="760">
+  </a>
+</p>
+
+### Settings and tools
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/88797ee1-1989-4411-b4db-ecd0738c6ba6">
+    <img src="https://github.com/user-attachments/assets/88797ee1-1989-4411-b4db-ecd0738c6ba6" alt="MasterLooter settings and tools overview" width="760">
+  </a>
+</p>
+
+### Trade assistant and history
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/f6752ff2-6b98-445c-95da-23fb93f76be6">
+    <img src="https://github.com/user-attachments/assets/f6752ff2-6b98-445c-95da-23fb93f76be6" alt="Trade assistant with pending item awards and history" width="760">
+  </a>
+</p>
 
 ## How a roll works
 
