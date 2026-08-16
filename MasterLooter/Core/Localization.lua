@@ -59,6 +59,11 @@ function Locale:RegisterPhrases(values)
             self.phrasesReverse[#self.phrasesReverse + 1] = { value[2], value[1] }
         end
     end
+    -- Longer fragments must win before shorter fragments contained in them.
+    -- Otherwise a generic word such as "Winner" can partially translate a
+    -- complete status prefix and leave mixed-language text behind.
+    table.sort(self.phrases, function(left, right) return #left[1] > #right[1] end)
+    table.sort(self.phrasesReverse, function(left, right) return #left[1] > #right[1] end)
 end
 
 local function escapePattern(value)

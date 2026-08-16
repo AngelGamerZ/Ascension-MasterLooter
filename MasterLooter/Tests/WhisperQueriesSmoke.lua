@@ -3,7 +3,7 @@ local function expect(value, message) assertions = assertions + 1; if not value 
 local function same(actual, expected, message) expect(actual == expected, message .. " (expected " .. tostring(expected) .. ", got " .. tostring(actual) .. ")") end
 
 local now, raidMaster = 100, 1
-local profile = { language = "enUS" }
+local profile = { language = "enUS", commandAnnouncementsEnabled = true }
 local sent, callbacks, registered = {}, {}, {}
 function GetTime() return now end
 function UnitName(unit)
@@ -22,7 +22,10 @@ local GA = {
     DB = { data = { softRes = { reservations = { ["1985"] = { alice = 2 }, ["2000"] = { bob = 1 } } } }, GetProfile = function() return profile end },
     Events = {},
     PlusOnes = { Get = function(_, player) return string.lower(tostring(player)):find("alice", 1, true) and 3 or 0 end },
-    Announcements = { ResolveChannel = function() return "RAID_WARNING" end },
+    Announcements = { ResolveChannel = function(_, requested)
+        expect(requested == nil, "command announcement uses the configured announcement channel")
+        return "RAID_WARNING"
+    end },
 }
 function GA:RegisterModule(name, module) self.modules[name] = module end
 function GA.Events:On(event, callback) callbacks[event] = callback end
@@ -82,5 +85,15 @@ same(#sent, afterAliases, "unchanged master-looter state is not announced twice"
 raidMaster = 2; callbacks.PARTY_LOOT_METHOD_CHANGED()
 raidMaster = 1; callbacks.PARTY_LOOT_METHOD_CHANGED()
 same(#sent, afterAliases + 1, "regaining master looter announces commands again")
+
+profile.commandAnnouncementsEnabled = false
+raidMaster = 2; callbacks.PARTY_LOOT_METHOD_CHANGED()
+raidMaster = 1; callbacks.PARTY_LOOT_METHOD_CHANGED()
+same(#sent, afterAliases + 1, "disabled command announcements stay disabled after master-looter changes")
+expect(not GA.WhisperQueries:AnnounceCommands(), "disabled command announcement does not send directly")
+
+profile.commandAnnouncementsEnabled = true
+expect(GA.WhisperQueries:AnnounceCommands(), "command announcement can be enabled again")
+same(#sent, afterAliases + 2, "re-enabled command announcement is sent")
 
 print("PASS: " .. assertions .. " whisper-query assertions")

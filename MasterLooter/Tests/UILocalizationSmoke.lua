@@ -53,6 +53,13 @@ for source, translated in pairs(englishSamples) do
     same(GA:Localize(source), translated, "English UI translation for " .. source)
 end
 same(GA:Localize("Gewinner: Alice (MS)"), "Winner: Alice (MS)", "dynamic German UI status translates to English")
+same(GA:Localize("MasterLooter 0.17.3-beta – Einstellungen"), "MasterLooter 0.17.3-beta — Settings",
+    "dynamic versioned settings title translates completely to English")
+same(GA:Localize("Einstellungen konnten nicht geöffnet werden: Theme-Modul ist nicht verfügbar."),
+    "Settings could not be opened: Theme module is unavailable.", "dynamic settings errors contain no German remainder")
+same(GA:Localize("Beendet – Gewinner: Alice"), "Ended — winner: Alice", "dynamic auction winner status is not partially translated")
+same(GA:L("PROFILE_DELETE_CONFIRM", "Raid"), "Click again to delete Raid.",
+    "dynamic profile deletion prompt uses one complete localized format")
 same(GA:Localize("Seite 2 / 5  (40 Einträge)"), "Page 2 / 5  (40 entries)", "dynamic page status translates to English")
 same(GA:Localize("Letzter Klick: keiner"), "Last click: none", "diagnostic none value does not corrupt word endings")
 local englishDiagnostic = GA:Localize("MasterLooter – Gesamtdiagnose\nLua-Version: 0.17.1-beta\nAktive Sitzung: keine\nsichtbar=ja")
@@ -81,6 +88,12 @@ same(GA:Localize("Tracker initialisiert: true\nDirekter Eventframe: true\nSitzun
 
 profile.language = "deDE"
 GA.Locale.pendingMode = nil
+same(GA:L("SETTINGS_WINDOW_TITLE", "0.17.3-beta"), "MasterLooter 0.17.3-beta – Einstellungen",
+    "German settings title preserves version punctuation")
+same(GA:L("PROFILE_DELETE_CONFIRM", "Raid"), "Noch einmal klicken, um Raid zu löschen.",
+    "German profile deletion prompt uses one complete localized format")
+same(GA:Localize("MasterLooter 0.17.3-beta · WoW 3.3.5a"), "MasterLooter 0.17.3-beta · WoW 3.3.5a",
+    "German reverse localization never rewrites version punctuation")
 for german, english in pairs(englishSamples) do
     same(GA:Localize(english), german, "English source literal translates back to German")
 end

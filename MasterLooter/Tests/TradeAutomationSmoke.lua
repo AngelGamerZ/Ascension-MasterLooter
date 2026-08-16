@@ -5,9 +5,10 @@ local function expect(value, message) assertions = assertions + 1; if not value 
 local function same(actual, wanted, message) expect(actual == wanted, message .. " (wanted " .. tostring(wanted) .. ", got " .. tostring(actual) .. ")") end
 
 local listeners = {}
+local currentProfile = { tradeWhispersEnabled = true }
 local GA = {
     modules = {},
-    DB = { data = { character = {} } },
+    DB = { data = { character = {} }, GetProfile = function() return currentProfile end },
     Events = {
         On = function(_, event, callback, owner) listeners[event] = listeners[event] or {}; listeners[event][#listeners[event] + 1] = { callback, owner } end,
         Emit = function(_, event, ...)
@@ -204,5 +205,34 @@ same(initiations[#initiations], "party3", "addon peer is also automatically cont
 bags[2] = { bag = 0, slot = 7, link = "|Hitem:7002:0:0:0|h[Coordinated 2]|h", count = 1, locked = false }
 award("c2", 7002, "Dave")
 same(requests, 1, "handshake requests are rate-limited per winner")
+
+-- The profile switch suppresses every automatic trade whisper without
+-- disabling queue assessment, coordination or automatic trade initiation.
+currentProfile.tradeWhispersEnabled = false
+GA.Trade.pending, GA.Trade.preparedGroup, GA.Trade.placedThisTrade = {}, nil, {}
+GA.Trade.reminders, GA.Trade.fallbackNotices, GA.Trade.autoInitiations = {}, {}, {}
+GA.Trade.state, GA.Trade.partner, inRange = "IDLE", nil, false
+bags = { { bag = 0, slot = 8, link = "|Hitem:8001:0:0:0|h[Silent delivery]|h", count = 1, locked = false } }
+local silentBaseline = #whispers
+local silent = award("silent1", 8001, "Charlie")
+same(silent.status, "READY", "disabled whispers do not prevent delivery assessment")
+same(#whispers, silentBaseline, "disabled trade whispers suppress out-of-range reminders")
+expect(not GA.Trade:NotifyAwardFallback({ sessionID = "silent-fallback", itemLink = silent.itemLink, winner = "Charlie" }),
+    "disabled trade whispers suppress immediate fallback notices")
+same(#whispers, silentBaseline, "fallback suppression sends no private message")
+silent.tradeExpiresAt = now + 60
+expect(GA.Trade:WarnExpiring(silent), "disabled trade whispers still record the crossed expiry warning")
+same(#whispers, silentBaseline, "disabled trade whispers suppress expiry warnings")
+
+inRange = true
+GA.Trade.state, GA.Trade.partner = "IDLE", nil
+local initiationBaseline = #initiations
+GA.Trade:RefreshWinnerStatuses(true)
+same(#initiations, initiationBaseline + 1, "trade automation remains active while whispers are disabled")
+
+currentProfile.tradeWhispersEnabled = true
+inRange, GA.Trade.state, GA.Trade.partner = false, "IDLE", nil
+expect(GA.Trade:RemindWinner(silent, true), "re-enabled trade whispers allow new reminders")
+same(#whispers, silentBaseline + 1, "re-enabled trade whispers send a private reminder")
 
 print("PASS: " .. assertions .. " trade automation smoke assertions")

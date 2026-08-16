@@ -60,14 +60,16 @@ function TradeWindow:EnsureFrame()
     local take = Theme:CreateButton(frame, "An mich nehmen", 125, 27); take:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 29); take:SetScript("OnClick", function() TradeWindow:TakePendingAward() end); take:Disable(); self.take = take
     local prepare = Theme:CreateButton(frame, "Taschen prüfen", 115, 27); prepare:SetPoint("LEFT", take, "RIGHT", 8, 0); prepare:SetScript("OnClick", function() TradeWindow:PrepareSelected() end); prepare:Disable(); self.prepare = prepare
     local place = Theme:CreateButton(frame, "Items einlegen", 115, 27); place:SetPoint("LEFT", prepare, "RIGHT", 8, 0); place:SetScript("OnClick", function() TradeWindow:PlaceSelected() end); place:Disable(); self.place = place
-    local note = Theme:CreateLabel(frame, "Items werden eingelegt; den Handel immer selbst annehmen.", 11, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 35); note:SetWidth(280); note:SetJustifyH("RIGHT")
+    local delivered = Theme:CreateButton(frame, "Als vergeben", 95, 27); delivered:SetPoint("LEFT", place, "RIGHT", 8, 0); delivered:SetScript("OnClick", function() TradeWindow:CloseSelected(true) end); delivered:Disable(); self.delivered = delivered
+    local cancel = Theme:CreateButton(frame, "Abbrechen", 95, 27); cancel:SetPoint("LEFT", delivered, "RIGHT", 8, 0); cancel:SetScript("OnClick", function() TradeWindow:CloseSelected(false) end); cancel:Disable(); self.cancel = cancel
+    local note = Theme:CreateLabel(frame, "Items werden eingelegt; den Handel immer selbst annehmen.", 11, Theme.colors.muted); note:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 8); note:SetWidth(590); note:SetJustifyH("RIGHT")
     frame:SetScript("OnUpdate", function(_, elapsed) TradeWindow.updateElapsed = (TradeWindow.updateElapsed or 0) + (elapsed or 0); if TradeWindow.updateElapsed >= 1 then TradeWindow.updateElapsed = 0; TradeWindow:Refresh() end end)
     return frame
 end
 
 function TradeWindow:SetMinimized(minimized)
     self.minimized = minimized and true or false
-    for _, control in ipairs({ self.list, self.previous, self.pageLabel, self.next, self.clearButton, self.selectedLabel, self.take, self.prepare, self.place, self.filterButton, self.broadcastButton, self.estimateLabel }) do
+    for _, control in ipairs({ self.list, self.previous, self.pageLabel, self.next, self.clearButton, self.selectedLabel, self.take, self.prepare, self.place, self.delivered, self.cancel, self.filterButton, self.broadcastButton, self.estimateLabel }) do
         if control then if self.minimized then control:Hide() else control:Show() end end
     end
     self.frame:SetHeight(self.minimized and 105 or self.expandedHeight)
@@ -105,7 +107,7 @@ function TradeWindow:RequestClear()
     local trades = GA.Trade and type(GA.Trade.ClearPending) == "function" and GA.Trade:ClearPending() or 0
     local awards = GA.Award and type(GA.Award.ClearDeferred) == "function" and GA.Award:ClearDeferred() or 0
     self.selected, self.pendingAward, self.page = nil, nil, 1
-    self.prepare:Disable(); self.place:Disable(); self.take:Disable()
+    self.prepare:Disable(); self.place:Disable(); self.take:Disable(); self.delivered:Disable(); self.cancel:Disable()
     self:Refresh()
     self.selectedLabel:SetText(tostring((tonumber(trades) or 0) + (tonumber(awards) or 0)) .. " offene Einträge gelöscht.")
     return true
@@ -137,7 +139,36 @@ end
 
 function TradeWindow:Select(group)
     if not group then return end
-    self.selected = group; self.selectedLabel:SetText("Auswahl: " .. tostring(group.winner or "–") .. " (" .. tostring(#group.entries) .. " Items)"); self.prepare:Enable(); self.place:Enable()
+    self.selected = group
+    local index = 1
+    if self.selectedEntry then
+        for current, entry in ipairs(group.entries) do
+            if entry.id == self.selectedEntry.id then index = current < #group.entries and current + 1 or 1; break end
+        end
+    end
+    self.selectedEntry = group.entries[index]
+    self.selectedLabel:SetText("Auswahl: " .. tostring(group.winner or "–") .. " – " .. tostring(self.selectedEntry and self.selectedEntry.itemLink or "Item") ..
+        (#group.entries > 1 and (" (" .. tostring(index) .. "/" .. tostring(#group.entries) .. "; erneut klicken zum Wechseln)") or ""))
+    self.prepare:Enable(); self.place:Enable(); self.delivered:Enable(); self.cancel:Enable()
+end
+
+function TradeWindow:CloseSelected(delivered)
+    local entry = self.selectedEntry
+    if not entry or not GA.Trade then self.selectedLabel:SetText("Zuerst einen offenen Eintrag auswählen."); return false end
+    local ok, closed
+    if delivered and type(GA.Trade.MarkDelivered) == "function" then
+        ok, closed = GA.Trade:MarkDelivered(entry.id, "MANUAL_CONFIRMATION")
+    elseif not delivered and type(GA.Trade.Cancel) == "function" then
+        ok, closed = GA.Trade:Cancel(entry.id, "MANUAL_CANCEL")
+    end
+    if ok and GA.Award and type(GA.Award.CloseMatchingTradeEntry) == "function" then
+        GA.Award:CloseMatchingTradeEntry(closed or entry, delivered, delivered and "MANUAL_CONFIRMATION" or "MANUAL_CANCEL")
+    end
+    self.selected, self.selectedEntry = nil, nil
+    self.prepare:Disable(); self.place:Disable(); self.delivered:Disable(); self.cancel:Disable()
+    self:Refresh()
+    self.selectedLabel:SetText(ok and (delivered and "Eintrag als vergeben markiert." or "Eintrag abgebrochen.") or tostring(closed or "Eintrag konnte nicht geschlossen werden."))
+    return ok and true or false
 end
 
 function TradeWindow:PrepareSelected()

@@ -19,6 +19,12 @@ local function timestamp()
     return (time and time()) or 0
 end
 
+local function automaticWhispersEnabled()
+    if not GA.DB or type(GA.DB.GetProfile) ~= "function" then return true end
+    local ok, current = pcall(GA.DB.GetProfile, GA.DB)
+    return not ok or type(current) ~= "table" or current.tradeWhispersEnabled ~= false
+end
+
 local function baseName(name)
     return type(name) == "string" and (string.match(name, "^[^-]+") or name) or nil
 end
@@ -83,6 +89,7 @@ function Trade:RemindWinner(entry, force)
     local count = math.max(tonumber(entry.reminderCount) or 0, tonumber(reminder.count) or 0)
     local last = math.max(tonumber(entry.lastReminderAt) or 0, tonumber(reminder.last) or 0)
     if not force and (count >= self.REMINDER_LIMIT or timestamp() - last < self.REMINDER_COOLDOWN) then return false end
+    if not automaticWhispersEnabled() then return false end
     if type(SendChatMessage) ~= "function" then return false end
     local message = L("trade.reminder", "MasterLooter: Du hast %s gewonnen. Bitte handle %s an, damit das Item übergeben werden kann.",
         tostring(entry.itemLink or "ein Item"), tostring((UnitName and UnitName("player")) or "den Lootmaster"))
@@ -103,6 +110,7 @@ end
 function Trade:NotifyAwardFallback(result)
     if type(result) ~= "table" or type(result.winner) ~= "string" or
         sameName(result.winner, UnitName and UnitName("player")) then return false end
+    if not automaticWhispersEnabled() then return false end
     if type(SendChatMessage) ~= "function" then return false end
     self.fallbackNotices = self.fallbackNotices or {}
     local key = tostring(result.sessionID or result.itemLink or "?") .. "\031" ..
@@ -269,7 +277,7 @@ function Trade:WarnExpiring(entry)
                 if remaining <= crossed then entry.expiryWarnings[crossed] = timestamp() end
             end
             local minutes = math.max(1, math.ceil(remaining / 60))
-            if type(SendChatMessage) == "function" and entry.winner and not sameName(entry.winner, UnitName and UnitName("player")) then
+            if automaticWhispersEnabled() and type(SendChatMessage) == "function" and entry.winner and not sameName(entry.winner, UnitName and UnitName("player")) then
                 pcall(SendChatMessage, L("trade.expiring",
                     "MasterLooter: Die geschätzte Handelsfrist für %s endet in etwa %d Min. Bitte handle den Lootmaster an.",
                     tostring(entry.itemLink or "dein Item"), minutes), "WHISPER", nil, entry.winner)
@@ -346,6 +354,7 @@ function Trade:QueueAward(result, source)
     local entry = {
         id = newID(), itemLink = result.itemLink, itemID = GA.Compat:GetItemID(result.itemLink),
         sessionID = result.sessionID, awardIndex = result.awardIndex, awardLimit = result.awardLimit,
+        lootSlot = result.lootSlot, lootQueueID = result.lootQueueID,
         winner = result.winner, quantity = math.max(1, math.floor(tonumber(result.quantity) or 1)),
         choice = result.choice, roll = result.roll, note = result.note,
         status = "PENDING", source = source or "AWARD", createdAt = timestamp(), acquiredAt = acquiredAt,
@@ -564,6 +573,39 @@ function Trade:MarkFailed(id, reason)
     entry.deliveryReason = reason or "MANUAL_FAILURE"
     GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
     return true, entry
+end
+
+function Trade:Cancel(id, reason)
+    local entry = self:Get(id)
+    if not entry then return false, "unknown pending award" end
+    if entry.status == "DELIVERED" or entry.status == "CANCELLED" then return false, "award is closed" end
+    entry.status, entry.updatedAt = "CANCELLED", timestamp()
+    entry.deliveryReason = reason or "MANUAL_CANCEL"
+    if self.prepared == entry then self.prepared = nil end
+    if self.placedThisTrade then self.placedThisTrade[entry.id] = nil end
+    GA.Events:Emit("GA_TRADE_PENDING_UPDATED", entry)
+    return true, entry
+end
+
+-- A secure hook in Award observes native Blizzard master-loot assignments.
+-- Close exactly one matching delivery task after the corresponding loot slot
+-- is confirmed cleared; equal items for other winners or later copies remain.
+function Trade:ReconcileMasterLootAward(observation)
+    if type(observation) ~= "table" or not observation.winner or not observation.itemID then return nil end
+    local best, bestScore
+    for _, entry in ipairs(self.pending) do
+        if entry.status ~= "DELIVERED" and entry.status ~= "CANCELLED" and
+            sameName(entry.winner, observation.winner) and entry.itemID == observation.itemID then
+            local score = 0
+            if observation.lootQueueID and entry.lootQueueID == observation.lootQueueID then score = score + 100 end
+            if tonumber(observation.slot) == tonumber(entry.lootSlot) then score = score + 10 end
+            if observation.itemLink == entry.itemLink then score = score + 1 end
+            if not best or score > bestScore then best, bestScore = entry, score end
+        end
+    end
+    if not best then return nil end
+    self:MarkDelivered(best.id, "NATIVE_MASTER_LOOT")
+    return best
 end
 
 local function tradePartner()

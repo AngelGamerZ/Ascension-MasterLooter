@@ -3,6 +3,15 @@ GA.UI = GA.UI or {}
 local Theme, ProfileWindow = GA.UI.Theme, { selected = nil, rows = {}, page = 1, pageSize = 8 }
 GA.UI.ProfileWindow = ProfileWindow
 
+local function L(key, fallback, ...)
+    if type(GA.L) == "function" then
+        local ok, value = pcall(GA.L, GA, key, ...)
+        if ok and type(value) == "string" and value ~= "" and value ~= key then return value end
+    end
+    local ok, value = pcall(string.format, fallback, ...)
+    return ok and value or fallback
+end
+
 function ProfileWindow:EnsureFrame()
     if self.frame then return self.frame end
     local frame = CreateFrame("Frame", "MasterLooterProfileWindow", UIParent)
@@ -34,7 +43,7 @@ function ProfileWindow:Activate() if not self.selected then return self:SetStatu
 function ProfileWindow:Rename() if not self.selected then return self:SetStatus("Zuerst ein Profil wählen.", true) end local ok, err = GA.Profiles:Rename(self.selected, self.nameEdit:GetText()); if ok then self.selected = self.nameEdit:GetText() end; self:SetStatus(ok and "Profil umbenannt." or err, not ok); self:Refresh() end
 function ProfileWindow:Delete()
     if not self.selected then return self:SetStatus("Zuerst ein Profil wählen.", true) end
-    if self.deleteArmed ~= self.selected then self.deleteArmed = self.selected; self.deleteButton:SetText("Bestätigen"); return self:SetStatus("Noch einmal klicken, um " .. self.selected .. " zu löschen.", true) end
+    if self.deleteArmed ~= self.selected then self.deleteArmed = self.selected; self.deleteButton:SetText("Bestätigen"); return self:SetStatus(L("PROFILE_DELETE_CONFIRM", "Noch einmal klicken, um %s zu löschen.", self.selected), true) end
     local ok, err = GA.Profiles:Delete(self.selected); self.deleteArmed, self.selected = nil, nil; self.deleteButton:SetText("Löschen"); self:SetStatus(ok and "Profil gelöscht." or err, not ok); self:Refresh()
 end
 function ProfileWindow:Show() local frame = self:EnsureFrame(); self:Refresh(); frame:Show(); frame:Raise(); return true end

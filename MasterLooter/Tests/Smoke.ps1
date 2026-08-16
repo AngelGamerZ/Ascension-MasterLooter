@@ -14,6 +14,7 @@ $tests = @(
     "MasterLooter/Tests/AdminGDKPSmoke.lua",
     "MasterLooter/Tests/GDKPAdvancedSmoke.lua",
     "MasterLooter/Tests/LootTradeSmoke.lua",
+    "MasterLooter/Tests/ManualMasterLootSmoke.lua",
     "MasterLooter/Tests/LootLedgerSmoke.lua",
     "MasterLooter/Tests/TradeAutomationSmoke.lua",
     "MasterLooter/Tests/TradeHandshakeSmoke.lua",

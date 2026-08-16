@@ -17,10 +17,14 @@ GA.UI.SettingsWindow = SettingsWindow
 
 local function profile() return GA.DB:GetProfile() end
 
-local function localized(key, fallback)
+local function localized(key, fallback, ...)
     if type(GA.L) == "function" then
-        local ok, value = pcall(GA.L, GA, key)
+        local ok, value = pcall(GA.L, GA, key, ...)
         if ok and type(value) == "string" and value ~= "" and value ~= key then return value end
+    end
+    if select("#", ...) > 0 then
+        local ok, value = pcall(string.format, fallback or key, ...)
+        if ok then return value end
     end
     return fallback or key
 end
@@ -87,7 +91,7 @@ function SettingsWindow:GetSections() return self.SECTIONS end
 
 function SettingsWindow:ControlsReady()
     return self.autoOpen and self.autoGive and self.sound and self.minimap and self.bagShare and
-        self.announce and self.channelDropdown and self.languageDropdown and self.durationEdit and self.scaleEdit and self.profileEdit and
+        self.announce and self.commandAnnounce and self.tradeWhispers and self.channelDropdown and self.languageDropdown and self.durationEdit and self.scaleEdit and self.profileEdit and
         self.muleTargetEdit and self.muleQualityEdit and self.status
 end
 
@@ -204,7 +208,9 @@ function SettingsWindow:BuildLoot()
         if GA.Announcements then GA.Announcements:SetOption("enabled", self:GetChecked() and true or false) end
         SettingsWindow:SetStatus("Ansageeinstellung gespeichert.", Theme.colors.green)
     end)
-    local channelLabel = Theme:CreateLabel(section, localized("SETTINGS_ANNOUNCEMENT_CHANNEL", "Ansagekanal"), 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -178)
+    self.commandAnnounce = self:CreateCheckBox(section, localized("SETTINGS_COMMAND_ANNOUNCEMENTS", "Announce SR and SL whisper commands when becoming loot master"), -160, "commandAnnouncementsEnabled")
+    self.tradeWhispers = self:CreateCheckBox(section, localized("SETTINGS_TRADE_WHISPERS", "Send automatic trade whispers to winners"), -194, "tradeWhispersEnabled")
+    local channelLabel = Theme:CreateLabel(section, localized("SETTINGS_ANNOUNCEMENT_CHANNEL", "Ansagekanal"), 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -238)
     local channelNames = {
         AUTO = localized("CHANNEL_AUTO", "Automatisch"), RAID_WARNING = localized("CHANNEL_RAID_WARNING", "Raid-Warnung"),
         RAID = localized("CHANNEL_RAID", "Raid"), PARTY = localized("CHANNEL_PARTY", "Gruppe"),
@@ -219,13 +225,13 @@ function SettingsWindow:BuildLoot()
         SettingsWindow:SetStatus(ok and localized("CHANNEL_SAVED", "Ansagekanal gespeichert.") or tostring(err), ok and Theme.colors.green or Theme.colors.red)
     end)
     self.channelDropdown:SetPoint("LEFT", channelLabel, "RIGHT", 24, -2)
-    local durationLabel = Theme:CreateLabel(section, "Standarddauer", 12); durationLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -222)
+    local durationLabel = Theme:CreateLabel(section, "Standarddauer", 12); durationLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -282)
     self.durationEdit = Theme:CreateEditBox(section, 60, 24, true); self.durationEdit:SetPoint("LEFT", durationLabel, "RIGHT", 24, 0)
     local seconds = Theme:CreateLabel(section, "Sekunden", 12, Theme.colors.muted); seconds:SetPoint("LEFT", self.durationEdit, "RIGHT", 8, 0)
-    local save = Theme:CreateButton(section, "Speichern", 100, 25); save:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -260)
+    local save = Theme:CreateButton(section, "Speichern", 100, 25); save:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -320)
     save:SetScript("OnClick", function() SettingsWindow:SaveDuration() end)
     local note = Theme:CreateLabel(section, "Der OS-Bereich wird für jede Verteilung autoritativ im Lootmaster-Fenster festgelegt. MS bleibt immer /roll 100.", 11, Theme.colors.muted)
-    note:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -316); note:SetPoint("RIGHT", section, "RIGHT", -20, 0)
+    note:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -366); note:SetPoint("RIGHT", section, "RIGHT", -20, 0)
 end
 
 function SettingsWindow:BuildPackMule()
@@ -270,7 +276,7 @@ function SettingsWindow:ResetIncompleteBuild()
     self.frame, self.sidebar, self.content = nil, nil, nil
     self.sectionFrames, self.navButtons = {}, {}
     self.autoOpen, self.autoGive, self.sound, self.minimap, self.bagShare = nil, nil, nil, nil, nil
-    self.announce, self.channelDropdown, self.languageDropdown = nil, nil, nil
+    self.announce, self.commandAnnounce, self.tradeWhispers, self.channelDropdown, self.languageDropdown = nil, nil, nil, nil, nil
     self.durationEdit, self.scaleEdit, self.profileEdit = nil, nil, nil
     self.muleTargetEdit, self.muleQualityEdit, self.status = nil, nil, nil
     self.factoryResetButton, self.buildComplete = nil, false
@@ -282,7 +288,7 @@ function SettingsWindow:BuildFrame()
     self.buildGeneration = (tonumber(self.buildGeneration) or 0) + 1
     local frame = CreateFrame("Frame", self:BuildName("Window"), UIParent)
     frame:SetWidth(self.WIDTH); frame:SetHeight(self.HEIGHT); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
-    Theme:ApplyPanel(frame); Theme:AddTitle(frame, "MasterLooter " .. tostring(GA.VERSION or "") .. " – Einstellungen")
+    Theme:ApplyPanel(frame); Theme:AddTitle(frame, localized("SETTINGS_WINDOW_TITLE", "MasterLooter %s – Einstellungen", tostring(GA.VERSION or "")))
     Theme:MakeMovable(frame, "settingsHubV2"); Theme:RestorePosition(frame, "settingsHubV2", "CENTER", 0, 15); Theme:RegisterForEscape(frame)
     self.frame = frame
 
@@ -383,7 +389,7 @@ function SettingsWindow:Refresh()
     self.autoOpen:SetChecked(current.autoOpenRollWindow ~= false); self.autoGive:SetChecked(current.autoGiveAwards ~= false)
     self.sound:SetChecked(current.sound ~= false); self.minimap:SetChecked(current.minimap.hide ~= true)
     local config = GA.Announcements and GA.Announcements:GetConfig() or current.announcements or {}
-    self.announce:SetChecked(config.enabled ~= false); self.bagShare:SetChecked(current.bagInspectorShare ~= false)
+    self.announce:SetChecked(config.enabled ~= false); self.commandAnnounce:SetChecked(current.commandAnnouncementsEnabled ~= false); self.tradeWhispers:SetChecked(current.tradeWhispersEnabled ~= false); self.bagShare:SetChecked(current.bagInspectorShare ~= false)
     self.channelDropdown:SetValue(tostring(config.channel or "AUTO")); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
     local languageMode = GA.Localization and type(GA.Localization.GetLanguageMode) == "function" and GA.Localization:GetLanguageMode() or current.language or "AUTO"
     self.languageDropdown:SetValue(languageMode)
@@ -394,7 +400,7 @@ end
 
 function SettingsWindow:Show(section)
     local frame, err = self:EnsureFrame()
-    if not frame then if GA.Print then GA:Print("Einstellungen konnten nicht geöffnet werden: " .. tostring(err or "unbekannter Fehler")) end; return false end
+    if not frame then if GA.Print then GA:Print(localized("SETTINGS_OPEN_ERROR", "Einstellungen konnten nicht geöffnet werden: %s", tostring(err or "unbekannter Fehler"))) end; return false end
     if not self:Refresh() then return false end
     self:ShowSection(section or profile().settingsSection or self.DEFAULT_SECTION); frame:Show(); return true
 end
@@ -402,7 +408,7 @@ function SettingsWindow:Hide() if self.frame then self.frame:Hide() end end
 function SettingsWindow:Toggle(section)
     local frame, err = self:EnsureFrame()
     if not frame then
-        if GA.Print then GA:Print("Einstellungen konnten nicht geöffnet werden: " .. tostring(err or "unbekannter Fehler")) end
+        if GA.Print then GA:Print(localized("SETTINGS_OPEN_ERROR", "Einstellungen konnten nicht geöffnet werden: %s", tostring(err or "unbekannter Fehler"))) end
         return false
     end
     if frame:IsShown() then self:Hide() else return self:Show(section) end

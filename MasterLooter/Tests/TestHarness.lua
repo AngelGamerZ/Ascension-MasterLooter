@@ -693,7 +693,9 @@ same(bobGA.GDKPAuction.active.status, "ENDED", "auction end reaches the particip
 same(aliceGA.GDKP.active.sales[1].amount, 350, "winning auction becomes a GDKP sale")
 expect(aliceGA.GDKP:AddSale(nil, nil, 0) == nil, "GDKP rejects malformed sales without throwing")
 local activeProfile = aliceGA.DB:GetProfile()
+same(activeProfile.tradeWhispersEnabled, true, "trade whispers are enabled by default")
 activeProfile.sound = false
+activeProfile.tradeWhispersEnabled = false
 activeProfile.defaultRollDuration = nil -- simulate a profile saved by an older build
 fire(alice, "PLAYER_LOGOUT")
 local reloaded = makeClient("Reloaded", alice.env.MasterLooterDB)
@@ -702,6 +704,7 @@ same(reloadedGA.GDKP.active.name, "Auction Harness", "active GDKP session surviv
 same(reloadedGA.GDKP.active.sales[1].amount, 350, "active GDKP sales survive reload")
 same(reloadedGA.DB:GetProfile().sound, false, "existing profile values survive default merging")
 same(reloadedGA.DB:GetProfile().defaultRollDuration, 30, "existing profiles receive newly introduced defaults")
+same(reloadedGA.DB:GetProfile().tradeWhispersEnabled, false, "disabled trade whispers remain disabled after reload")
 expect(reloadedGA.GDKP:Finish() ~= nil, "restored GDKP session can be finished")
 same(reloadedGA.GDKP:GetCut(10), 0, "GetCut is safe without an active session")
 local exportText, exported = aliceGA.ImportExport:Export({ awards = false, gdkp = false })

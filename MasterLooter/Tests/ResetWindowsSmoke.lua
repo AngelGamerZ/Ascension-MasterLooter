@@ -23,8 +23,15 @@ local calls = {}
 local GA = {
     UI = { Theme = { colors = { red = { 1, 0, 0 }, green = { 0, 1, 0 }, muted = { 1, 1, 1 } } } },
     Compat = {}, modules = {},
-    Trade = { ClearPending = function() calls.trade = (calls.trade or 0) + 1; return 3 end },
-    Award = { ClearDeferred = function() calls.award = (calls.award or 0) + 1; return 2 end },
+    Trade = {
+        ClearPending = function() calls.trade = (calls.trade or 0) + 1; return 3 end,
+        MarkDelivered = function(_, id) calls.delivered = id; return true, { id = id, winner = "Alice", itemLink = "item:1" } end,
+        Cancel = function(_, id) calls.cancelled = id; return true, { id = id, winner = "Alice", itemLink = "item:1" } end,
+    },
+    Award = {
+        ClearDeferred = function() calls.award = (calls.award or 0) + 1; return 2 end,
+        CloseMatchingTradeEntry = function(_, entry, delivered) calls.awardClosed = { entry.id, delivered } end,
+    },
     SoftRes = { Reset = function() calls.softRes = (calls.softRes or 0) + 1 end },
     Priority = { Reset = function() calls.priority = (calls.priority or 0) + 1 end },
     PlusOnes = { ResetAll = function() calls.plusOnes = (calls.plusOnes or 0) + 1 end },
@@ -39,7 +46,7 @@ assert(loadfile("MasterLooter/UI/GDKPWindow.lua"))("MasterLooter", GA)
 
 local trade = GA.UI.TradeWindow
 trade.clearButton, trade.selectedLabel = control("Alles leeren"), control()
-trade.prepare, trade.place, trade.take = control(), control(), control()
+trade.prepare, trade.place, trade.take, trade.delivered, trade.cancel = control(), control(), control(), control(), control()
 trade.Refresh = function() end
 expect(not trade:RequestClear(), "first trade reset click only arms confirmation")
 same(calls.trade, nil, "first trade reset click does not delete data")
@@ -47,6 +54,15 @@ expect(trade:RequestClear(), "second trade reset click confirms deletion")
 same(calls.trade, 1, "confirmed trade reset clears trade queue")
 same(calls.award, 1, "confirmed trade reset clears deferred awards")
 expect(string.find(trade.selectedLabel:GetText(), "5", 1, true), "trade reset reports removed entry count")
+trade.selected, trade.selectedEntry = { winner = "Alice" }, { id = "trade-one", winner = "Alice", itemLink = "item:1" }
+expect(trade:CloseSelected(true), "selected trade entry can be marked delivered")
+same(calls.delivered, "trade-one", "delivered action targets only the selected trade entry")
+same(calls.awardClosed[1], "trade-one", "matching deferred award receives the same identity")
+same(calls.awardClosed[2], true, "matching deferred award is marked delivered")
+trade.selected, trade.selectedEntry = { winner = "Alice" }, { id = "trade-two", winner = "Alice", itemLink = "item:1" }
+expect(trade:CloseSelected(false), "selected trade entry can be cancelled")
+same(calls.cancelled, "trade-two", "cancel action targets only the selected trade entry")
+same(calls.awardClosed[2], false, "matching deferred award is cancelled")
 
 local rules = GA.UI.RulesWindow
 rules.resetButton, rules.status = control("Alles zurücksetzen"), control()

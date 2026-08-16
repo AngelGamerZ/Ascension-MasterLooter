@@ -128,9 +128,11 @@ end
 
 function WhisperQueries:AnnounceCommands()
     if type(SendChatMessage) ~= "function" then return false end
+    local profile = GA.DB and type(GA.DB.GetProfile) == "function" and GA.DB:GetProfile() or nil
+    if profile and profile.commandAnnouncementsEnabled == false then return false end
     local channel = "RAID"
     if GA.Announcements and type(GA.Announcements.ResolveChannel) == "function" then
-        channel = GA.Announcements:ResolveChannel("RAID_WARNING") or channel
+        channel = GA.Announcements:ResolveChannel() or channel
     end
     local message = L("whisper.commands", "MasterLooter aktiv. Per Whisper: SR = eigene SoftRes prüfen, SL = eigenen Strichstand prüfen.")
     local ok = pcall(SendChatMessage, message, channel)

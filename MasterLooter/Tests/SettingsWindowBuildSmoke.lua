@@ -112,11 +112,20 @@ function GA:Localize(value) return localizedWelcomeNotes[value] or value end
 local semanticEnglish = {
     SETTINGS_LANGUAGE = "Language", SETTINGS_LANGUAGE_AUTO = "Automatic (client)",
     SETTINGS_LANGUAGE_GERMAN = "German", SETTINGS_LANGUAGE_ENGLISH = "English",
-    SETTINGS_ANNOUNCEMENT_CHANNEL = "Announcement channel", CHANNEL_AUTO = "Automatic",
+    SETTINGS_WINDOW_TITLE = "MasterLooter %s — Settings",
+    SETTINGS_OPEN_ERROR = "Settings could not be opened: %s",
+    SETTINGS_ANNOUNCEMENT_CHANNEL = "Announcement channel",
+    SETTINGS_COMMAND_ANNOUNCEMENTS = "Announce SR and SL whisper commands when becoming loot master",
+    SETTINGS_TRADE_WHISPERS = "Send automatic trade whispers to winners",
+    CHANNEL_AUTO = "Automatic",
     CHANNEL_RAID_WARNING = "Raid warning", CHANNEL_RAID = "Raid", CHANNEL_PARTY = "Group",
     CHANNEL_SAY = "Say", CHANNEL_YELL = "Yell", CHANNEL_GUILD = "Guild", CHANNEL_OFFICER = "Officer",
 }
-function GA:L(key) return semanticEnglish[key] or key end
+function GA:L(key, ...)
+    local value = semanticEnglish[key] or key
+    if select("#", ...) > 0 then return string.format(value, ...) end
+    return value
+end
 
 local colors = {
     panel = { 0, 0, 0, 1 }, panelLight = { 0, 0, 0, 1 }, border = { 1, 1, 1, 1 },
@@ -130,7 +139,7 @@ function Theme:ApplyInset() end
 function Theme:CreateLabel(parent, text) local value = parent:CreateFontString(); value:SetText(GA:Localize(text)); return value end
 function Theme:CreateButton(_, text) local value = widget(); value:SetText(GA:Localize(text)); return value end
 function Theme:CreateEditBox() return widget() end
-function Theme:AddTitle() end
+function Theme:AddTitle(parent, text) local title = Theme:CreateLabel(parent, text); parent.title = title; return title, widget() end
 function Theme:MakeMovable() end
 function Theme:RestorePosition() end
 function Theme:RegisterForEscape() end
@@ -145,6 +154,7 @@ expect(frame ~= nil, buildError or "complete settings frame builds")
 expect(settings:ControlsReady(), "all controls required by Refresh exist")
 expect(settings.buildComplete, "settings construction is marked complete")
 expect(settings:Refresh(), "a complete settings frame refreshes safely")
+same(frame.title:GetText(), "MasterLooter build-smoke — Settings", "dynamic settings title is rendered completely in English")
 same(settings.languageDropdown:GetValue(), "AUTO", "language dropdown reflects automatic client selection")
 same(settings.channelDropdown:GetValue(), "AUTO", "announcement dropdown reflects the saved channel")
 same(settings.languageDropdown.padding, 0, "language dropdown supplies legacy SharedXML padding")
@@ -178,6 +188,8 @@ same(settings.autoOpen.label:GetText(), "Automatically open the roll window for 
 same(settings.sound.label:GetText(), "Play notification sounds", "General sound option is rendered in English")
 same(settings.minimap.label:GetText(), "Show minimap button", "General minimap option is rendered in English")
 same(settings.bagShare.label:GetText(), "Allow bag-inspection requests from group members", "General bag-sharing option is rendered in English")
+same(settings.commandAnnounce.label:GetText(), "Announce SR and SL whisper commands when becoming loot master", "command-announcement option is rendered in English")
+same(settings.tradeWhispers.label:GetText(), "Send automatic trade whispers to winners", "trade-whisper option is rendered in English")
 same(settings.languageLabel:GetText(), "Language", "General language caption is rendered in English")
 same(settings.profileTitle:GetText(), "PROFILE", "General profile section note is rendered in English")
 same(settings.profileLabel:GetText(), "Active profile", "General active-profile caption is rendered in English")

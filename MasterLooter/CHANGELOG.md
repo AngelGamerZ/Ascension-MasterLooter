@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.3-beta
+- Added persistent controls for loot-master command announcements and automatic trade whispers
+- Fixed pending trade reminders after manual Blizzard master-loot assignments
+- Added per-item actions to mark a trade task as delivered or cancel it
+- Fixed mixed-language dynamic window titles and status messages
+
 ## 0.17.2-beta
 - Fixed minimap tooltip startup when the localization helper is unavailable
 - Added Transmog rolls using `/roll 50`
