@@ -66,6 +66,7 @@ local raw = {
     -- Announcement configuration
     ["Unbekannte Ansageoption"] = "unknown announcement option",
     ["Ungültiger Ansagekanal"] = "invalid announcement channel",
+    ["Ungültiger Bereich für den finalen Countdown"] = "Invalid final countdown range",
     ["Ansagen sind deaktiviert"] = "announcements disabled",
     ["Du bist in keiner Gruppe"] = "not in a group",
     ["Zu viele Nachrichten in kurzer Zeit"] = "rate limited",

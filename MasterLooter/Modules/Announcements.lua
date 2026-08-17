@@ -3,7 +3,10 @@ local _, GA = ...
 
 local Announcements = { lastSent = -1000, minimumInterval = 0.5 }
 GA.Announcements = Announcements
-local DEFAULTS = { enabled = true, rollStart = true, rollStop = true, countdown = true, award = true, channel = "RAID_WARNING" }
+local DEFAULTS = {
+    rollStart = true, rollStop = true, countdown = true, award = true,
+    channel = "RAID_WARNING", finalCountdownSeconds = 10,
+}
 local CHANNEL_OPTIONS = { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" }
 local CHANNELS = {}
 for _, channel in ipairs(CHANNEL_OPTIONS) do CHANNELS[channel] = true end
@@ -48,6 +51,8 @@ function Announcements:GetConfig()
         profile.announcements.raidWarningDefaultV1 = true
     end
     profile.announcements.channel = self:NormalizeChannel(profile.announcements.channel) or DEFAULTS.channel
+    profile.announcements.finalCountdownSeconds = math.max(1, math.min(10,
+        math.floor(tonumber(profile.announcements.finalCountdownSeconds) or DEFAULTS.finalCountdownSeconds)))
     return profile.announcements
 end
 
@@ -73,6 +78,13 @@ function Announcements:SetOption(key, value)
     if key == "channel" then
         value = self:NormalizeChannel(value)
         if not value then return false, "invalid announcement channel" end
+    elseif key == "finalCountdownSeconds" then
+        value = tonumber(value)
+        if not value or value < 1 or value > 10 then
+            local errorMessage = L("error.announcement.final_countdown", "invalid final countdown range")
+            return false, errorMessage
+        end
+        value = math.floor(value)
     else value = value and true or false end
     self:GetConfig()[key] = value
     return true
@@ -119,7 +131,6 @@ local function itemDescription(state)
 end
 
 function Announcements:Send(message, channel)
-    if not self:GetConfig().enabled then return false, "announcements disabled" end
     channel = self:ResolveChannel(channel)
     if not channel then return false, "not in a group" end
     local current = (GetTime and GetTime()) or 0
@@ -138,11 +149,27 @@ end
 
 local STOP_REASON = { TIMEOUT = "timeout", STOPPED = "stopped", CANCELLED = "cancelled", AWARDED = "awarded" }
 
+local function hasChoice(state, wanted)
+    if type(state) ~= "table" or type(state.choices) ~= "table" then return true end
+    for _, choice in ipairs(state.choices) do if choice == wanted then return true end end
+    return false
+end
+
 function Announcements:OnRollStarted(state)
     local config = self:GetConfig()
     if config.rollStart and isOwner(state) then
-        self:Send(L("announcement.roll_started", "Roll für %s gestartet – %d Sekunden. /roll 100 für MS. /roll %d für OS. /roll 50 für Transmog.",
-            itemDescription(state), tonumber(state.duration) or 30, tonumber(state.osRollMaximum) or 99))
+        local osEnabled, transmogEnabled = hasChoice(state, "OS"), hasChoice(state, "TRANSMOG")
+        local key = osEnabled and transmogEnabled and "announcement.roll_started" or
+            (osEnabled and "announcement.roll_started_ms_os") or
+            (transmogEnabled and "announcement.roll_started_ms_transmog") or "announcement.roll_started_ms"
+        local fallbacks = {
+            ["announcement.roll_started"] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll %d for OS. /roll 50 for Transmog.",
+            ["announcement.roll_started_ms_os"] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll %d for OS.",
+            ["announcement.roll_started_ms_transmog"] = "Roll for %s started — %d seconds. /roll 100 for MS. /roll 50 for Transmog.",
+            ["announcement.roll_started_ms"] = "Roll for %s started — %d seconds. /roll 100 for MS.",
+        }
+        self:Send(L(key, fallbacks[key], itemDescription(state), tonumber(state.duration) or 30,
+            tonumber(state.osRollMaximum) or 99))
     end
     if isOwner(state) then
         self.activeRoll = state
@@ -162,9 +189,10 @@ function Announcements:OnRollEnded(state, reason)
     end
 end
 
-local function shouldAnnounceSecond(second)
+local function shouldAnnounceSecond(second, finalCountdownSeconds)
     if second < 1 then return false end
-    if second <= 10 then return true end
+    finalCountdownSeconds = math.max(1, math.min(10, math.floor(tonumber(finalCountdownSeconds) or 10)))
+    if second <= finalCountdownSeconds then return true end
     return second % 10 == 0
 end
 
@@ -176,7 +204,7 @@ function Announcements:Tick()
     local remaining = math.max(0, math.ceil((tonumber(state.expiresAt) or current) - current))
     if remaining == self.lastCountdownSecond then return end
     self.lastCountdownSecond = remaining
-    if shouldAnnounceSecond(remaining) then
+    if shouldAnnounceSecond(remaining, self:GetConfig().finalCountdownSeconds) then
         local key = remaining == 1 and "announcement.countdown.one" or "announcement.countdown.many"
         self:Send(L(key, remaining == 1 and "Noch %d Sekunde für %s." or "Noch %d Sekunden für %s.",
             remaining, itemDescription(state)))

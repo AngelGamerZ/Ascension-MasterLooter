@@ -7,7 +7,7 @@ GA.UI = GA.UI or {}
 local Theme = GA.UI.Theme
 local MasterLooterWindow = {
     page = 1, WIDTH = 520, HEIGHT = 450, VISIBLE_ROWS = 6,
-    LAYOUT_VERSION = 5, OS_EDIT_X = 282, PAGINATION_Y = -171,
+    LAYOUT_VERSION = 6, OS_EDIT_X = 300, PAGINATION_Y = -171,
     TABLE_TOP = -205, ROW_HEIGHT = 25,
 }
 GA.UI.MasterLooterWindow = MasterLooterWindow
@@ -17,6 +17,18 @@ local ROWS = MasterLooterWindow.VISIBLE_ROWS
 local function baseName(name)
     if type(name) ~= "string" then return "" end
     return string.lower((string.match(name, "^[^-]+") or name))
+end
+
+local function setChecked(control, checked)
+    if not control then return end
+    if type(control.SetChecked) == "function" then control:SetChecked(checked and true or false)
+    else control.checked = checked and true or false end
+end
+
+local function isChecked(control)
+    if not control then return true end
+    if type(control.GetChecked) == "function" then return control:GetChecked() and true or false end
+    return control.checked and true or false
 end
 
 local function field(source, ...)
@@ -201,21 +213,45 @@ function MasterLooterWindow:EnsureFrame()
     self.durationMinus, self.durationPlus = minus, plus
     local seconds = Theme:CreateLabel(frame, "Sek.", 11, Theme.colors.muted)
     seconds:SetPoint("LEFT", plus, "RIGHT", 7, 0)
+    self.secondsLabel = seconds
     minus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(-5) end)
     plus:SetScript("OnClick", function() MasterLooterWindow:AdjustDuration(5) end)
     duration:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
     duration:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     duration:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeDuration() end)
 
-    local osLabel = Theme:CreateLabel(frame, "OS /ROLL", 11, Theme.colors.muted)
-    osLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 220, -142)
+    local osEnabled = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    osEnabled:SetWidth(24); osEnabled:SetHeight(24)
+    osEnabled:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -300, 19)
+    setChecked(osEnabled, not profile or profile.osRollEnabled ~= false)
+    self.osEnabledCheck = osEnabled
+    local osLabel = Theme:CreateLabel(frame, "OS", 11, Theme.colors.muted)
+    osLabel:SetPoint("LEFT", osEnabled, "RIGHT", 0, 0)
+    osLabel:SetWidth(32)
+    self.osEnabledLabel = osLabel
+    local osRangeLabel = Theme:CreateLabel(frame, "OS /ROLL", 11, Theme.colors.muted)
+    osRangeLabel:SetWidth(78)
+    self.osRangeLabel = osRangeLabel
     local osMaximum = Theme:CreateEditBox(frame, 42, 24, true)
     osMaximum:SetPoint("TOPLEFT", frame, "TOPLEFT", self.OS_EDIT_X, -136)
+    osRangeLabel:SetPoint("RIGHT", osMaximum, "LEFT", -8, 0)
     if type(osMaximum.SetMaxLetters) == "function" then osMaximum:SetMaxLetters(2) end
     osMaximum:SetText(tostring(math.max(2, math.min(99, math.floor(tonumber(profile and profile.osRollMaximum) or 99)))))
     self.osMaximumEdit = osMaximum
-    local osHint = Theme:CreateLabel(frame, "· MS /roll 100", 10, Theme.colors.muted)
+    local osHint = Theme:CreateLabel(frame, "· MS /100", 10, Theme.colors.muted)
     osHint:SetPoint("LEFT", osMaximum, "RIGHT", 8, 0)
+    self.osHintLabel = osHint
+    local transmogEnabled = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    transmogEnabled:SetWidth(24); transmogEnabled:SetHeight(24)
+    transmogEnabled:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -236, 19)
+    setChecked(transmogEnabled, not profile or profile.transmogRollEnabled ~= false)
+    self.transmogEnabledCheck = transmogEnabled
+    local transmogLabel = Theme:CreateLabel(frame, "Transmog", 11, Theme.colors.muted)
+    transmogLabel:SetPoint("LEFT", transmogEnabled, "RIGHT", 0, 0)
+    transmogLabel:SetWidth(82)
+    self.transmogEnabledLabel = transmogLabel
+    osEnabled:SetScript("OnClick", function() MasterLooterWindow:OnChoiceToggle() end)
+    transmogEnabled:SetScript("OnClick", function() MasterLooterWindow:OnChoiceToggle() end)
     osMaximum:SetScript("OnTextChanged", function(_, userInput) MasterLooterWindow:RefreshInputState(userInput and true or false) end)
     osMaximum:SetScript("OnEnterPressed", function(self) self:ClearFocus(); MasterLooterWindow:RefreshInputState(true) end)
     osMaximum:SetScript("OnEditFocusLost", function() MasterLooterWindow:NormalizeOSMaximum() end)
@@ -320,7 +356,7 @@ function MasterLooterWindow:EnsureFrame()
 
     local winnerLabel = Theme:CreateLabel(frame, "Gewinner: – bitte Spieler anklicken", 12)
     winnerLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 23, 24)
-    winnerLabel:SetWidth(355)
+    winnerLabel:SetWidth(165)
     self.winnerLabel = winnerLabel
     local award = Theme:CreateButton(frame, "Item vergeben", 125, 28)
     award:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -22, 17)
@@ -330,6 +366,7 @@ function MasterLooterWindow:EnsureFrame()
     self.awardButton = award
 
     start:Disable()
+    self:RefreshChoiceControls()
     self:RefreshInputState(false)
     return frame
 end
@@ -346,10 +383,53 @@ function MasterLooterWindow:GetInputIssue()
         return "DURATION", "Die Rollzeit muss eine ganze Zahl zwischen 5 und 300 Sekunden sein."
     end
     local osMaximum = tonumber(self.osMaximumEdit and self.osMaximumEdit:GetText())
-    if not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 or osMaximum == 50 then
+    if self:IsChoiceEnabled("OS") and
+        (not osMaximum or osMaximum ~= math.floor(osMaximum) or osMaximum < 2 or osMaximum > 99 or osMaximum == 50) then
         return "OS_MAXIMUM", "Der Lootmaster muss für OS eine ganze Zahl zwischen 2 und 99 außer 50 festlegen."
     end
-    return nil, nil, duration, osMaximum
+    return nil, nil, duration, osMaximum or tonumber(GA.RollSession and GA.RollSession.DEFAULT_OS_ROLL_MAXIMUM) or 99
+end
+
+function MasterLooterWindow:IsChoiceEnabled(choice)
+    if choice == "OS" then return isChecked(self.osEnabledCheck) end
+    if choice == "TRANSMOG" then return isChecked(self.transmogEnabledCheck) end
+    return choice == "MS" or choice == "PASS"
+end
+
+function MasterLooterWindow:GetSelectedChoices()
+    local choices = { "MS" }
+    if self:IsChoiceEnabled("OS") then choices[#choices + 1] = "OS" end
+    if self:IsChoiceEnabled("TRANSMOG") then choices[#choices + 1] = "TRANSMOG" end
+    choices[#choices + 1] = "PASS"
+    return choices
+end
+
+function MasterLooterWindow:RefreshChoiceControls()
+    local osEnabled = self:IsChoiceEnabled("OS")
+    local canEdit = not self.sessionActive and not self.sessionStarting
+    if self.osMaximumEdit then
+        if osEnabled and canEdit and self.osMaximumEdit.Enable then self.osMaximumEdit:Enable()
+        elseif self.osMaximumEdit.Disable then self.osMaximumEdit:Disable() end
+        if self.osMaximumEdit.SetTextColor then
+            self.osMaximumEdit:SetTextColor(unpack(osEnabled and Theme.colors.text or Theme.colors.muted))
+        end
+    end
+    if self.osEnabledCheck then
+        if canEdit then self.osEnabledCheck:Enable() else self.osEnabledCheck:Disable() end
+    end
+    if self.transmogEnabledCheck then
+        if canEdit then self.transmogEnabledCheck:Enable() else self.transmogEnabledCheck:Disable() end
+    end
+end
+
+function MasterLooterWindow:OnChoiceToggle()
+    local profile = GA.DB and GA.DB:GetProfile()
+    if profile then
+        profile.osRollEnabled = self:IsChoiceEnabled("OS")
+        profile.transmogRollEnabled = self:IsChoiceEnabled("TRANSMOG")
+    end
+    self:RefreshChoiceControls()
+    self:RefreshInputState(true)
 end
 
 function MasterLooterWindow:RefreshInputState(showFeedback)
@@ -412,7 +492,6 @@ function MasterLooterWindow:SetSessionActive(active)
         if self.durationMinus then self.durationMinus:Disable() end
         if self.durationPlus then self.durationPlus:Disable() end
         if self.durationEdit.Disable then self.durationEdit:Disable() end
-        if self.osMaximumEdit and self.osMaximumEdit.Disable then self.osMaximumEdit:Disable() end
         if self.noteEdit.Disable then self.noteEdit:Disable() end
         if self.itemDrop then self.itemDrop:EnableMouse(false) end
     else
@@ -421,11 +500,11 @@ function MasterLooterWindow:SetSessionActive(active)
         if self.durationMinus then self.durationMinus:Enable() end
         if self.durationPlus then self.durationPlus:Enable() end
         if self.durationEdit.Enable then self.durationEdit:Enable() end
-        if self.osMaximumEdit and self.osMaximumEdit.Enable then self.osMaximumEdit:Enable() end
         if self.noteEdit.Enable then self.noteEdit:Enable() end
         if self.itemDrop then self.itemDrop:EnableMouse(true) end
         self:RefreshInputState(false)
     end
+    self:RefreshChoiceControls()
 end
 
 function MasterLooterWindow:SetItem(itemLink)
@@ -536,7 +615,7 @@ function MasterLooterWindow:StartSession()
     local ok, result, errorMessage = pcall(method, manager, itemLink, {
         duration = duration,
         note = note,
-        choices = { "MS", "OS", "TRANSMOG", "PASS" },
+        choices = self:GetSelectedChoices(),
         osRollMaximum = osMaximum,
         lootQueueID = self.sourceLoot and self.sourceLoot.queueID,
         lootSlot = self.sourceLoot and self.sourceLoot.slot,
@@ -552,6 +631,8 @@ function MasterLooterWindow:StartSession()
     if profile then
         profile.defaultRollDuration = duration
         profile.osRollMaximum = osMaximum
+        profile.osRollEnabled = self:IsChoiceEnabled("OS")
+        profile.transmogRollEnabled = self:IsChoiceEnabled("TRANSMOG")
     end
     if self.sourceLoot and self.sourceLoot.queueID and GA.Loot and type(GA.Loot.SetQueueStatus) == "function" then
         GA.Loot:SetQueueStatus(self.sourceLoot.queueID, "ROLLING", result.id)
@@ -587,6 +668,12 @@ function MasterLooterWindow:UpdateSession(session)
     self.sessionId = nextSessionId
     if self.osMaximumEdit and session.osRollMaximum then
         self.osMaximumEdit:SetText(tostring(session.osRollMaximum))
+    end
+    if type(session.choices) == "table" then
+        local enabled = {}
+        for _, choice in ipairs(session.choices) do enabled[choice] = true end
+        setChecked(self.osEnabledCheck, enabled.OS)
+        setChecked(self.transmogEnabledCheck, enabled.TRANSMOG)
     end
     local link = field(session, "itemLink", "link") or field(session.item, "link", "itemLink")
     if link then self:SetItem(link) end

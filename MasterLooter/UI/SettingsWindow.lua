@@ -90,8 +90,8 @@ end
 function SettingsWindow:GetSections() return self.SECTIONS end
 
 function SettingsWindow:ControlsReady()
-    return self.autoOpen and self.autoGive and self.sound and self.minimap and self.bagShare and
-        self.announce and self.commandAnnounce and self.tradeWhispers and self.channelDropdown and self.languageDropdown and self.durationEdit and self.scaleEdit and self.profileEdit and
+    return self.autoOpen and self.autoGive and self.sound and self.minimap and self.bagShare and self.updateNotifications and
+        self.commandAnnounce and self.tradeWhispers and self.channelDropdown and self.countdownDropdown and self.languageDropdown and self.durationEdit and self.scaleEdit and self.profileEdit and
         self.muleTargetEdit and self.muleQualityEdit and self.status
 end
 
@@ -172,9 +172,10 @@ function SettingsWindow:BuildGeneral()
         if GA.BagInspector and type(GA.BagInspector.SetSharing) == "function" then GA.BagInspector:SetSharing(enabled) else profile().bagInspectorShare = enabled end
         SettingsWindow:SetStatus("Taschenfreigabe gespeichert.", Theme.colors.green)
     end)
+    self.updateNotifications = self:CreateCheckBox(section, localized("SETTINGS_UPDATE_NOTIFICATIONS", "Show a chat message when a newer MasterLooter version is detected"), -228, "updateNotificationsEnabled")
 
     local languageLabel = Theme:CreateLabel(section, localized("SETTINGS_LANGUAGE", "Sprache / Language"), 12)
-    languageLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -240)
+    languageLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -274)
     self.languageLabel = languageLabel
     local languageOptions = {
         { value = "AUTO", label = localized("SETTINGS_LANGUAGE_AUTO", "Automatisch (Client)") },
@@ -191,8 +192,8 @@ function SettingsWindow:BuildGeneral()
     end)
     self.languageDropdown:SetPoint("LEFT", languageLabel, "RIGHT", 20, -2)
 
-    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -292); self.profileTitle = profileTitle
-    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -322); self.profileLabel = profileLabel
+    local profileTitle = Theme:CreateLabel(section, "PROFIL", 11, Theme.colors.muted); profileTitle:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -326); self.profileTitle = profileTitle
+    local profileLabel = Theme:CreateLabel(section, "Aktives Profil", 12); profileLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -356); self.profileLabel = profileLabel
     self.profileEdit = Theme:CreateEditBox(section, 190, 24); self.profileEdit:SetPoint("LEFT", profileLabel, "RIGHT", 20, 0)
     local switchProfile = Theme:CreateButton(section, "Wechseln", 90, 24); switchProfile:SetPoint("LEFT", self.profileEdit, "RIGHT", 8, 0); self.switchProfileButton = switchProfile
     switchProfile:SetScript("OnClick", function() SettingsWindow:SwitchProfile() end)
@@ -203,14 +204,9 @@ end
 function SettingsWindow:BuildLoot()
     local section = self:CreateSection("LOOT", "Loot & Rollen", "Standards für Verteilungen, Vergaben und Gruppenansagen.")
     self.autoGive = self:CreateCheckBox(section, "Gewinner automatisch über Masterloot beliefern", -92, "autoGiveAwards")
-    self.announce = self:CreateCheckBox(section, "Ansagen in Gruppe/Raid aktivieren", -126, "_announcementEnabled")
-    self.announce:SetScript("OnClick", function(self)
-        if GA.Announcements then GA.Announcements:SetOption("enabled", self:GetChecked() and true or false) end
-        SettingsWindow:SetStatus("Ansageeinstellung gespeichert.", Theme.colors.green)
-    end)
-    self.commandAnnounce = self:CreateCheckBox(section, localized("SETTINGS_COMMAND_ANNOUNCEMENTS", "Announce SR and SL whisper commands when becoming loot master"), -160, "commandAnnouncementsEnabled")
-    self.tradeWhispers = self:CreateCheckBox(section, localized("SETTINGS_TRADE_WHISPERS", "Send automatic trade whispers to winners"), -194, "tradeWhispersEnabled")
-    local channelLabel = Theme:CreateLabel(section, localized("SETTINGS_ANNOUNCEMENT_CHANNEL", "Ansagekanal"), 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -238)
+    self.commandAnnounce = self:CreateCheckBox(section, localized("SETTINGS_COMMAND_ANNOUNCEMENTS", "Send the SR and SL command notice when becoming loot master"), -126, "commandAnnouncementsEnabled")
+    self.tradeWhispers = self:CreateCheckBox(section, localized("SETTINGS_TRADE_WHISPERS", "Send automatic trade whispers to winners"), -160, "tradeWhispersEnabled")
+    local channelLabel = Theme:CreateLabel(section, localized("SETTINGS_ANNOUNCEMENT_CHANNEL", "Ansagekanal"), 12); channelLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -204)
     local channelNames = {
         AUTO = localized("CHANNEL_AUTO", "Automatisch"), RAID_WARNING = localized("CHANNEL_RAID_WARNING", "Raid-Warnung"),
         RAID = localized("CHANNEL_RAID", "Raid"), PARTY = localized("CHANNEL_PARTY", "Gruppe"),
@@ -225,13 +221,38 @@ function SettingsWindow:BuildLoot()
         SettingsWindow:SetStatus(ok and localized("CHANNEL_SAVED", "Ansagekanal gespeichert.") or tostring(err), ok and Theme.colors.green or Theme.colors.red)
     end)
     self.channelDropdown:SetPoint("LEFT", channelLabel, "RIGHT", 24, -2)
-    local durationLabel = Theme:CreateLabel(section, "Standarddauer", 12); durationLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -282)
+
+    local countdownLabel = Theme:CreateLabel(section, localized("SETTINGS_FINAL_COUNTDOWN", "Final countdown announcements"), 12)
+    countdownLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -248)
+    self.countdownLabel = countdownLabel
+    local countdownOptions = {}
+    for value = 1, 10 do
+        local label
+        if value == 1 then
+            label = localized("SETTINGS_FINAL_COUNTDOWN_ONE", "Only at 1 second")
+        else
+            local sequence = ""
+            for second = value, 1, -1 do sequence = sequence .. (sequence ~= "" and ", " or "") .. tostring(second) end
+            label = localized("SETTINGS_FINAL_COUNTDOWN_LAST", "Last %d seconds: %s", value, sequence)
+        end
+        countdownOptions[#countdownOptions + 1] = { value = value, label = label }
+    end
+    self.countdownDropdown = createDropdown(section, self:BuildName("FinalCountdownDropdown"), 260, countdownOptions, function(value)
+        local ok, err = GA.Announcements:SetOption("finalCountdownSeconds", value)
+        SettingsWindow:SetStatus(ok and localized("SETTINGS_FINAL_COUNTDOWN_SAVED", "Final countdown saved.") or tostring(err), ok and Theme.colors.green or Theme.colors.red)
+    end)
+    self.countdownDropdown:SetPoint("LEFT", countdownLabel, "RIGHT", 18, -2)
+    local countdownHelp = Theme:CreateLabel(section, localized("SETTINGS_FINAL_COUNTDOWN_HELP", "Above the selected final countdown, an announcement is still sent every 10 seconds."), 10, Theme.colors.muted)
+    countdownHelp:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -284); countdownHelp:SetPoint("RIGHT", section, "RIGHT", -20, 0)
+    self.countdownHelp = countdownHelp
+
+    local durationLabel = Theme:CreateLabel(section, "Standarddauer", 12); durationLabel:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -320)
     self.durationEdit = Theme:CreateEditBox(section, 60, 24, true); self.durationEdit:SetPoint("LEFT", durationLabel, "RIGHT", 24, 0)
     local seconds = Theme:CreateLabel(section, "Sekunden", 12, Theme.colors.muted); seconds:SetPoint("LEFT", self.durationEdit, "RIGHT", 8, 0)
-    local save = Theme:CreateButton(section, "Speichern", 100, 25); save:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -320)
+    local save = Theme:CreateButton(section, "Speichern", 100, 25); save:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -358)
     save:SetScript("OnClick", function() SettingsWindow:SaveDuration() end)
     local note = Theme:CreateLabel(section, "Der OS-Bereich wird für jede Verteilung autoritativ im Lootmaster-Fenster festgelegt. MS bleibt immer /roll 100.", 11, Theme.colors.muted)
-    note:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -366); note:SetPoint("RIGHT", section, "RIGHT", -20, 0)
+    note:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -404); note:SetPoint("RIGHT", section, "RIGHT", -20, 0)
 end
 
 function SettingsWindow:BuildPackMule()
@@ -276,11 +297,12 @@ function SettingsWindow:ResetIncompleteBuild()
     self.frame, self.sidebar, self.content = nil, nil, nil
     self.sectionFrames, self.navButtons = {}, {}
     self.autoOpen, self.autoGive, self.sound, self.minimap, self.bagShare = nil, nil, nil, nil, nil
-    self.announce, self.commandAnnounce, self.tradeWhispers, self.channelDropdown, self.languageDropdown = nil, nil, nil, nil, nil
+    self.commandAnnounce, self.tradeWhispers, self.channelDropdown, self.countdownDropdown, self.languageDropdown = nil, nil, nil, nil, nil
     self.durationEdit, self.scaleEdit, self.profileEdit = nil, nil, nil
     self.muleTargetEdit, self.muleQualityEdit, self.status = nil, nil, nil
     self.factoryResetButton, self.buildComplete = nil, false
     self.languageLabel, self.profileTitle, self.profileLabel = nil, nil, nil
+    self.countdownLabel, self.countdownHelp = nil, nil
     self.switchProfileButton, self.manageProfilesButton = nil, nil
 end
 
@@ -387,10 +409,10 @@ function SettingsWindow:Refresh()
     if not self:EnsureFrame() or not self:ControlsReady() then return false end
     local current = profile(); current.minimap = current.minimap or {}
     self.autoOpen:SetChecked(current.autoOpenRollWindow ~= false); self.autoGive:SetChecked(current.autoGiveAwards ~= false)
-    self.sound:SetChecked(current.sound ~= false); self.minimap:SetChecked(current.minimap.hide ~= true)
+    self.sound:SetChecked(current.sound ~= false); self.minimap:SetChecked(current.minimap.hide ~= true); self.updateNotifications:SetChecked(current.updateNotificationsEnabled ~= false)
     local config = GA.Announcements and GA.Announcements:GetConfig() or current.announcements or {}
-    self.announce:SetChecked(config.enabled ~= false); self.commandAnnounce:SetChecked(current.commandAnnouncementsEnabled ~= false); self.tradeWhispers:SetChecked(current.tradeWhispersEnabled ~= false); self.bagShare:SetChecked(current.bagInspectorShare ~= false)
-    self.channelDropdown:SetValue(tostring(config.channel or "AUTO")); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
+    self.commandAnnounce:SetChecked(current.commandAnnouncementsEnabled ~= false); self.tradeWhispers:SetChecked(current.tradeWhispersEnabled ~= false); self.bagShare:SetChecked(current.bagInspectorShare ~= false)
+    self.channelDropdown:SetValue(tostring(config.channel or "AUTO")); self.countdownDropdown:SetValue(tonumber(config.finalCountdownSeconds) or 10); self.durationEdit:SetText(tostring(tonumber(current.defaultRollDuration) or 30))
     local languageMode = GA.Localization and type(GA.Localization.GetLanguageMode) == "function" and GA.Localization:GetLanguageMode() or current.language or "AUTO"
     self.languageDropdown:SetValue(languageMode)
     self.scaleEdit:SetText(string.format("%.2f", tonumber(current.uiScale) or 1)); self.profileEdit:SetText(tostring(GA.DB.data.activeProfile or "Default"))

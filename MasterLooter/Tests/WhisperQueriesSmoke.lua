@@ -2,18 +2,22 @@ local assertions = 0
 local function expect(value, message) assertions = assertions + 1; if not value then error("ASSERTION FAILED: " .. message, 2) end end
 local function same(actual, expected, message) expect(actual == expected, message .. " (expected " .. tostring(expected) .. ", got " .. tostring(actual) .. ")") end
 
-local now, raidMaster = 100, 1
+local now, raidMaster, partyMaster, groupMode = 100, 1, 0, "raid"
 local profile = { language = "enUS", commandAnnouncementsEnabled = true }
 local sent, callbacks, registered = {}, {}, {}
 function GetTime() return now end
 function UnitName(unit)
     if unit == "player" or unit == "raid1" then return "Lootmaster" end
+    if unit == "party1" then return "Alice" end
     if unit == "raid2" then return "Alice" end
     if unit == "raid3" then return "Bob" end
 end
-function GetNumRaidMembers() return 3 end
-function GetNumPartyMembers() return 0 end
-function GetLootMethod() return "master", nil, raidMaster end
+function GetNumRaidMembers() return groupMode == "raid" and 3 or 0 end
+function GetNumPartyMembers() return groupMode == "party" and 1 or 0 end
+function GetLootMethod()
+    if groupMode == "party" then return "master", partyMaster, nil end
+    return "master", nil, raidMaster
+end
 function GetItemInfo(id) return "Item " .. tostring(id), "|Hitem:" .. tostring(id) .. ":0:0:0|h[Item " .. tostring(id) .. "]|h" end
 function SendChatMessage(message, channel, _, target) sent[#sent + 1] = { message = message, channel = channel, target = target } end
 
@@ -95,5 +99,12 @@ expect(not GA.WhisperQueries:AnnounceCommands(), "disabled command announcement 
 profile.commandAnnouncementsEnabled = true
 expect(GA.WhisperQueries:AnnounceCommands(), "command announcement can be enabled again")
 same(#sent, afterAliases + 2, "re-enabled command announcement is sent")
+
+raidMaster = 2
+callbacks.PARTY_LOOT_METHOD_CHANGED()
+groupMode, partyMaster = "party", 0
+callbacks.PARTY_MEMBERS_CHANGED()
+same(#sent, afterAliases + 3, "becoming master looter in a party sends the same optional command notice")
+expect(registered.PARTY_MEMBERS_CHANGED, "party roster changes refresh the master-looter notice state")
 
 print("PASS: " .. assertions .. " whisper-query assertions")

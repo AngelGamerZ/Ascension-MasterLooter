@@ -694,8 +694,10 @@ same(aliceGA.GDKP.active.sales[1].amount, 350, "winning auction becomes a GDKP s
 expect(aliceGA.GDKP:AddSale(nil, nil, 0) == nil, "GDKP rejects malformed sales without throwing")
 local activeProfile = aliceGA.DB:GetProfile()
 same(activeProfile.tradeWhispersEnabled, true, "trade whispers are enabled by default")
+same(activeProfile.updateNotificationsEnabled, true, "update notifications are enabled by default")
 activeProfile.sound = false
 activeProfile.tradeWhispersEnabled = false
+activeProfile.updateNotificationsEnabled = false
 activeProfile.defaultRollDuration = nil -- simulate a profile saved by an older build
 fire(alice, "PLAYER_LOGOUT")
 local reloaded = makeClient("Reloaded", alice.env.MasterLooterDB)
@@ -705,6 +707,7 @@ same(reloadedGA.GDKP.active.sales[1].amount, 350, "active GDKP sales survive rel
 same(reloadedGA.DB:GetProfile().sound, false, "existing profile values survive default merging")
 same(reloadedGA.DB:GetProfile().defaultRollDuration, 30, "existing profiles receive newly introduced defaults")
 same(reloadedGA.DB:GetProfile().tradeWhispersEnabled, false, "disabled trade whispers remain disabled after reload")
+same(reloadedGA.DB:GetProfile().updateNotificationsEnabled, false, "disabled update notifications remain disabled after reload")
 expect(reloadedGA.GDKP:Finish() ~= nil, "restored GDKP session can be finished")
 same(reloadedGA.GDKP:GetCut(10), 0, "GetCut is safe without an active session")
 local exportText, exported = aliceGA.ImportExport:Export({ awards = false, gdkp = false })
@@ -771,8 +774,8 @@ loadFile(alice, "UI/MasterLooterWindow.lua")
 same(aliceGA.UI.MasterLooterWindow.WIDTH, 520, "the Gargul-style loot-master window keeps its compact width")
 same(aliceGA.UI.MasterLooterWindow.HEIGHT, 450, "the loot-master controls and roll table fit one compact window")
 same(aliceGA.UI.MasterLooterWindow.VISIBLE_ROWS, 6, "the loot-master table uses a dense visible roll list")
-same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 5, "the row-action loot-master layout is active")
-same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 282, "the OS /roll input is separated from its full label")
+same(aliceGA.UI.MasterLooterWindow.LAYOUT_VERSION, 6, "the aligned roll-options loot-master layout is active")
+same(aliceGA.UI.MasterLooterWindow.OS_EDIT_X, 300, "the OS /roll input is separated from seconds and its full label")
 same(aliceGA.UI.MasterLooterWindow.PAGINATION_Y, -171, "pagination sits above rather than over the table headers")
 same(aliceGA.UI.MasterLooterWindow.TABLE_TOP, -205, "the status area ends before the roll table begins")
 same(aliceGA.UI.MasterLooterWindow.ROW_HEIGHT, 25, "six compact participant rows fit without clipping")

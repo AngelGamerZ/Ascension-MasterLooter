@@ -3,11 +3,14 @@ param([string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\.."))
 $ErrorActionPreference = "Stop"
 $tests = @(
     "MasterLooter/Tests/TestHarness.lua",
+    "MasterLooter/Tests/VersionCheckSmoke.lua",
     "MasterLooter/Tests/RulesLedgerSmoke.lua",
     "MasterLooter/Tests/RulesSyncSmoke.lua",
     "MasterLooter/Tests/ExternalImportSmoke.lua",
     "MasterLooter/Tests/WhisperQueriesSmoke.lua",
     "MasterLooter/Tests/LocalizationChannelsSmoke.lua",
+    "MasterLooter/Tests/AnnouncementCountdownSmoke.lua",
+    "MasterLooter/Tests/RollChoiceConfigurationSmoke.lua",
     "MasterLooter/Tests/ErrorLocalizationSmoke.lua",
     "MasterLooter/Tests/NonUILocalizationSmoke.lua",
     "MasterLooter/Tests/UILocalizationSmoke.lua",

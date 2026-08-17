@@ -83,6 +83,13 @@ if not announcementChunk then error(announcementError) end
 announcementChunk("MasterLooter", GA)
 local Announcements = GA.Announcements
 
+same(Announcements:GetConfig().finalCountdownSeconds, 10, "final countdown defaults to the legacy 10-to-1 sequence")
+expect(Announcements:SetOption("finalCountdownSeconds", 3), "a valid final-countdown range is persisted")
+same(profile.announcements.finalCountdownSeconds, 3, "saved final-countdown range uses the numeric value")
+expect(not Announcements:SetOption("finalCountdownSeconds", 0), "a final-countdown range below 1 is rejected")
+expect(not Announcements:SetOption("finalCountdownSeconds", 11), "a final-countdown range above 10 is rejected")
+same(profile.announcements.finalCountdownSeconds, 3, "invalid final-countdown input preserves the previous value")
+
 local expectedOptions = { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" }
 local options = Announcements:GetChannelOptions()
 same(#options, #expectedOptions, "channel selector exposes every supported option")
@@ -123,5 +130,20 @@ same(Announcements:ResolveChannel("RAID_WARNING"), "RAID", "raid warning degrade
 groupState.officer = true
 same(Announcements:ResolveChannel("AUTO"), "RAID_WARNING", "automatic mode prefers raid warning with permission")
 same(Announcements:ResolveChannel("RAID_WARNING"), "RAID_WARNING", "raid warning is retained with permission")
+
+local now, countdownMessages = 50, {}
+GetTime = function() return now end
+Announcements.Send = function(_, message) countdownMessages[#countdownMessages + 1] = message; return true end
+Announcements.activeRoll = { id = "countdown", owner = "Lootmaster", status = "ACTIVE", expiresAt = 100, itemLink = "[Test item]" }
+Announcements.lastCountdownSecond = nil
+for _, remaining in ipairs({ 50, 49, 40, 11, 10, 9, 3, 2, 1, 0 }) do
+    now = 100 - remaining
+    Announcements:Tick()
+end
+same(#countdownMessages, 6, "range 3 announces 50, 40, 10 and the final 3-to-1 sequence only")
+expect(string.find(countdownMessages[1], "50", 1, true), "first ten-second interval is announced")
+expect(string.find(countdownMessages[3], "10", 1, true), "10 seconds remains an interval announcement")
+expect(string.find(countdownMessages[4], "3", 1, true) and string.find(countdownMessages[6], "1", 1, true),
+    "selected final countdown is announced completely")
 
 print(string.format("PASS: %d localization and announcement-channel assertions", assertions))

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.4-beta
+- Added realm-wide update checks through a dedicated MasterLooter channel
+- Added native Blizzard tooltip support to participant rolls, including RefactorGear information
+- Added configurable final-countdown announcements
+- Added controls to disable OS and Transmog rolls
+- Added switches for loot-master command notices and automatic trade whispers
+- Fixed layout and alignment in the loot-master window
+
 ## 0.17.3-beta
 - Added persistent controls for loot-master command announcements and automatic trade whispers
 - Fixed pending trade reminders after manual Blizzard master-loot assignments

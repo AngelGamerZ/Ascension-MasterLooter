@@ -172,11 +172,12 @@ function Theme:RegisterForEscape(frame)
     table.insert(UISpecialFrames, name)
 end
 
-function Theme:SetItemTooltip(widget, itemLink)
+function Theme:SetItemTooltip(widget, itemLink, context)
     widget.itemLink = itemLink
+    widget.itemTooltipContext = context
     widget:SetScript("OnEnter", function(self)
         self.itemTooltipShift = type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false
-        Theme:ShowItemTooltip(self, self.itemLink)
+        Theme:ShowItemTooltip(self, self.itemLink, nil, self.itemTooltipContext)
     end)
     widget:SetScript("OnLeave", function(self)
         self.itemTooltipShift = nil
@@ -187,7 +188,7 @@ function Theme:SetItemTooltip(widget, itemLink)
         if self.itemTooltipShift == shift then return end
         self.itemTooltipShift = shift
         Theme:HideOwnedTooltip(self)
-        Theme:ShowItemTooltip(self, self.itemLink)
+        Theme:ShowItemTooltip(self, self.itemLink, nil, self.itemTooltipContext)
     end
 end
 
@@ -202,9 +203,19 @@ function Theme:GetTooltip()
     return tooltip
 end
 
-function Theme:ShowItemTooltip(owner, itemLink, anchor)
+function Theme:GetItemTooltip(context)
+    -- The participant roll window behaves like a native Blizzard item button.
+    -- Using GameTooltip here lets tooltip addons (including RefactorGear)
+    -- render through their own existing OnTooltipSetItem hooks and styling.
+    if type(context) == "table" and context.source == "roll" and _G.GameTooltip then
+        return _G.GameTooltip
+    end
+    return self:GetTooltip()
+end
+
+function Theme:ShowItemTooltip(owner, itemLink, anchor, context)
     if not owner or type(itemLink) ~= "string" or itemLink == "" then return false end
-    local tooltip = self:GetTooltip()
+    local tooltip = self:GetItemTooltip(context)
     if not tooltip then return false end
     tooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
     tooltip:SetHyperlink(itemLink)
@@ -245,6 +256,11 @@ function Theme:ShowTextTooltip(owner, lines, anchor)
 end
 
 function Theme:HideOwnedTooltip(owner)
+    local global = _G.GameTooltip
+    if global and type(global.Hide) == "function" and type(global.GetOwner) == "function" and global:GetOwner() == owner then
+        global:Hide()
+        return true
+    end
     local tooltip = self.tooltip
     if not tooltip or type(tooltip.Hide) ~= "function" then return false end
     if type(tooltip.GetOwner) == "function" and tooltip:GetOwner() ~= owner then return false end

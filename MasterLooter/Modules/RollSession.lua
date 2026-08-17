@@ -163,14 +163,18 @@ end
 
 local function sanitizeChoices(choices)
     local result, seen = {}, {}
-    if type(choices) ~= "table" then choices = defaultChoices() end
+    local known = { MS = true, OS = true, TRANSMOG = true, PASS = true }
+    if type(choices) ~= "table" or #choices == 0 then choices = defaultChoices() end
     for i = 1, #choices do
         local choice = tostring(choices[i] or "")
-        if choice ~= "" and #choice <= 24 and not seen[choice] then
+        if known[choice] and not seen[choice] then
             result[#result + 1], seen[choice] = choice, true
         end
     end
-    if #result == 0 then return defaultChoices() end
+    -- MS and passing are core actions. Optional categories are represented only
+    -- by their presence in this list so protocol 3 peers need no new fields.
+    if not seen.MS then table.insert(result, 1, "MS") end
+    if not seen.PASS then result[#result + 1] = "PASS" end
     return result
 end
 
@@ -188,7 +192,9 @@ local function sanitizeAwardLimit(value)
 end
 
 local function hasChoice(state, choice)
-    for i = 1, #state.choices do if state.choices[i] == choice then return true end end
+    local choices = type(state) == "table" and state.choices
+    if type(choices) ~= "table" then choices = defaultChoices() end
+    for i = 1, #choices do if choices[i] == choice then return true end end
     return false
 end
 
@@ -261,6 +267,7 @@ function RollSession:RestoreActive()
     if remaining <= 0 or remaining > 600 then store.active = nil; return false end
     local state = copyPersistent(saved)
     state.savedAt, state.remainingAtSave = nil, nil
+    state.choices = sanitizeChoices(state.choices)
     state.receivedAt, state.expiresAt, state.timeSource = GetTimeSafe(), GetTimeSafe() + remaining, "RESTORED"
     state.participants, state.participantSequences, state.rollAssignments = state.participants or {},
         state.participantSequences or {}, state.rollAssignments or {}
@@ -393,9 +400,9 @@ function RollSession:GetChoiceForMaximum(sessionID, maximum)
     local state = type(sessionID) == "table" and sessionID or resolveState(sessionID)
     maximum = tonumber(maximum)
     if not state or not maximum then return nil end
-    if maximum == 100 then return "MS" end
+    if maximum == 100 and hasChoice(state, "MS") then return "MS" end
     if maximum == self.TRANSMOG_ROLL_MAXIMUM and hasChoice(state, "TRANSMOG") then return "TRANSMOG" end
-    if maximum == sanitizeOSMaximum(state.osRollMaximum) then return "OS" end
+    if maximum == sanitizeOSMaximum(state.osRollMaximum) and hasChoice(state, "OS") then return "OS" end
     return nil
 end
 

@@ -72,14 +72,17 @@ function UIDropDownMenu_SetText(dropdown, text) dropdown.text = text end
 function CloseDropDownMenus() end
 
 local profile = { minimap = {}, defaultRollDuration = 30, language = "AUTO" }
-local selectedChannel, selectedLanguage
+local selectedChannel, selectedCountdown, selectedLanguage
 local GA = {
     VERSION = "build-smoke", UI = {}, modules = {},
     DB = { data = { activeProfile = "Default" }, GetProfile = function() return profile end },
     Announcements = {
-        GetConfig = function() return { enabled = true, channel = "AUTO" } end,
+        GetConfig = function() return { enabled = true, channel = "AUTO", finalCountdownSeconds = 3 } end,
         GetChannelOptions = function() return { "AUTO", "RAID_WARNING", "RAID", "PARTY", "SAY", "YELL", "GUILD", "OFFICER" } end,
-        SetOption = function(_, key, value) if key == "channel" then selectedChannel = value end; return true end,
+        SetOption = function(_, key, value)
+            if key == "channel" then selectedChannel = value elseif key == "finalCountdownSeconds" then selectedCountdown = value end
+            return true
+        end,
     },
     Localization = {
         GetLanguageMode = function() return profile.language end,
@@ -115,8 +118,14 @@ local semanticEnglish = {
     SETTINGS_WINDOW_TITLE = "MasterLooter %s — Settings",
     SETTINGS_OPEN_ERROR = "Settings could not be opened: %s",
     SETTINGS_ANNOUNCEMENT_CHANNEL = "Announcement channel",
-    SETTINGS_COMMAND_ANNOUNCEMENTS = "Announce SR and SL whisper commands when becoming loot master",
+    SETTINGS_COMMAND_ANNOUNCEMENTS = "Send the SR and SL command notice when becoming loot master",
     SETTINGS_TRADE_WHISPERS = "Send automatic trade whispers to winners",
+    SETTINGS_UPDATE_NOTIFICATIONS = "Show a chat message when a newer MasterLooter version is detected",
+    SETTINGS_FINAL_COUNTDOWN = "Final countdown announcements",
+    SETTINGS_FINAL_COUNTDOWN_ONE = "Only at 1 second",
+    SETTINGS_FINAL_COUNTDOWN_LAST = "Last %d seconds: %s",
+    SETTINGS_FINAL_COUNTDOWN_HELP = "Above the selected final countdown, an announcement is still sent every 10 seconds.",
+    SETTINGS_FINAL_COUNTDOWN_SAVED = "Final countdown saved.",
     CHANNEL_AUTO = "Automatic",
     CHANNEL_RAID_WARNING = "Raid warning", CHANNEL_RAID = "Raid", CHANNEL_PARTY = "Group",
     CHANNEL_SAY = "Say", CHANNEL_YELL = "Yell", CHANNEL_GUILD = "Guild", CHANNEL_OFFICER = "Officer",
@@ -157,8 +166,10 @@ expect(settings:Refresh(), "a complete settings frame refreshes safely")
 same(frame.title:GetText(), "MasterLooter build-smoke — Settings", "dynamic settings title is rendered completely in English")
 same(settings.languageDropdown:GetValue(), "AUTO", "language dropdown reflects automatic client selection")
 same(settings.channelDropdown:GetValue(), "AUTO", "announcement dropdown reflects the saved channel")
+same(settings.countdownDropdown:GetValue(), 3, "final-countdown dropdown reflects the saved range")
 same(settings.languageDropdown.padding, 0, "language dropdown supplies legacy SharedXML padding")
 same(settings.channelDropdown.padding, 0, "channel dropdown supplies legacy SharedXML padding")
+same(settings.countdownDropdown.padding, 0, "final-countdown dropdown supplies legacy SharedXML padding")
 same(settings.languageDropdown.options[1].label, "Automatic (client)", "automatic language dropdown value is English")
 same(settings.languageDropdown.options[2].label, "German", "German language dropdown value is named in English")
 same(settings.languageDropdown.options[3].label, "English", "English language dropdown value is English")
@@ -169,11 +180,21 @@ for _, option in ipairs(settings.channelDropdown.options) do
 end
 same(settings.languageDropdown:GetName(), "MasterLooterSettingsLanguageDropdown", "language dropdown has a stable 3.3.5a template name")
 same(settings.channelDropdown:GetName(), "MasterLooterSettingsAnnouncementChannelDropdown", "channel dropdown has a distinct 3.3.5a template name")
+same(settings.countdownDropdown:GetName(), "MasterLooterSettingsFinalCountdownDropdown", "final-countdown dropdown has a distinct 3.3.5a template name")
 same(#settings.channelDropdown.options, 8, "announcement dropdown exposes all supported channels")
+same(#settings.countdownDropdown.options, 10, "final-countdown dropdown exposes ranges 1 through 10")
+same(settings.countdownDropdown.options[1].label, "Only at 1 second", "one-second option has a descriptive label")
+same(settings.countdownDropdown.options[3].label, "Last 3 seconds: 3, 2, 1", "multi-second option shows its complete sequence")
+same(settings.countdownDropdown.text, "Last 3 seconds: 3, 2, 1", "closed dropdown shows the complete saved description")
 dropdownButtons = {}; settings.channelDropdown.initialize()
 for _, info in ipairs(dropdownButtons) do
     info.func()
     same(selectedChannel, info.value, "each announcement callback persists its own channel: " .. tostring(info.value))
+end
+dropdownButtons = {}; settings.countdownDropdown.initialize()
+for _, info in ipairs(dropdownButtons) do
+    info.func()
+    same(selectedCountdown, info.value, "each countdown callback persists its own range: " .. tostring(info.value))
 end
 dropdownButtons = {}; settings.languageDropdown.initialize()
 for _, info in ipairs(dropdownButtons) do
@@ -188,7 +209,9 @@ same(settings.autoOpen.label:GetText(), "Automatically open the roll window for 
 same(settings.sound.label:GetText(), "Play notification sounds", "General sound option is rendered in English")
 same(settings.minimap.label:GetText(), "Show minimap button", "General minimap option is rendered in English")
 same(settings.bagShare.label:GetText(), "Allow bag-inspection requests from group members", "General bag-sharing option is rendered in English")
-same(settings.commandAnnounce.label:GetText(), "Announce SR and SL whisper commands when becoming loot master", "command-announcement option is rendered in English")
+same(settings.updateNotifications.label:GetText(), "Show a chat message when a newer MasterLooter version is detected", "update-notification option is rendered in English")
+same(settings.updateNotifications:GetChecked(), true, "update notifications are enabled by default")
+same(settings.commandAnnounce.label:GetText(), "Send the SR and SL command notice when becoming loot master", "command-announcement option is rendered in English")
 same(settings.tradeWhispers.label:GetText(), "Send automatic trade whispers to winners", "trade-whisper option is rendered in English")
 same(settings.languageLabel:GetText(), "Language", "General language caption is rendered in English")
 same(settings.profileTitle:GetText(), "PROFILE", "General profile section note is rendered in English")

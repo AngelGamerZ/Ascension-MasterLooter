@@ -157,7 +157,32 @@ end
 function RollWindow:SetButtonsEnabled(enabled)
     if not self.buttons then return end
     for choice, button in pairs(self.buttons) do
-        if enabled and (not self.availableChoices or self.availableChoices[choice]) then button:Enable() else button:Disable() end
+        local available = not self.availableChoices or self.availableChoices[choice]
+        if available then
+            button:Show()
+            if enabled then button:Enable() else button:Disable() end
+        else
+            button:Hide()
+            button:Disable()
+        end
+    end
+    self:LayoutChoiceButtons()
+end
+
+function RollWindow:LayoutChoiceButtons()
+    if not self.buttons then return end
+    local order = { "MS", "OS", "TRANSMOG", "PASS" }
+    local visible = {}
+    for _, choice in ipairs(order) do
+        if not self.availableChoices or self.availableChoices[choice] then visible[#visible + 1] = self.buttons[choice] end
+    end
+    local gap, right = 4, self.WIDTH - 10
+    for index = #visible, 1, -1 do
+        local button = visible[index]
+        if button.ClearAllPoints then button:ClearAllPoints() end
+        button:SetPoint("TOPRIGHT", self.frame, "TOPLEFT", right, -6)
+        local width = type(button.GetWidth) == "function" and button:GetWidth() or 70
+        right = right - width - gap
     end
 end
 
@@ -197,7 +222,11 @@ function RollWindow:ShowSession(session)
         texture = select(10, GetItemInfo(self.itemLink))
     end
     self.icon.texture:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
-    Theme:SetItemTooltip(self.itemInteraction or self.icon, self.itemLink)
+    Theme:SetItemTooltip(self.itemInteraction or self.icon, self.itemLink, {
+        source = "roll",
+        session = session,
+        sessionId = self.sessionId,
+    })
     self.status:SetText("Bitte wähle deine Roll-Kategorie.")
     self.status:SetTextColor(unpack(Theme.colors.muted))
     self:SetButtonsEnabled(true)
@@ -209,6 +238,7 @@ end
 
 function RollWindow:Submit(choice)
     if not self.session then return end
+    if self.availableChoices and not self.availableChoices[choice] then return end
     local manager = GA.RollSession
     if choice == "PASS" then
         local ok, result = type(manager) == "table" and type(manager.Pass) == "function" and

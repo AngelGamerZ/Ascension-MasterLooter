@@ -142,7 +142,8 @@ end
 
 function WhisperQueries:RefreshMasterLooterState()
     local inRaid = type(GetNumRaidMembers) == "function" and (GetNumRaidMembers() or 0) > 0
-    local active = inRaid and self:IsActiveMasterLooter() or false
+    local inParty = type(GetNumPartyMembers) == "function" and (GetNumPartyMembers() or 0) > 0
+    local active = (inRaid or inParty) and self:IsActiveMasterLooter() or false
     if active and not self.wasMasterLooter then self:AnnounceCommands() end
     self.wasMasterLooter = active
     return active
@@ -150,7 +151,7 @@ end
 
 function WhisperQueries:OnInitialize()
     GA.Events:On("CHAT_MSG_WHISPER", function(_, _, message, sender) WhisperQueries:HandleWhisper(message, sender) end, self)
-    for _, event in ipairs({ "PARTY_LOOT_METHOD_CHANGED", "RAID_ROSTER_UPDATE", "PLAYER_ENTERING_WORLD" }) do
+    for _, event in ipairs({ "PARTY_LOOT_METHOD_CHANGED", "PARTY_MEMBERS_CHANGED", "RAID_ROSTER_UPDATE", "PLAYER_ENTERING_WORLD" }) do
         GA.Events:On(event, function() WhisperQueries:RefreshMasterLooterState() end, self)
         GA.Events:RegisterGameEvent(event)
     end

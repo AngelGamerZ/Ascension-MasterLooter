@@ -12,12 +12,17 @@ end
 unpack = unpack or table.unpack
 UISpecialFrames = {}
 local foreignOwner, masterOwner = {}, {}
-local globalCalls, privateHides, privateShows = 0, 0, 0
+local globalCalls, globalShows, globalHides, privateHides, privateShows = 0, 0, 0, 0, 0
+local globalOwner, globalLink, onGlobalHyperlink
 GameTooltip = {
-    SetOwner = function() globalCalls = globalCalls + 1 end,
-    SetHyperlink = function() globalCalls = globalCalls + 1 end,
-    Show = function() globalCalls = globalCalls + 1 end,
-    Hide = function() globalCalls = globalCalls + 1 end,
+    SetOwner = function(_, owner) globalCalls, globalOwner = globalCalls + 1, owner end,
+    GetOwner = function() return globalOwner end,
+    SetHyperlink = function(_, link)
+        globalCalls, globalLink = globalCalls + 1, link
+        if onGlobalHyperlink then onGlobalHyperlink(link) end
+    end,
+    Show = function() globalCalls, globalShows = globalCalls + 1, globalShows + 1 end,
+    Hide = function() globalCalls, globalHides = globalCalls + 1, globalHides + 1 end,
 }
 local privateOwner, privateLink
 local privateTooltip = {
@@ -74,5 +79,38 @@ itemWidget:UpdateTooltip()
 same(compareCalls, 1, "releasing Shift removes comparison without creating another one")
 itemWidget.scripts.OnLeave(itemWidget)
 same(globalCalls, 0, "comparison support does not manipulate Blizzard's global tooltip")
+
+-- The participant roll item deliberately uses Blizzard's existing GameTooltip.
+-- This gives tooltip addons their normal OnTooltipSetItem path and exact
+-- rendering while ownership checks prevent MasterLooter from hiding a foreign
+-- tooltip. Other MasterLooter windows continue using the isolated tooltip.
+local refactorHookCalls, refactorLink = 0, nil
+onGlobalHyperlink = function(link)
+    refactorHookCalls, refactorLink = refactorHookCalls + 1, link
+end
+local rollContext = { source = "roll", sessionId = "session-1" }
+local rollWidget = { scripts = {} }
+function rollWidget:SetScript(name, callback) self.scripts[name] = callback end
+GA.UI.Theme:SetItemTooltip(rollWidget, "|Hitem:3|h[Roll]|h", rollContext)
+local privateShowsBeforeRoll = privateShows
+rollWidget.scripts.OnEnter(rollWidget)
+same(globalOwner, rollWidget, "roll hover owns Blizzard's existing tooltip")
+same(globalLink, "|Hitem:3|h[Roll]|h", "Blizzard tooltip receives the complete roll item link")
+same(globalShows, 1, "roll hover shows the existing Blizzard tooltip")
+same(privateShows, privateShowsBeforeRoll, "roll hover does not create another private tooltip rendering")
+same(refactorHookCalls, 1, "the standard tooltip item path reaches RefactorGear's existing hook")
+same(refactorLink, globalLink, "RefactorGear sees the same item link as Blizzard's tooltip")
+rollWidget.scripts.OnLeave(rollWidget)
+same(globalHides, 1, "leaving the owned roll item hides its Blizzard tooltip")
+
+globalOwner = foreignOwner
+same(GA.UI.Theme:HideOwnedTooltip(rollWidget), false, "roll item cannot hide a Blizzard tooltip now owned elsewhere")
+same(globalHides, 1, "foreign Blizzard tooltip remains visible")
+
+shiftDown = true
+rollWidget.scripts.OnEnter(rollWidget)
+same(compareCalls, 2, "Shift comparison also runs through Blizzard's roll tooltip")
+same(comparedTooltip, GameTooltip, "roll comparison is attached to the existing Blizzard tooltip")
+rollWidget.scripts.OnLeave(rollWidget)
 
 print(string.format("PASS: %d tooltip-safety assertions", assertions))

@@ -71,6 +71,8 @@ local function widget(kind, name, parent)
     function object:EnableMouse(value) self.mouseEnabled = value ~= false end
     function object:SetText(value) self.text = tostring(value or "") end
     function object:GetText() return self.text end
+    function object:SetChecked(value) self.checked = value and true or false end
+    function object:GetChecked() return self.checked and true or false end
     function object:ClearFocus() self.focused = false end
     function object:Show() self.shown = true end
     function object:Hide() self.shown = false end
@@ -244,12 +246,24 @@ expect(window.WIDTH <= 600 and window.HEIGHT <= 500 and window.WIDTH > window.HE
 -- Geometry regression: the old screenshot showed clipped/overlapping inputs and
 -- pagination controls. Check the interactive controls against their containers.
 for _, control in ipairs({ window.itemDrop, window.startButton, window.stopButton, window.durationEdit,
-    window.osMaximumEdit, window.noteEdit, window.tableFrame, window.awardButton }) do
+    window.osMaximumEdit, window.noteEdit, window.tableFrame, window.awardButton,
+    window.osEnabledCheck, window.transmogEnabledCheck }) do
     inside(control, frame, "interactive control stays inside the main window")
 end
 separated(window.itemDrop, window.startButton, "item drop target does not overlap the start button")
 separated(window.startButton, window.stopButton, "start and stop buttons do not overlap")
 separated(window.durationEdit, window.osMaximumEdit, "timer and OS maximum inputs remain visually separate")
+separated(window.secondsLabel, window.osRangeLabel, "seconds label does not collide with the OS range label")
+local osRangeRect, osEditRect = rect(window.osRangeLabel), rect(window.osMaximumEdit)
+expect(math.abs(((osRangeRect.bottom + osRangeRect.top) / 2) - ((osEditRect.bottom + osEditRect.top) / 2)) < 0.01,
+    "OS /ROLL label is vertically centered on its input")
+separated(window.winnerLabel, window.osEnabledCheck, "winner text stays separate from the OS toggle")
+separated(window.osEnabledLabel, window.transmogEnabledCheck, "OS and Transmog toggles stay separate")
+separated(window.transmogEnabledLabel, window.awardButton, "Transmog toggle stays left of the award button")
+expect(window.osEnabledLabel:GetWidth() >= (#window.osEnabledLabel:GetText() * 8) + 8,
+    "OS toggle reserves enough width for the rendered label")
+expect(window.transmogEnabledLabel:GetWidth() >= (#window.transmogEnabledLabel:GetText() * 8) + 8,
+    "Transmog toggle reserves enough width for the rendered label")
 inside(window.itemHelp, frame, "English item help remains inside the loot-master window")
 expect(rect(window.itemHelp).width >= 420, "item help reserves the full row width for English text")
 inside(window.previousButton, frame, "previous-page button is visible")
@@ -279,6 +293,28 @@ window:NormalizeOSMaximum()
 same(window.osMaximumEdit:GetText(), "49", "reserved OS range normalizes to 49")
 expect(window.startButton.enabled, "safe OS maximum restores roll start")
 
+-- Roll-category controls are host settings. Legacy profiles (nil fields) keep
+-- both categories, while explicit choices are persisted before a session.
+expect(window.osEnabledCheck:GetChecked(), "legacy profiles keep OS enabled")
+expect(window.transmogEnabledCheck:GetChecked(), "legacy profiles keep Transmog enabled")
+window.osEnabledCheck:SetChecked(false)
+window.transmogEnabledCheck:SetChecked(false)
+window:OnChoiceToggle()
+same(profile.osRollEnabled, false, "disabling OS is persisted in the active profile")
+same(profile.transmogRollEnabled, false, "disabling Transmog is persisted in the active profile")
+local selectedChoices = window:GetSelectedChoices()
+same(#selectedChoices, 2, "disabling optional categories leaves exactly MS and Pass")
+same(selectedChoices[1], "MS", "MS cannot be removed by the loot master")
+same(selectedChoices[2], "PASS", "Pass cannot be removed by the loot master")
+expect(not window.osMaximumEdit.enabled, "OS maximum input is disabled when OS is disabled")
+window.osMaximumEdit:SetText("invalid")
+window:RefreshInputState(true)
+expect(window.startButton.enabled, "a disabled OS category does not validate its unused range")
+window.osEnabledCheck:SetChecked(true)
+window.transmogEnabledCheck:SetChecked(true)
+window.osMaximumEdit:SetText("49")
+window:OnChoiceToggle()
+
 local rollChunk, rollLoadError = loadfile("MasterLooter/UI/RollWindow.lua")
 if not rollChunk then error(rollLoadError) end
 rollChunk("MasterLooter", GA)
@@ -291,6 +327,14 @@ for _, button in pairs(rollWindow.buttons) do inside(button, rollFrame, "partici
 rollWindow:ShowSession({ id = "legacy-ui", itemLink = item, duration = 30, expiresAt = 30, osRollMaximum = 99,
     choices = { "MS", "OS", "PASS" } })
 expect(not rollWindow.buttons.TRANSMOG.enabled, "a legacy host cannot expose a non-functional Transmog action")
+expect(not rollWindow.buttons.TRANSMOG:IsShown(), "a disabled Transmog action is hidden rather than left greyed out")
+expect(rollWindow.buttons.OS:IsShown(), "an enabled OS action remains visible")
+rollWindow:ShowSession({ id = "ms-only-ui", itemLink = item, duration = 30, expiresAt = 30, osRollMaximum = 99,
+    choices = { "MS", "PASS" } })
+expect(not rollWindow.buttons.OS:IsShown() and not rollWindow.buttons.TRANSMOG:IsShown(),
+    "OS and Transmog buttons are both hidden for an MS-only session")
+expect(rollWindow.buttons.MS:IsShown() and rollWindow.buttons.PASS:IsShown(),
+    "MS and Pass remain visible when optional categories are disabled")
 rollWindow:ShowSession({ id = "transmog-ui", itemLink = item, duration = 30, expiresAt = 30, osRollMaximum = 99,
     choices = { "MS", "OS", "TRANSMOG", "PASS" } })
 expect(rollWindow.buttons.TRANSMOG.enabled, "a Transmog-capable host enables the new action")

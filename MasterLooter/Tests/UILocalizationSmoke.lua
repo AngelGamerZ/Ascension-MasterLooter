@@ -53,7 +53,7 @@ for source, translated in pairs(englishSamples) do
     same(GA:Localize(source), translated, "English UI translation for " .. source)
 end
 same(GA:Localize("Gewinner: Alice (MS)"), "Winner: Alice (MS)", "dynamic German UI status translates to English")
-same(GA:Localize("MasterLooter 0.17.3-beta – Einstellungen"), "MasterLooter 0.17.3-beta — Settings",
+same(GA:Localize("MasterLooter 0.17.3-1-beta – Einstellungen"), "MasterLooter 0.17.3-1-beta — Settings",
     "dynamic versioned settings title translates completely to English")
 same(GA:Localize("Einstellungen konnten nicht geöffnet werden: Theme-Modul ist nicht verfügbar."),
     "Settings could not be opened: Theme module is unavailable.", "dynamic settings errors contain no German remainder")
@@ -88,11 +88,11 @@ same(GA:Localize("Tracker initialisiert: true\nDirekter Eventframe: true\nSitzun
 
 profile.language = "deDE"
 GA.Locale.pendingMode = nil
-same(GA:L("SETTINGS_WINDOW_TITLE", "0.17.3-beta"), "MasterLooter 0.17.3-beta – Einstellungen",
+same(GA:L("SETTINGS_WINDOW_TITLE", "0.17.3-1-beta"), "MasterLooter 0.17.3-1-beta – Einstellungen",
     "German settings title preserves version punctuation")
 same(GA:L("PROFILE_DELETE_CONFIRM", "Raid"), "Noch einmal klicken, um Raid zu löschen.",
     "German profile deletion prompt uses one complete localized format")
-same(GA:Localize("MasterLooter 0.17.3-beta · WoW 3.3.5a"), "MasterLooter 0.17.3-beta · WoW 3.3.5a",
+same(GA:Localize("MasterLooter 0.17.3-1-beta · WoW 3.3.5a"), "MasterLooter 0.17.3-1-beta · WoW 3.3.5a",
     "German reverse localization never rewrites version punctuation")
 for german, english in pairs(englishSamples) do
     same(GA:Localize(english), german, "English source literal translates back to German")
