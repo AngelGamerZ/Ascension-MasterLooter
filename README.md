@@ -1,5 +1,9 @@
 # MasterLooter
 
+<p align="center">
+  <img src="assets/masterlooter-thumbnail.png" alt="MasterLooter loot distribution addon" width="100%">
+</p>
+
 > Loot distribution, public roll tracking, SoftRes, GDKP, raid tools, and trade assistance for **Project Ascension** on **World of Warcraft 3.3.5a**.
 
 [![Latest beta](https://img.shields.io/github/v/release/AngelGamerZ/Ascension-MasterLooter?include_prereleases&label=latest%20beta&color=d4a017)](https://github.com/AngelGamerZ/Ascension-MasterLooter/releases)
