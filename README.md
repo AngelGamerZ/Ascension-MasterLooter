@@ -4,11 +4,11 @@
   <img src="assets/masterlooter-thumbnail.png" alt="MasterLooter loot distribution addon" width="100%">
 </p>
 
-> Loot distribution, public roll tracking, SoftRes, GDKP, raid tools, and trade assistance for **Project Ascension** on **World of Warcraft 3.3.5a**.
+> Loot distribution, public roll tracking, SoftRes, GDKP, raid tools, and trade assistance for **World of Warcraft: Wrath of the Lich King 3.3.5a**.
 
 [![Latest beta](https://img.shields.io/github/v/release/AngelGamerZ/Ascension-MasterLooter?include_prereleases&label=latest%20beta&color=d4a017)](https://github.com/AngelGamerZ/Ascension-MasterLooter/releases)
 ![WoW client](https://img.shields.io/badge/WoW-3.3.5a-6f42c1)
-![Target](https://img.shields.io/badge/Project-Ascension-2f855a)
+![Target](https://img.shields.io/badge/WotLK-3.3.5a-2f855a)
 ![Languages](https://img.shields.io/badge/languages-English%20%7C%20Deutsch-277da1)
 
 MasterLooter keeps loot distribution clear and visible for the entire group. Players with the addon receive a compact roll window, while players without it can participate through ordinary public `/roll` commands.
@@ -147,7 +147,7 @@ The loot master selects the desired channel from a dropdown in the settings. Ava
 
 1. Download the newest archive from [GitHub Releases](https://github.com/AngelGamerZ/Ascension-MasterLooter/releases).
 2. Close the game client completely.
-3. Extract these folders into your Ascension installation:
+3. Extract these folders into your WoW 3.3.5a installation:
 
    ```text
    Interface/AddOns/MasterLooter
@@ -157,7 +157,7 @@ The loot master selects the desired channel from a dropdown in the settings. Ava
 4. Enable **Load out of date AddOns** on the character screen if required.
 5. Enter the game and use `/ml`.
 
-`MasterLooter_ItemData` is optional and helps the addon remember custom Ascension item information.
+`MasterLooter_ItemData` is optional and maintains a sparse, runtime-learned item index. It can also use compatible AtlasLoot difficulty-family data when available.
 
 When updating, always replace the complete addon folders instead of mixing files from different versions.
 
@@ -183,4 +183,4 @@ Minimap shortcuts and normal WoW key bindings provide quick access to the most f
 
 ## Support
 
-If something does not work as expected, include the MasterLooter version, your Ascension realm, and the copied output from `/ml debug` when opening a [GitHub issue](https://github.com/AngelGamerZ/Ascension-MasterLooter/issues).
+If something does not work as expected, include the MasterLooter version, your realm/server, and the copied output from `/ml debug` when opening a [GitHub issue](https://github.com/AngelGamerZ/Ascension-MasterLooter/issues).
