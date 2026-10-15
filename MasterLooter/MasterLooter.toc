@@ -1,9 +1,9 @@
 ## Interface: 30300
 ## Title: MasterLooter
-## Notes: Loot distribution and raid tools for Ascension WoW 3.3.5a
-## Notes-deDE: Beuteverteilung und Raidwerkzeuge für Ascension WoW 3.3.5a
+## Notes: Loot distribution and raid tools for WoW WotLK 3.3.5a
+## Notes-deDE: Beuteverteilung und Raidwerkzeuge für WoW WotLK 3.3.5a
 ## Author: MasterLooter Team
-## Version: 0.17.4-beta
+## Version: 0.17.5-beta
 ## SavedVariables: MasterLooterDB
 ## DefaultState: Enabled
 
@@ -56,6 +56,7 @@ UI\MasterLooterWindow.lua
 UI\HistoryWindow.lua
 UI\LootLedgerWindow.lua
 UI\SettingsWindow.lua
+UI\AutoRollWindow.lua
 UI\SoftResWindow.lua
 UI\GDKPWindow.lua
 UI\GDKPAuctionWindow.lua

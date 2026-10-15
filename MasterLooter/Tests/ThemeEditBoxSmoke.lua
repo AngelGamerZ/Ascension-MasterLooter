@@ -1,4 +1,4 @@
--- Verifies the Ascension-safe edit-box implementation without relying on the
+-- Verifies the 3.3.5a-safe edit-box implementation without relying on the
 -- client-specific InputBoxTemplate draw order.
 local assertions = 0
 local function expect(value, message)
@@ -42,7 +42,7 @@ end
 local GA = { UI = {}, RegisterModule = function() end }
 assert(loadfile("MasterLooter/UI/Theme.lua"))("MasterLooter", GA)
 local edit = GA.UI.Theme:CreateEditBox(widget("Frame"), 180, 24, true)
-same(edit.template, nil, "edit box does not use the broken Ascension InputBoxTemplate")
+same(edit.template, nil, "edit box does not rely on incompatible InputBoxTemplate variants")
 expect(edit.backdrop ~= nil, "edit box draws its own inset background")
 same(edit.width, 180, "edit box keeps requested width")
 same(edit.height, 24, "edit box keeps requested height")
@@ -52,4 +52,4 @@ same(edit.fontObject, ChatFontNormal, "edit box receives an explicit readable fo
 expect(edit.textColor ~= nil, "edit text receives an explicit visible color")
 expect(edit.numeric, "numeric edit boxes remain numeric")
 
-print("PASS: " .. assertions .. " Ascension edit-box assertions")
+print("PASS: " .. assertions .. " WotLK 3.3.5a edit-box assertions")

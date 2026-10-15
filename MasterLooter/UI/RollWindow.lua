@@ -12,6 +12,14 @@ local function now()
     return type(GetTime) == "function" and GetTime() or 0
 end
 
+local function L(key, fallback, ...)
+    if type(GA.L) == "function" then
+        local translated = GA:L(key, ...)
+        if translated and translated ~= key then return translated end
+    end
+    return fallback or tostring(key or "")
+end
+
 local function baseName(name)
     return type(name) == "string" and string.lower(string.match(name, "^[^-]+") or name) or ""
 end
@@ -71,7 +79,7 @@ function RollWindow:EnsureFrame()
     Theme:RestorePosition(frame, "rollWidgetGargulV1", "BOTTOM", 0, 125)
     Theme:RegisterForEscape(frame)
     self.frame = frame
-    frame:SetScript("OnMouseUp", function(_, button) if button == "RightButton" then frame:Hide() end end)
+    frame:SetScript("OnMouseUp", function(_, button) if button == "RightButton" then RollWindow:Hide() end end)
 
     local itemStrip = frame:CreateTexture(nil, "BACKGROUND")
     itemStrip:SetTexture(0.05, 0.22, 0.07, 0.78)
@@ -83,6 +91,12 @@ function RollWindow:EnsureFrame()
     status:SetWidth(174)
     status:SetJustifyH("LEFT")
     self.status = status
+
+    local autoCancel = Theme:CreateButton(frame, L("autoroll.cancel", "Cancel AutoRoll"), 174, 24)
+    autoCancel:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -5)
+    autoCancel:SetScript("OnClick", function() RollWindow:CancelAutoRoll("USER", true) end)
+    autoCancel:Hide()
+    self.autoCancelButton = autoCancel
 
     local icon = CreateFrame("Button", nil, frame)
     icon:SetWidth(32)
@@ -192,14 +206,125 @@ function RollWindow:IsCurrentSession(subject)
     return id ~= nil and tostring(id) == tostring(self.sessionId)
 end
 
+function RollWindow:TraceAuto(action, ...)
+    if type(GA.Trace) == "function" then GA:Trace("AUTOROLL", action, ...) end
+end
+
+function RollWindow:CancelAutoRoll(reason, announce)
+    local pending = self.autoRollPending
+    if not pending then return false end
+    self.autoRollPending = nil
+    if pending.timer and type(pending.timer.Cancel) == "function" then pcall(pending.timer.Cancel, pending.timer) end
+    if self.autoCancelButton then self.autoCancelButton:Hide() end
+    if self.status then self.status:Show() end
+    self:TraceAuto("CANCELLED", pending.sessionId, pending.choice, reason or "UNKNOWN")
+    if announce and self.status then
+        self.status:SetText(L("autoroll.cancelled", "AutoRoll was cancelled."))
+        self.status:SetTextColor(unpack(Theme.colors.muted))
+    end
+    return true
+end
+
+function RollWindow:UpdateAutoRollLabel()
+    local pending = self.autoRollPending
+    if not pending or not self.autoCancelButton then return end
+    local remaining = math.max(0, pending.dueAt - now())
+    self.autoCancelButton:SetText(string.format(
+        L("autoroll.cancel_countdown", "Auto: %s in %.1f sec - cancel"), tostring(pending.choice), remaining))
+end
+
+function RollWindow:ExecuteAutoRoll(pending)
+    if self.autoRollPending ~= pending then return false end
+    self.autoRollPending = nil
+    if self.autoCancelButton then self.autoCancelButton:Hide() end
+    if self.status then self.status:Show() end
+    if tostring(self.sessionId) ~= tostring(pending.sessionId) or not self.session or self.submittedSessionId == self.sessionId then
+        self:TraceAuto("SKIPPED_STALE", pending.sessionId, pending.choice)
+        return false
+    end
+    if self.endsAt and self.endsAt <= now() then
+        self:TraceAuto("SKIPPED_EXPIRED", pending.sessionId, pending.choice)
+        return false
+    end
+    if self.availableChoices and not self.availableChoices[pending.choice] then
+        self:TraceAuto("SKIPPED_DISABLED_CHOICE", pending.sessionId, pending.choice)
+        return false
+    end
+    self:TraceAuto("SUBMIT", pending.sessionId, pending.choice, pending.ruleID, pending.matchKind)
+    return self:Submit(pending.choice, true)
+end
+
+function RollWindow:ScheduleAutoRoll(session)
+    local module = GA.AutoRoll
+    if not module or type(module.Preview) ~= "function" or
+        (type(module.IsEnabled) == "function" and not module:IsEnabled()) then return false end
+    if self.submittedSessionId == self.sessionId then
+        self:TraceAuto("SKIPPED_ALREADY_SUBMITTED", self.sessionId)
+        return false
+    end
+    if self.autoRollPending and tostring(self.autoRollPending.sessionId) == tostring(self.sessionId) then return true end
+    local _, class
+    if type(UnitClass) == "function" then _, class = UnitClass("player") end
+    local item = self.itemLink or value(session, "itemID") or value(session.item, "itemID", "id")
+    local ok, plan = pcall(module.Preview, module, item, {
+        player = type(UnitName) == "function" and UnitName("player") or "",
+        class = class,
+        itemName = value(session, "itemName", "name") or value(session.item, "name"),
+        icon = value(session, "texture", "icon") or value(session.item, "texture", "icon"),
+    })
+    if not ok then self:TraceAuto("MATCH_ERROR", self.sessionId, plan); return false end
+    if type(plan) ~= "table" or not plan.matched then
+        self:TraceAuto("NO_MATCH", self.sessionId, type(plan) == "table" and plan.reason or "NO_PLAN")
+        return false
+    end
+    if self.availableChoices and not self.availableChoices[plan.choice] then
+        self:TraceAuto("SKIPPED_DISABLED_CHOICE", self.sessionId, plan.choice, plan.ruleID)
+        self.status:SetText(string.format(
+            L("autoroll.choice_unavailable", "AutoRoll rule %s is disabled for this roll."), tostring(plan.choice)))
+        self.status:SetTextColor(unpack(Theme.colors.red))
+        return false
+    end
+    local rule
+    if type(module.GetRules) == "function" then
+        for _, candidate in ipairs(module:GetRules()) do
+            if tonumber(candidate.id) == tonumber(plan.ruleID) then rule = candidate; break end
+        end
+    end
+    local delay = math.max(0, math.min(10, tonumber(rule and rule.delay) or
+        (type(module.GetDefaultDelay) == "function" and module:GetDefaultDelay()) or 3))
+    local timeLeft = self.endsAt and (self.endsAt - now()) or nil
+    if timeLeft and timeLeft <= 0.25 then self:TraceAuto("SKIPPED_EXPIRED", self.sessionId, plan.choice); return false end
+    if timeLeft then delay = math.min(delay, math.max(0, timeLeft - 0.25)) end
+    local pending = { sessionId = self.sessionId, choice = plan.choice, ruleID = plan.ruleID,
+        matchKind = plan.matchKind, dueAt = now() + delay }
+    self.autoRollPending = pending
+    if type(GA.Compat) == "table" and type(GA.Compat.After) == "function" then
+        pending.timer = GA.Compat:After(delay, function() RollWindow:ExecuteAutoRoll(pending) end)
+    else
+        self.autoRollPending = nil
+        self:TraceAuto("SKIPPED_NO_TIMER", self.sessionId, plan.choice)
+        return false
+    end
+    self.status:Hide()
+    self.autoCancelButton:Show()
+    self:UpdateAutoRollLabel()
+    self.frame:Show()
+    self:TraceAuto("SCHEDULED", self.sessionId, plan.choice, plan.ruleID, plan.matchKind, delay)
+    return true
+end
+
 function RollWindow:ShowSession(session)
     if type(session) ~= "table" then return end
     local profile = GA.DB and GA.DB:GetProfile()
     local frame = self:EnsureFrame()
     if not frame then return end
 
+    local nextSessionId = value(session, "id", "sessionId", "rollId")
+    local keepPending = self.autoRollPending and tostring(self.autoRollPending.sessionId) == tostring(nextSessionId)
+    if not keepPending then self:CancelAutoRoll("NEW_SESSION") end
     self.session = session
-    self.sessionId = value(session, "id", "sessionId", "rollId")
+    self.sessionId = nextSessionId
+    if self.submittedSessionId ~= self.sessionId then self.submittedSessionId = nil end
     self.itemLink = value(session, "itemLink", "link") or value(session.item, "link", "itemLink")
     local duration = tonumber(value(session, "duration", "seconds", "timeout")) or 30
     self.osRollMaximum = math.max(2, math.min(99, math.floor(tonumber(value(session, "osRollMaximum", "osMaximum")) or 99)))
@@ -231,14 +356,23 @@ function RollWindow:ShowSession(session)
     self.status:SetTextColor(unpack(Theme.colors.muted))
     self:SetButtonsEnabled(true)
     self:UpdateTimer()
+    if keepPending then
+        self.status:Hide()
+        self.autoCancelButton:Show()
+        self:UpdateAutoRollLabel()
+    else
+        self:ScheduleAutoRoll(session)
+    end
     if profile and profile.autoOpenRollWindow == false then return end
     frame:Show()
     if profile and profile.sound and type(PlaySound) == "function" then pcall(PlaySound, "igQuestListOpen") end
 end
 
-function RollWindow:Submit(choice)
+function RollWindow:Submit(choice, automatic)
     if not self.session then return end
     if self.availableChoices and not self.availableChoices[choice] then return end
+    if not automatic then self:CancelAutoRoll("MANUAL_OVERRIDE") end
+    if self.submittedSessionId == self.sessionId then return false end
     local manager = GA.RollSession
     if choice == "PASS" then
         local ok, result = type(manager) == "table" and type(manager.Pass) == "function" and
@@ -247,11 +381,12 @@ function RollWindow:Submit(choice)
             self.status:SetText("Du hast gepasst.")
             self.status:SetTextColor(unpack(Theme.colors.green))
             self:SetButtonsEnabled(false)
+            self.submittedSessionId = self.sessionId
         else
             self.status:SetText("Passen konnte nicht gesendet werden.")
             self.status:SetTextColor(unpack(Theme.colors.red))
         end
-        return
+        return ok and result ~= nil and result ~= false
     end
     local maximum = choice == "MS" and 100 or (choice == "OS" and self.osRollMaximum) or
         (choice == "TRANSMOG" and 50)
@@ -265,15 +400,18 @@ function RollWindow:Submit(choice)
         self.status:SetText("/roll " .. tostring(maximum) .. " ausgeführt – warte auf das Ergebnis.")
         self.status:SetTextColor(unpack(Theme.colors.green))
         self:SetButtonsEnabled(false)
+        self.submittedSessionId = self.sessionId
     else
         self.status:SetText("Der öffentliche Wurf konnte nicht ausgeführt werden.")
         self.status:SetTextColor(unpack(Theme.colors.red))
     end
+    return ok and true or false
 end
 
 function RollWindow:EndSession(reason, subject)
     if not self.frame or not self.session then return end
     if subject and not self:IsCurrentSession(subject) then return false end
+    self:CancelAutoRoll("SESSION_ENDED")
     self.endsAt = nil
     self:SetButtonsEnabled(false)
     local messages = {
@@ -295,6 +433,7 @@ function RollWindow:Confirm(participant, session)
     local name = value(participant, "name", "player", "playerName")
     local me = type(UnitName) == "function" and UnitName("player") or nil
     if name and me and string.lower(string.match(name, "^[^-]+") or name) ~= string.lower(string.match(me, "^[^-]+") or me) then return end
+    self:CancelAutoRoll("ROLL_CONFIRMED")
     local choice = value(participant, "choice", "category") or "-"
     local roll = tonumber(value(participant, "roll", "value")) or 0
     self.status:SetText(choice == "PASS" and "Passen wurde bestätigt." or ("Bestätigt: " .. choice .. " (" .. roll .. ")"))
@@ -305,6 +444,7 @@ end
 
 
 function RollWindow:Hide()
+    self:CancelAutoRoll("WINDOW_HIDDEN")
     if self.frame then self.frame:Hide() end
 end
 
@@ -324,6 +464,7 @@ function RollWindow:UpdateTimer()
     local remaining = self.endsAt - now()
     self.timer:SetText(Theme:FormatTime(remaining))
     if remaining <= 0 then
+        self:CancelAutoRoll("TIMEOUT")
         self.endsAt = nil
         self:SetButtonsEnabled(false)
         self.status:SetText("Zeit abgelaufen.")
@@ -337,6 +478,7 @@ function RollWindow:OnUpdate(elapsed)
     self.elapsed = (self.elapsed or 0) + elapsed
     if self.elapsed < 0.1 then return end
     self.elapsed = 0
+    self:UpdateAutoRollLabel()
     self:UpdateTimer()
 end
 

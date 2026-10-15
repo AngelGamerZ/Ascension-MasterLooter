@@ -4,7 +4,7 @@ local Theme, WelcomeWindow = GA.UI.Theme, {}
 GA.UI.WelcomeWindow = WelcomeWindow
 
 local NOTES = {
-    "Neuimplementierung für Ascension WoW 3.3.5a",
+    "Entwickelt für WoW WotLK 3.3.5a",
     "Öffentliche /roll-Auswertung für Spieler mit und ohne Addon",
     "Direktvergabe, Handels-Fallback, Regeln, Strichliste und GDKP",
     "Erweiterte Werkzeuge sind jederzeit über den Minimap-Button erreichbar",
@@ -14,7 +14,7 @@ function WelcomeWindow:EnsureFrame()
     local frame = CreateFrame("Frame", "MasterLooterWelcomeWindow", UIParent); frame:SetWidth(620); frame:SetHeight(420); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
     Theme:ApplyPanel(frame); Theme:AddTitle(frame, "MasterLooter " .. tostring(GA.VERSION)); Theme:MakeMovable(frame, "welcomeWindow"); Theme:RestorePosition(frame, "welcomeWindow", "CENTER", 0, 0); Theme:RegisterForEscape(frame); self.frame = frame
     local heading = Theme:CreateLabel(frame, "Willkommen bei MasterLooter", 14, Theme.colors.gold); heading:SetPoint("TOPLEFT", frame, "TOPLEFT", 28, -58)
-    local text = Theme:CreateLabel(frame, "Dieses Addon wurde speziell für Project Ascension und den 3.3.5a-Client entwickelt.", 12); text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -14); text:SetPoint("RIGHT", frame, "RIGHT", -28, 0)
+    local text = Theme:CreateLabel(frame, "Dieses Addon wurde für World of Warcraft: Wrath of the Lich King 3.3.5a entwickelt.", 12); text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -14); text:SetPoint("RIGHT", frame, "RIGHT", -28, 0)
     local previous = text
     self.noteLabels = {}
     for _, note in ipairs(NOTES) do

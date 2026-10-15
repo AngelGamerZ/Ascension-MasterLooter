@@ -1,11 +1,11 @@
 # MasterLooter
 
-Eigenständige Loot- und Raidverwaltung für Project Ascension auf dem 3.3.5a-Client.
+Eigenständige Loot- und Raidverwaltung für World of Warcraft: Wrath of the Lich King 3.3.5a.
 
 ## Installation
 
 1. Die Ordner `MasterLooter` und `MasterLooter_ItemData` nach `Interface/AddOns/` kopieren.
-2. Im Charakterbildschirm **Veraltete Addons laden** aktivieren, falls der verwendete Ascension-Build dies verlangt.
+2. Im Charakterbildschirm **Veraltete Addons laden** aktivieren, falls der verwendete 3.3.5a-Client dies verlangt.
 3. Nur Spieler mit `MasterLooter` erhalten das Rollfenster. Spieler ohne Addon können über die im Gruppenchat angekündigten `/roll`-Befehle teilnehmen. `MasterLooter_ItemData` ist optional.
 4. Im Spiel `/ml` eingeben. Die eigenständige Übersicht und alle Einstellungen funktionieren auch außerhalb einer Gruppe oder Lootmaster-Sitzung.
 
@@ -32,7 +32,7 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - Synchronisierte GDKP-Auktionen mit Mindestschritt, Anti-Snipe und Replay-Schutz
 - Unveränderte Blizzard-Gruppenloot-Oberfläche sowie Raidverwaltung, Versionsprüfung und Tascheninspektor
 - Persistente Profile und Einstellungen
-- Optionaler, zur Laufzeit lernender Ascension-Itemindex
+- Optionaler, zur Laufzeit lernender WotLK-Itemindex
 - Persistentes Beute-Ledger mit Status- und Genauigkeitskennzeichnung
 - Bis zu vier parallele GDKP-Auktionen, Gold-Ledger, Preislisten, Mutatoren und Cuts
 - AutoRoll-Empfehlungen, TMB-, BISBEARD-, DFT-, ClassicPR-/CSV- und RRobin-Import sowie abgesicherter +1-/Boosted-Roll-Sync
@@ -58,9 +58,9 @@ Das Fenster **Erfasster Loot** sammelt Lootereignisse im Hintergrund und öffnet
 - `/ml sync <Spieler>` – autoritativen +1-/Boosted-Roll-Snapshot bei einem vertrauenswürdigen Spieler anfordern
 - `/ml trust <Spieler>` – vertrauenswürdigen Regeldaten-Sender setzen
 
-Am Minimap-Button öffnet Umschalt+Rechtsklick direkt das Lootmaster-Fenster. STRG+Rechtsklick auf unterstützten Blizzard-/Ascension-Lootslots oder Taschenitems übernimmt das Item in den Lootmaster; Drag-and-drop und die Ascension-Itemsuche bleiben gleichwertige Alternativen.
+Am Minimap-Button öffnet Umschalt+Rechtsklick direkt das Lootmaster-Fenster. STRG+Rechtsklick auf unterstützten Blizzard- oder angepassten Lootslots sowie Taschenitems übernimmt das Item in den Lootmaster; Drag-and-drop und die Itemsuche bleiben gleichwertige Alternativen.
 
-MasterLooter verwendet für sämtliche eigenen Itemanzeigen einen isolierten `MasterLooterTooltip`. Der globale Blizzard-/Ascension-`GameTooltip` wird von der Oberfläche weder besetzt noch geleert oder ausgeblendet. Die Diagnose beobachtet ihn ausschließlich per Nach-Hook und verändert sein Verhalten nicht.
+MasterLooter verwendet für sämtliche eigenen Itemanzeigen einen isolierten `MasterLooterTooltip`. Der globale Blizzard-`GameTooltip` wird von der Oberfläche weder besetzt noch geleert oder ausgeblendet. Die Diagnose beobachtet ihn ausschließlich per Nach-Hook und verändert sein Verhalten nicht.
 
 `+1` wird grundsätzlich manuell vergeben: Ein Klick auf eine Spielerzeile wählt den Gewinner sichtbar aus. Der separate `+1`-Button derselben Zeile vergibt genau einen Strich; die Schaltfläche **Item vergeben** überträgt ausschließlich das Item. Direkte Vergaben, Selbstvergaben und abgeschlossene Handelsübergaben erzeugen niemals automatisch einen Strich. Die getrennten Itemzähler `G/MS/OS` bleiben als Vergabehistorie erhalten.
 
@@ -76,4 +76,4 @@ Der Harness lädt zwei voneinander isolierte Addon-Clients und prüft Kommunikat
 
 ## Grenzen des Clients
 
-Das Addon versucht die Handelsöffnung automatisch und legt vorgemerkte Items beim verifizierten Gewinner ein. Es nimmt den Handel niemals selbst an; Annahme und Abschluss bleiben beim Lootmaster. Masterloot kann nur vergeben werden, wenn das Lootfenster offen ist und der Gewinner ein gültiger Kandidat des Slots ist. Ein statischer Vollbestand aller Ascension-Custom-Items wird nicht behauptet: Das Begleitaddon lernt echte Links aus Taschen und Chat und kann eine vorhandene Ascension-AtlasLoot-Datenquelle zur Laufzeit übernehmen.
+Das Addon versucht die Handelsöffnung automatisch und legt vorgemerkte Items beim verifizierten Gewinner ein. Es nimmt den Handel niemals selbst an; Annahme und Abschluss bleiben beim Lootmaster. Masterloot kann nur vergeben werden, wenn das Lootfenster offen ist und der Gewinner ein gültiger Kandidat des Slots ist. Das optionale Begleitaddon lernt echte Links aus Taschen und Chat und kann kompatible AtlasLoot-Daten zu Schwierigkeitsvarianten zur Laufzeit übernehmen.

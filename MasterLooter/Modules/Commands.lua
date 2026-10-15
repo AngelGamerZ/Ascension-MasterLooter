@@ -56,7 +56,7 @@ end
 function TooltipDebug:OnTooltipAction(action) self:Log("TOOLTIP_" .. tostring(action), self:TooltipState(), true) end
 
 function TooltipDebug:InstallHooks()
-    -- Ascension tooltip methods are commonly chained by several addons. Stay
+    -- Tooltip methods are commonly chained by several addons. Stay
     -- completely outside that chain; inspect GameTooltip only when the user
     -- explicitly opens the diagnostic report.
     self.hooked, self.passive = false, true
@@ -248,7 +248,7 @@ local WINDOWS = {
     loot = "LootWindow", trade = "TradeWindow", softres = "SoftResWindow",
     rules = "RulesWindow", gdkpui = "GDKPWindow", history = "HistoryWindow",
     auction = "GDKPAuctionWindow", raid = "RaidManagerWindow", version = "VersionWindow",
-    bags = "BagInspectorWindow", settings = "SettingsWindow", io = "ImportExportWindow",
+    bags = "BagInspectorWindow", settings = "SettingsWindow", io = "ImportExportWindow", autoroll = "AutoRollWindow",
 }
 
 local function showWindow(key)

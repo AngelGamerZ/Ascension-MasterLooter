@@ -23,7 +23,7 @@ local files = {
     "MasterLooter/UI/CommDebugWindow.lua",
     "MasterLooter/UI/RollWindow.lua",
     "MasterLooter/UI/MasterLooterWindow.lua", "MasterLooter/UI/HistoryWindow.lua", "MasterLooter/UI/LootLedgerWindow.lua",
-    "MasterLooter/UI/SettingsWindow.lua", "MasterLooter/UI/SoftResWindow.lua",
+    "MasterLooter/UI/SettingsWindow.lua", "MasterLooter/UI/AutoRollWindow.lua", "MasterLooter/UI/SoftResWindow.lua",
     "MasterLooter/UI/GDKPWindow.lua", "MasterLooter/UI/GDKPAuctionWindow.lua", "MasterLooter/UI/GDKPAdvancedWindow.lua",
     "MasterLooter/UI/RaidManagerWindow.lua", "MasterLooter/UI/VersionWindow.lua",
     "MasterLooter/UI/BagInspectorWindow.lua", "MasterLooter/UI/LootWindow.lua",

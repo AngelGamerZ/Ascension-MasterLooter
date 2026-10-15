@@ -74,7 +74,7 @@ function Theme:CreateButton(parent, text, width, height)
 end
 
 function Theme:CreateEditBox(parent, width, height, numeric)
-    -- Ascension's 3.3.5a InputBoxTemplate can render its middle texture above
+    -- Some 3.3.5a InputBoxTemplate variants can render their middle texture above
     -- the edit text.  That leaves only the first and last characters visible.
     -- A self-contained inset avoids client-template draw-order differences.
     local edit = CreateFrame("EditBox", nil, parent)

@@ -717,7 +717,7 @@ function Trade:Complete(reason)
             end
         end
     end
-    deliverMatches(true) -- Preserve Ascension variants whenever the complete hyperlink is available.
+    deliverMatches(true) -- Preserve item variants whenever the complete hyperlink is available.
     deliverMatches(false) -- Legacy fallback for links whose formatting differs between bag/trade APIs.
     self.state = "COMPLETED"
     emitState(reason or "TRADE_COMPLETE")

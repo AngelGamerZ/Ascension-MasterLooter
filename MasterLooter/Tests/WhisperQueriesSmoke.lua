@@ -43,7 +43,7 @@ assert(loadfile("MasterLooter/Modules/WhisperQueries.lua"))("MasterLooter", GA)
 GA.WhisperQueries:OnInitialize()
 same(sent[1].channel, "RAID_WARNING", "becoming raid master looter announces through raid warning")
 expect(sent[1].message:find("SR", 1, true) and sent[1].message:find("SL", 1, true) and not sent[1].message:find("!SR", 1, true),
-    "master-looter announcement uses Ascension-safe alphanumeric whisper commands")
+    "master-looter announcement uses client-safe alphanumeric whisper commands")
 expect(registered.CHAT_MSG_WHISPER, "whisper event is registered")
 expect(not registered.CHAT_MSG_RAID and not registered.CHAT_MSG_PARTY, "public chat query events are not registered")
 

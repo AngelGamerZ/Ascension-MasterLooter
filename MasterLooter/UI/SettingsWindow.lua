@@ -150,7 +150,8 @@ function SettingsWindow:BuildHome()
         { "SoftRes", "SoftResWindow" }, { "Regeln & Strichliste", "RulesWindow" }, { "Historie", "HistoryWindow" },
         { "GDKP", "GDKPWindow" }, { "GDKP-Auktion", "GDKPAuctionWindow" }, { "Raidverwaltung", "RaidManagerWindow" },
         { "Tascheninspektor", "BagInspectorWindow" }, { "Import / Export", "ImportExportWindow" }, { "Versionscheck", "VersionWindow" },
-        { "Ascension-Itemsuche", "ItemSearchWindow" }, { "Profile", "ProfileWindow" }, { "Neuigkeiten", "WelcomeWindow" },
+        { "Itemsuche", "ItemSearchWindow" }, { "Profile", "ProfileWindow" }, { "AutoRoll-Regeln", "AutoRollWindow" },
+        { "Neuigkeiten", "WelcomeWindow" },
     }
     for index, tool in ipairs(tools) do
         local column = ((index - 1) % 3) + 1
@@ -253,6 +254,8 @@ function SettingsWindow:BuildLoot()
     save:SetScript("OnClick", function() SettingsWindow:SaveDuration() end)
     local note = Theme:CreateLabel(section, "Der OS-Bereich wird für jede Verteilung autoritativ im Lootmaster-Fenster festgelegt. MS bleibt immer /roll 100.", 11, Theme.colors.muted)
     note:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -404); note:SetPoint("RIGHT", section, "RIGHT", -20, 0)
+    local autoRoll = Theme:CreateButton(section, "AutoRoll-Regeln", 160, 26); autoRoll:SetPoint("TOPLEFT", section, "TOPLEFT", 20, -448)
+    autoRoll:SetScript("OnClick", function() openWindow("AutoRollWindow") end)
 end
 
 function SettingsWindow:BuildPackMule()

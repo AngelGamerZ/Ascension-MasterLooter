@@ -22,7 +22,11 @@ local function resolveInstant(itemID)
         return nil
     end
 
-    local first, second, third, fourth, fifth, sixth, seventh = GetItemInfoInstant(itemID)
+    -- Custom clients and other addons may expose partial/backported versions of
+    -- GetItemInfoInstant. A provider error must not abort the per-frame index
+    -- worker and leave the variant import stuck forever.
+    local ok, first, second, third, fourth, fifth, sixth, seventh = pcall(GetItemInfoInstant, itemID)
+    if not ok then return nil end
     if type(first) == "table" then
         return {
             name = first.name,
@@ -71,8 +75,7 @@ function addon:Initialize()
     self.contextKey = tostring(realm) .. "|" .. tostring(locale) .. "|" .. tostring(interface)
     self.DB.contexts[self.contextKey] = { realm = realm, locale = locale, interface = interface,
         lastSeen = time and time() or 0 }
-    self:ImportAtlasLootFamilies()
-    self:LearnBags()
+    self:BeginAtlasLootImport()
 end
 
 function addon:Add(itemID, name, quality, link, metadata)
@@ -85,7 +88,9 @@ function addon:Add(itemID, name, quality, link, metadata)
     local instant = resolveInstant(itemID) or {}
     local infoName, infoLink, infoQuality, infoLevel, _, infoType, infoSubType, _, infoEquip, infoIcon
     if type(GetItemInfo) == "function" then
-        infoName, infoLink, infoQuality, infoLevel, _, infoType, infoSubType, _, infoEquip, infoIcon = GetItemInfo(itemID)
+        local ok
+        ok, infoName, infoLink, infoQuality, infoLevel, _, infoType, infoSubType, _, infoEquip, infoIcon = pcall(GetItemInfo, itemID)
+        if not ok then infoName, infoLink, infoQuality, infoLevel, infoType, infoSubType, infoEquip, infoIcon = nil end
     end
 
     current.name = infoName or name or instant.name or current.name
@@ -187,6 +192,66 @@ function addon:ImportAtlasLootFamilies()
     return imported
 end
 
+-- AtlasLoot tables can contain thousands of variant IDs. Iterating them while
+-- LoadAddOn is still on the UI call stack freezes the 3.3.5a client, so the
+-- initial import is divided into small, bounded pieces processed per frame.
+function addon:BeginAtlasLootImport()
+    local source = _G.ItemIDsDatabase
+    if type(source) ~= "table" then
+        self.importing = false
+        self:LearnBags()
+        return false
+    end
+    if self.importing then return true end
+    self.importState = { source = source, baseKey = nil, variants = nil, difficultyKey = nil, imported = 0, processed = 0 }
+    self.importing = true
+    if self.worker then self.worker:Show() end
+    return true
+end
+
+function addon:ProcessAtlasLootImport(budget)
+    local state = self.importState
+    if not self.importing or type(state) ~= "table" then return true end
+    budget = math.max(1, math.min(tonumber(budget) or 25, 100))
+    local used = 0
+    while used < budget do
+        if not state.variants then
+            local baseID, variants = next(state.source, state.baseKey)
+            state.baseKey = baseID
+            used = used + 1
+            if baseID == nil then
+                self.importing = false
+                self.lastImportCount = state.imported
+                self.importState = nil
+                self:LearnBags()
+                if self.worker then self.worker:Hide() end
+                return true
+            end
+            if type(baseID) == "number" and type(variants) == "table" then
+                state.variants = variants
+                state.difficultyKey = nil
+                state.family = self.DB.families[baseID] or { [3] = baseID }
+                self.DB.families[baseID] = state.family
+                self:Add(baseID, nil, nil, nil, { familyID = baseID, difficulty = 3 })
+                state.processed = state.processed + 1
+            end
+        else
+            local difficulty, itemID = next(state.variants, state.difficultyKey)
+            state.difficultyKey = difficulty
+            used = used + 1
+            if difficulty == nil then
+                state.variants, state.family = nil, nil
+            elseif type(difficulty) == "number" and type(itemID) == "number" then
+                state.family[difficulty] = itemID
+                self:Add(itemID, nil, nil, nil, { familyID = state.baseKey, difficulty = difficulty, source = "AtlasLoot" })
+                state.imported = state.imported + 1
+                state.processed = state.processed + 1
+            end
+        end
+    end
+    return false
+end
+
 function addon:Get(itemID)
     return self.DB and self.DB.items[tonumber(itemID)] or nil
 end
@@ -247,8 +312,18 @@ function addon:GetStats()
     local items, families, verified = 0, 0, 0
     for _, entry in pairs(self.DB and self.DB.items or {}) do items = items + 1; if entry.verified then verified = verified + 1 end end
     for _ in pairs(self.DB and self.DB.families or {}) do families = families + 1 end
-    return { items = items, families = families, verified = verified, context = self:GetContext() }
+    return { items = items, families = families, verified = verified, context = self:GetContext(),
+        importing = self.importing and true or false,
+        importProcessed = self.importState and self.importState.processed or 0,
+        imported = self.importState and self.importState.imported or self.lastImportCount or 0 }
 end
+
+local worker = CreateFrame("Frame")
+addon.worker = worker
+worker:Hide()
+worker:SetScript("OnUpdate", function()
+    if addon.importing then addon:ProcessAtlasLootImport(25) else worker:Hide() end
+end)
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")

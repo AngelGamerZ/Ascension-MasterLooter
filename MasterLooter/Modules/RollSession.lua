@@ -1,4 +1,4 @@
--- Distributed roll-session state machine for Ascension WoW 3.3.5a.
+-- Distributed roll-session state machine for WoW WotLK 3.3.5a.
 
 local addonName, GA = ...
 GA = GA or _G.MasterLooter
@@ -419,7 +419,7 @@ function RollSession:RecordPublicRoll(player, roll, minimum, maximum, sessionID)
     end
     local key = baseName(player)
     if key == "" then return nil, "invalid player" end
-    -- Some Ascension builds report the party size correctly while returning nil
+    -- Some customized 3.3.5a builds report the party size correctly while returning nil
     -- for UnitName/GetUnitName/UnitFullName on party tokens. A public /roll is
     -- therefore allowed as a group fallback, but only on the active authority's
     -- own session. Solo and inactive-session messages remain rejected above.

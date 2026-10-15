@@ -135,7 +135,7 @@ end
 function ChatRolls:OnInitialize()
     if self.captureInitialized then return true end
     -- Keep independent capture paths for this critical game event. Gargul also
-    -- uses the chat-message filter path; Ascension builds can display a system
+    -- uses the chat-message filter path; customized 3.3.5a builds can display a system
     -- line even when an addon's regular event dispatch does not receive it.
     if type(CreateFrame) == "function" then
         self.frame = self.frame or CreateFrame("Frame")

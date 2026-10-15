@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.5-beta
+- Retargeted MasterLooter for general World of Warcraft: Wrath of the Lich King 3.3.5a clients
+- Added a dedicated AutoRoll rule window with item links, item IDs, and drag-and-drop support
+- Added automatic matching for equivalent item variants that share the same item name
+- Added compatible AtlasLoot difficulty-family matching when available
+- Prevented item-index updates from freezing the game when AutoRoll rules are saved
+
 ## 0.17.4-beta
 - Added realm-wide update checks through a dedicated MasterLooter channel
 - Added native Blizzard tooltip support to participant rolls, including RefactorGear information

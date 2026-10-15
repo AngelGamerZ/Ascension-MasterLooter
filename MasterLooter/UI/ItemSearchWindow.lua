@@ -7,7 +7,7 @@ function ItemSearchWindow:EnsureFrame()
     if self.frame then return self.frame end
     local frame = CreateFrame("Frame", "MasterLooterItemSearchWindow", UIParent)
     frame:SetWidth(720); frame:SetHeight(520); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true); frame:Hide()
-    Theme:ApplyPanel(frame); Theme:AddTitle(frame, "Ascension-Itemsuche"); Theme:MakeMovable(frame, "itemSearchWindow"); Theme:RestorePosition(frame, "itemSearchWindow", "CENTER", 0, 0); Theme:RegisterForEscape(frame); self.frame = frame
+    Theme:ApplyPanel(frame); Theme:AddTitle(frame, "Itemsuche"); Theme:MakeMovable(frame, "itemSearchWindow"); Theme:RestorePosition(frame, "itemSearchWindow", "CENTER", 0, 0); Theme:RegisterForEscape(frame); self.frame = frame
     local search = Theme:CreateEditBox(frame, 330, 25); search:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -52); search:SetScript("OnEnterPressed", function(self) self:ClearFocus(); ItemSearchWindow:Search() end); self.searchEdit = search
     local quality = Theme:CreateEditBox(frame, 48, 25, true); quality:SetPoint("LEFT", search, "RIGHT", 8, 0); quality:SetText("0"); self.qualityEdit = quality
     local level = Theme:CreateEditBox(frame, 58, 25, true); level:SetPoint("LEFT", quality, "RIGHT", 8, 0); level:SetText("0"); self.levelEdit = level
@@ -19,7 +19,7 @@ function ItemSearchWindow:EnsureFrame()
         row.name = Theme:CreateLabel(row, "", 11); row.name:SetPoint("LEFT", row, "LEFT", 6, 0); row.name:SetWidth(430); row.meta = Theme:CreateLabel(row, "", 10, Theme.colors.muted); row.meta:SetPoint("RIGHT", row, "RIGHT", -6, 0); row.meta:SetWidth(210); row.meta:SetJustifyH("RIGHT")
         row:SetScript("OnClick", function() ItemSearchWindow:Use(row.entry) end); row:SetScript("OnEnter", function(self) if self.entry and self.entry.link then Theme:ShowItemTooltip(self, self.entry.link) end end); row:SetScript("OnLeave", function(self) Theme:HideOwnedTooltip(self) end); self.rows[index] = row
     end
-    local status = Theme:CreateLabel(frame, "Der Index lernt echte Ascension-Items aus Client, Taschen, Chat und AtlasLoot.", 11, Theme.colors.muted); status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 22); status:SetPoint("RIGHT", frame, "RIGHT", -22, 0); self.status = status
+    local status = Theme:CreateLabel(frame, "Der Index lernt Items aus Client, Taschen, Chat und kompatiblen AtlasLoot-Daten.", 11, Theme.colors.muted); status:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 22, 22); status:SetPoint("RIGHT", frame, "RIGHT", -22, 0); self.status = status
     return frame
 end
 function ItemSearchWindow:Search()

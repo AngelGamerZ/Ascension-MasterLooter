@@ -206,7 +206,7 @@ function Loot:OnSlotCleared(slot)
     local snapshot = self:GetSnapshot()
     GA.Events:Emit("GA_LOOT_SLOT_CLEARED", record, snapshot)
     GA.Events:Emit("GA_LOOT_UPDATED", snapshot, "SLOT_CLEARED", record)
-    -- Ascension clients can compact equal drops onto the cleared numeric slot.
+    -- Customized loot frames can compact equal drops onto the cleared numeric slot.
     -- Refresh on following frames so the next copy receives a fresh queue ID.
     if GA.Compat and type(GA.Compat.After) == "function" then
         local generation = self.generation

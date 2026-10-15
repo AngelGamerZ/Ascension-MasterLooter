@@ -93,7 +93,7 @@ local GA = {
 function GA:RegisterModule(name, module) self.modules[name] = module end
 function GA:Print(message) self.lastPrint = message end
 local localizedWelcomeNotes = {
-    ["Neuimplementierung für Ascension WoW 3.3.5a"] = "New implementation for Ascension WoW 3.3.5a",
+    ["Entwickelt für WoW WotLK 3.3.5a"] = "Built for WoW WotLK 3.3.5a",
     ["Öffentliche /roll-Auswertung für Spieler mit und ohne Addon"] = "Public /roll tracking for players with and without the addon",
     ["Direktvergabe, Handels-Fallback, Regeln, Strichliste und GDKP"] = "Direct awards, trade fallback, rules, +1 tracking, and GDKP",
     ["Erweiterte Werkzeuge sind jederzeit über den Minimap-Button erreichbar"] = "Advanced tools are always available from the minimap button",
@@ -274,7 +274,7 @@ GA.UI.ItemSearchWindow:Search()
 expect(GA.UI.ItemSearchWindow.rows[1].shown, "item search renders provider results")
 expect(GA.UI.WelcomeWindow:EnsureFrame() ~= nil, "welcome window builds against legacy UI")
 same(#GA.UI.WelcomeWindow.noteLabels, 4, "welcome window renders every feature note")
-same(GA.UI.WelcomeWindow.noteLabels[1]:GetText(), "• New implementation for Ascension WoW 3.3.5a", "welcome feature notes are localized before bullet formatting")
+same(GA.UI.WelcomeWindow.noteLabels[1]:GetText(), "• Built for WoW WotLK 3.3.5a", "welcome feature notes are localized before bullet formatting")
 same(GA.UI.WelcomeWindow.noteLabels[2]:GetText(), "• Public /roll tracking for players with and without the addon", "public roll feature note is rendered in English")
 same(GA.UI.WelcomeWindow.noteLabels[3]:GetText(), "• Direct awards, trade fallback, rules, +1 tracking, and GDKP", "award feature note is rendered in English")
 same(GA.UI.WelcomeWindow.noteLabels[4]:GetText(), "• Advanced tools are always available from the minimap button", "minimap feature note is rendered in English")
